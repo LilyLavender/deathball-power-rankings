@@ -6,6 +6,7 @@ https://challonge.com/sgdq2026_deathball
 Need to add:
 
 https://challonge.com/users/natnied/tournaments
+https://challonge.com/users/thauber/tournaments
 
 
 Need to confirm if actually DeathBall:

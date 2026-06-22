@@ -13,10 +13,14 @@
         rows.sort((a, b) => {
           const cellA = a.cells[colIndex];
           const cellB = b.cells[colIndex];
-          let valA = cellA.dataset.sort !== undefined ? Number(cellA.dataset.sort) : cellA.textContent.trim().toLowerCase();
-          let valB = cellB.dataset.sort !== undefined ? Number(cellB.dataset.sort) : cellB.textContent.trim().toLowerCase();
-          if (type === 'number') return asc ? valA - valB : valB - valA;
-          return asc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+          if (type === 'number') {
+            const valA = Number(cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent);
+            const valB = Number(cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent);
+            return asc ? valA - valB : valB - valA;
+          }
+          const valA = cellA.textContent.trim().toLowerCase();
+          const valB = cellB.textContent.trim().toLowerCase();
+          return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
         rows.forEach((r) => tbody.appendChild(r));
       });
