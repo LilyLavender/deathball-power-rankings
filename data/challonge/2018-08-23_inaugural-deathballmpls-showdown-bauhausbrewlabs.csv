@@ -1,0 +1,31 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Alex Zick,2,,,false,,phillanomatry,1,,,false
+B,,Weizenberg,2,,,false,,Kiwii,0,,,false
+C,,Brent,0,,,false,,TurkishPepis,2,,,false
+D,,coolguy69,2,,,false,,TheHolySheet,0,,,false
+E,,Luke Snyder,0,,,false,,Kayla,2,,,false
+F,,metalmandy,0,,,false,,stepbystepdad,2,,,false
+G,,Britta,1,,,false,,Sam,2,,,false
+H,,Emily,1,,,false,,Pumpy Supreme,2,,,false
+I,,Alex Zick,1,,,false,,Weizenberg,0,,,false
+J,,TurkishPepis,1,,,false,,coolguy69,0,,,false
+K,,Kayla,0,,,false,,stepbystepdad,1,,,false
+L,,Sam,1,,,false,,Pumpy Supreme,0,,,false
+M,,Alex Zick,0,,,false,,TurkishPepis,1,,,false
+N,,stepbystepdad,1,,,false,,Sam,0,,,false
+O,,TurkishPepis,1,,,false,,stepbystepdad,0,,,false
+R,,phillanomatry,1,,,false,,Kiwii,0,,,false
+S,,Brent,0,,,false,,TheHolySheet,1,,,false
+T,,Luke Snyder,1,,,false,,metalmandy,0,,,false
+U,,Britta,1,,,false,,Emily,0,,,false
+V,,Pumpy Supreme,1,,,false,,phillanomatry,0,,,false
+W,,Kayla,0,,,false,,TheHolySheet,1,,,false
+X,,coolguy69,0,,,false,,Luke Snyder,1,,,false
+Y,,Weizenberg,1,,,false,,Britta,0,,,false
+Z,,Pumpy Supreme,1,,,false,,TheHolySheet,0,,,false
+AA,,Luke Snyder,0,,,false,,Weizenberg,1,,,false
+AB,,Alex Zick,1,,,false,,Pumpy Supreme,0,,,false
+AC,,Sam,0,,,false,,Weizenberg,1,,,false
+AD,,Alex Zick,1,,,false,,Weizenberg,0,,,false
+AE,,stepbystepdad,0,,,false,,Alex Zick,1,,,false
+P,,TurkishPepis,1,,,false,,Alex Zick,0,,,false

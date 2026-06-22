@@ -1,0 +1,8 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Cloud,1,,,false,,Gabe,0,,,false
+B,,Shantia,1,,,false,,Justice,0,,,false
+C,,Josael,0,,,false,,Mitchell,1,,,false
+D,,Roger,1,,,false,,Alex,0,,,false
+E,,Cloud,1,,,false,,Shantia,0,,,false
+F,,Mitchell,0,,,false,,Roger,1,,,false
+G,,Cloud,0,,,false,,Roger,1,,,false

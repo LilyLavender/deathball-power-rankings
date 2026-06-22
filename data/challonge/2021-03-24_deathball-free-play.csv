@@ -1,0 +1,9 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Kevin,0,,,false,,Jarrett,1,,,false
+B,,Micky,1,,,false,,Charli,0,,,false
+C,,Jerry Garcia,1,,,false,,Liz,0,,,false
+D,,Sunny,0,,,false,,Matt,1,,,false
+E,,Jarrett,0,,,false,,Micky,1,,,false
+F,,Jerry Garcia,1,,,false,,Matt,0,,,false
+G,,Micky,1,,,false,,Jerry Garcia,0,,,false
+3P,,Jarrett,0,,,false,,Matt,1,,,false

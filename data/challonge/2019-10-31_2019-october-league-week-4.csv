@@ -1,0 +1,16 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,marco,2,,,false,,corley,3,,,false
+B,,wes,3,,,false,,qp,2,,,false
+C,,roman,1,,,false,,Anthony,3,,,false
+D,,qp,3,,,false,,roman,0,,,false
+E,,Anthony,2,,,false,,marco,3,,,false
+F,,corley,3,,,false,,wes,2,,,false
+G,,Anthony,2,,,false,,qp,3,,,false
+H,,roman,0,,,false,,corley,3,,,false
+I,,marco,2,,,false,,wes,3,,,false
+J,,wes,3,,,false,,roman,0,,,false
+K,,corley,3,,,false,,Anthony,1,,,false
+L,,qp,1,,,false,,marco,3,,,false
+M,,Anthony,0,,,false,,wes,3,,,false
+N,,marco,2,,,false,,roman,3,,,false
+O,,qp,1,,,false,,corley,3,,,false

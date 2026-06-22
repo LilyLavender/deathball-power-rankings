@@ -1,0 +1,8 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Warren,11,,,false,,Kristin,8,,,false
+B,,Nathan,9,,,false,,Bill,7,,,false
+C,,Vivvian,9,,,false,,Drew,2,,,false
+D,,Chris,9,,,false,,Leah,2,,,false
+E,,Warren,10,,,false,,Nathan,9,,,false
+F,,Vivvian,1,,,false,,Chris,0,,,false
+G,,Nathan,9,,,false,,Vivvian,5,,,false

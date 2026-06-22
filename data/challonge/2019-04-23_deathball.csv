@@ -1,0 +1,19 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Liz F,1,,,false,,Mugs,2,,,false
+B,,Alex T,2,,,false,,Karla,0,,,false
+C,,Aaron R,2,,,false,,Mugs,1,,,false
+D,,Ashleigh C,2,,,false,,Kevan S,1,,,false
+E,,Aaron O,2,,,false,,Alex T,0,,,false
+F,,Jack J,2,,,false,,Alex z,1,,,false
+G,,Aaron R,2,,,false,,Ashleigh C,1,,,false
+H,,Aaron O,1,,,false,,Jack J,2,,,false
+I,,Aaron R,0,,,false,,Jack J,2,,,false
+L,,Alex z,2,,,false,,Liz F,0,,,false
+M,,Kevan S,0,,,false,,Karla,1,,,false
+N,,Alex T,1,,,false,,Alex z,2,,,false
+O,,Mugs,0,,,false,,Karla,2,,,false
+P,,Ashleigh C,2,,,false,,Alex z,0,,,false
+Q,,Aaron O,0,,,false,,Karla,2,,,false
+R,,Ashleigh C,2,,,false,,Karla,0,,,false
+S,,Aaron R,2,,,false,,Ashleigh C,0,,,false
+J,,Jack J,3,,,false,,Aaron R,2,,,false

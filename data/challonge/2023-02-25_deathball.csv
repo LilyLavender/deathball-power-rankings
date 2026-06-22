@@ -1,0 +1,17 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Richard,1,,,false,,Mario,0,,,false
+B,,Khai,0,,,false,,Sodah,1,,,false
+C,,Cesar,0,,,false,,Bubba Buckets,1,,,false
+D,,Jason,0,,,false,,Kristian,1,,,false
+E,,Malloy,1,,,false,,Cute Don,0,,,false
+F,,Taylor,1,,,false,,Bree,0,,,false
+G,,Eduardo,1,,,false,,Todd,0,,,false
+H,,Shipwash,1,,,false,,Jacobi,0,,,false
+I,,Richard,0,,,false,,Sodah,1,,,false
+J,,Bubba Buckets,0,,,false,,Kristian,1,,,false
+K,,Malloy,1,,,false,,Taylor,0,,,false
+L,,Eduardo,1,,,false,,Shipwash,0,,,false
+M,,Sodah,0,,,false,,Kristian,1,,,false
+N,,Malloy,1,,,false,,Eduardo,0,,,false
+O,,Kristian,0,,,false,,Malloy,1,,,false
+3P,,Sodah,1,,,false,,Eduardo,0,,,false

@@ -1,0 +1,22 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,marco,0,,,false,,Lawrence The Late Boy,0,,,false
+B,,PooPooPants,2,,,false,,ryan,3,,,false
+C,,Westley,3,,,false,,Kirby,2,,,false
+D,,ryan,0,,,false,,Westley,3,,,false
+E,,Lawrence The Late Boy,0,,,false,,PooPooPants,0,,,false
+F,,corley,0,,,false,,marco,0,,,false
+G,,PooPooPants,1,,,false,,corley,3,,,false
+H,,Westley,0,,,false,,Lawrence The Late Boy,0,,,false
+I,,Kirby,3,,,false,,ryan,0,,,false
+J,,Lawrence The Late Boy,0,,,false,,Kirby,0,,,false
+K,,corley,0,,,false,,Westley,3,,,false
+L,,marco,0,,,false,,PooPooPants,0,,,false
+M,,Westley,0,,,false,,marco,0,,,false
+N,,Kirby,1,,,false,,corley,3,,,false
+O,,ryan,0,,,false,,Lawrence The Late Boy,0,,,false
+P,,corley,3,,,false,,ryan,1,,,false
+Q,,marco,0,,,false,,Kirby,0,,,false
+R,,PooPooPants,3,,,false,,Westley,1,,,false
+S,,Kirby,1,,,false,,PooPooPants,3,,,false
+T,,ryan,0,,,false,,marco,0,,,false
+U,,Lawrence The Late Boy,0,,,false,,corley,0,,,false

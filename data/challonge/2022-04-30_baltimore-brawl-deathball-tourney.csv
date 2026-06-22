@@ -1,0 +1,32 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,meezeed,1,,,false,,Chris Baldwin,2,,,false
+B,,Alex Hogan,0,,,false,,Nate Smith,2,,,false
+C,,Jeb,2,,,false,,Mario,1,,,false
+D,,Alex Kogan,1,,,false,,Arde,2,,,false
+E,,Jc,2,,,false,,Foster,0,,,false
+F,,Todd,0,,,false,,Eduardo,2,,,false
+G,,Jeff Barth,0,,,false,,Taylor Christianson,2,,,false
+H,,Chris Preisinger,2,,,false,,Zack McKenna,0,,,false
+I,,Chris Baldwin,2,,,false,,Nate Smith,0,,,false
+J,,Jeb,1,,,false,,Arde,2,,,false
+K,,Jc,0,,,false,,Eduardo,2,,,false
+L,,Taylor Christianson,2,,,false,,Chris Preisinger,0,,,false
+M,,Chris Baldwin,2,,,false,,Arde,0,,,false
+N,,Eduardo,1,,,false,,Taylor Christianson,2,,,false
+O,,Chris Baldwin,1,,,false,,Taylor Christianson,2,,,false
+R,,meezeed,2,,,false,,Alex Hogan,1,,,false
+S,,Mario,0,,,false,,Alex Kogan,2,,,false
+T,,Foster,0,,,false,,Todd,2,,,false
+U,,Jeff Barth,1,,,false,,Zack McKenna,2,,,false
+V,,Chris Preisinger,1,,,false,,meezeed,2,,,false
+W,,Jc,0,,,false,,Alex Kogan,2,,,false
+X,,Jeb,2,,,false,,Todd,0,,,false
+Y,,Nate Smith,1,,,false,,Zack McKenna,2,,,false
+Z,,meezeed,2,,,false,,Alex Kogan,0,,,false
+AA,,Jeb,2,,,false,,Zack McKenna,0,,,false
+AB,,Arde,0,,,false,,meezeed,2,,,false
+AC,,Eduardo,2,,,false,,Jeb,0,,,false
+AD,,meezeed,0,,,false,,Eduardo,2,,,false
+AE,,Chris Baldwin,,,,false,,Eduardo,,,,false
+P,,Taylor Christianson,,,,false,,,,,,false
+Q,,,,,,false,,,,,,false

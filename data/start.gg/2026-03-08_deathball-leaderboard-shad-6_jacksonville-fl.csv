@@ -1,0 +1,11 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+E,,Cole,2,,,false,,Austin,0,,,false
+K,,Austin,1,,,false,,Jay,2,,,false
+J,,Jay,2,,,false,,Ty,1,,,false
+C,,Cole,2,,,false,,Bicker,1,,,false
+D,,Austin,2,,,false,,Squid,0,,,false
+H,,Squid,1,,,false,,Jay,2,,,false
+I,,Bicker,1,,,false,,Ty,2,,,false
+A,,Jay,0,,,false,,Bicker,2,,,false
+B,,Ty,1,,,false,,Squid,2,,,false
+F,,Cole,0,,,false,,Jay,0,,,false

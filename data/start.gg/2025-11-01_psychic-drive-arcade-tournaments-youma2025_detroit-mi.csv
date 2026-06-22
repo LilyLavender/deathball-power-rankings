@@ -1,0 +1,35 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+R,,JamesPod,3,,,false,,SunnyJ,1,,,false
+Q,,JamesPod,3,,,false,,SunnyJ,0,,,false
+AI,,SunnyJ,3,,,false,OFFWORLD,Pops,0,,,false
+AH,OFFWORLD,Pops,2,,,false,OFFWORLD,helm,1,,,false
+O,,JamesPod,0,,,false,OFFWORLD,helm,0,,,true
+P,,PJ,0,,,false,,SunnyJ,2,,,false
+AF,,PJ,0,,,false,OFFWORLD,Pops,2,,,false
+AG,OFFWORLD,helm,2,,,false,,Zam,1,,,false
+AD,,Jubi,0,,,false,OFFWORLD,Pops,2,,,false
+AE,,MiDe,1,,,false,,Zam,2,,,false
+K,,JamesPod,2,,,false,,Cornelius,0,,,false
+L,OFFWORLD,helm,2,,,false,,Jubi,0,,,false
+M,,PJ,2,,,false,,Zam,1,,,false
+N,,SunnyJ,2,,,false,,MiDe,0,,,false
+AA,,Cornelius,0,,,true,OFFWORLD,Pops,0,,,false
+AB,,MiDe,2,,,false,,Dave,0,,,false
+AC,,Zam,3,,,false,,Zenso Si,1,,,false
+Z,,Jubi,0,,,false,,Tomy,0,,,true
+V,,KroKo,1,,,false,,Tomy,2,,,false
+W,,CAPC0MHER0,1,,,false,OFFWORLD,Pops,2,,,false
+X,,Dave,2,,,false,,enussi,0,,,false
+Y,,Zenso Si,2,,,false,,Joe,1,,,false
+C,,JamesPod,2,,,false,,Joe,0,,,false
+D,,Zenso Si,1,,,false,,Cornelius,2,,,false
+E,,enussi,0,,,false,OFFWORLD,helm,2,,,false
+F,,Dave,1,,,false,,Jubi,2,,,false
+G,OFFWORLD,Pops,0,,,false,,PJ,2,,,false
+H,,CAPC0MHER0,0,,,false,,Zam,2,,,false
+I,,SunnyJ,2,,,false,,Tomy,1,,,false
+J,,MiDe,2,,,false,,Sadclown64,0,,,false
+T,,Sadclown64,1,,,false,,KroKo,2,,,false
+U,,Dave,0,,,false,,KeifDunes,0,,,true
+A,,Joe,2,,,false,,KroKo,0,,,false
+B,,PJ,2,,,false,,KeifDunes,1,,,false

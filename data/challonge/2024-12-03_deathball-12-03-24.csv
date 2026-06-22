@@ -1,0 +1,27 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,solo,1,,,false,,denise,0,,,false
+B,,ally,1,,,false,,gene,0,,,false
+C,,nicolo,0,,,false,,sid,1,,,false
+D,,john,1,,,false,,jeremy,0,,,false
+E,,amethyst,0,,,false,,josiah,1,,,false
+F,,xary,0,,,false,,jacoby,1,,,false
+G,,josh,1,,,false,,solo,0,,,false
+H,,ally,1,,,false,,sid,0,,,false
+I,,oscar,0,,,false,,john,1,,,false
+J,,josiah,0,,,false,,jacoby,1,,,false
+K,,josh,1,,,false,,ally,0,,,false
+L,,john,0,,,false,,jacoby,1,,,false
+M,,josh,1,,,false,,jacoby,0,,,false
+P,,gene,1,,,false,,nicolo,0,,,false
+Q,,amethyst,1,,,false,,xary,0,,,false
+R,,josiah,1,,,false,,denise,0,,,false
+S,,oscar,0,,,false,,gene,1,,,false
+T,,sid,1,,,false,,jeremy,0,,,false
+U,,solo,0,,,false,,amethyst,1,,,false
+V,,josiah,1,,,false,,gene,0,,,false
+W,,sid,0,,,false,,amethyst,1,,,false
+X,,ally,1,,,false,,josiah,0,,,false
+Y,,john,1,,,false,,amethyst,0,,,false
+Z,,ally,1,,,false,,john,0,,,false
+AA,,jacoby,0,,,false,,ally,1,,,false
+N,,josh,1,,,false,,ally,0,,,false

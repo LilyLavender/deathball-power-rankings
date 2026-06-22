@@ -1,0 +1,16 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Wes,3,,,false,,Josh,"2,3",,,false
+B,,Corley,3,,,false,,Laura,"1,2",,,false
+C,,Marco,3,,,false,,Donald,"0,3",,,false
+D,,Blake,2,,,false,,Lawrence,"3,3",,,false
+E,,Wes,3,,,false,,Corley,"0,3",,,false
+F,,Marco,3,,,false,,Lawrence,"2,3",,,false
+G,,Wes,0,,,false,,Marco,"3,3",,,false
+J,,Josh,3,,,false,,Laura,"1,0",,,false
+K,,Donald,0,,,false,,Blake,"3,0",,,false
+L,,Lawrence,3,,,false,,Laura,"0,3",,,false
+M,,Corley,3,,,false,,Blake,"2,3",,,false
+N,,Lawrence,0,,,false,,Corley,"3,1",,,false
+O,,Wes,3,,,false,,Corley,"1,0",,,false
+H,,Marco,0,,,false,,Wes,"5,1",,,false
+I,,Wes,5,,,false,,Marco,"1,3",,,false

@@ -1,0 +1,16 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Chayan,1,,,false,,Rolando,0,,,false
+B,,Christine,1,,,false,,Vera,0,,,false
+C,,Hola,1,,,false,,Johnny,0,,,false
+D,,Eli,1,,,false,,Nsama,0,,,false
+E,,Chayan,1,,,false,,Christine,0,,,false
+F,,Hola,1,,,false,,Eli,0,,,false
+G,,Chayan,1,,,false,,Hola,0,,,false
+J,,Rolando,0,,,false,,Vera,1,,,false
+K,,Johnny,1,,,false,,Nsama,0,,,false
+L,,Eli,1,,,false,,Vera,0,,,false
+M,,Christine,0,,,false,,Johnny,1,,,false
+N,,Eli,1,,,false,,Johnny,0,,,false
+O,,Hola,1,,,false,,Eli,0,,,false
+H,,Chayan,0,,,false,,Hola,1,,,false
+I,,Hola,,,,false,,Chayan,,,,false

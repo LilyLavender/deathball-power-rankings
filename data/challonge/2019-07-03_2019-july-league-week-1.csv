@@ -1,0 +1,29 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Bye2,,,,true,,ddhj,,,,false
+B,,wesmess,,,,false,,Bye1,,,,true
+C,,romaine lettuce,2,,,false,,Anthony,3,,,false
+D,,corlido bandido,3,,,false,,Marco,2,,,false
+E,,Anthony,0,,,false,,corlido bandido,3,,,false
+F,,Marco,,,,false,,Bye2,,,,true
+G,,Bye1,,,,true,,romaine lettuce,,,,false
+H,,ddhj,1,,,false,,wesmess,3,,,false
+I,,corlido bandido,,,,false,,Bye1,,,,true
+J,,romaine lettuce,3,,,false,,ddhj,2,,,false
+K,,Bye2,,,,true,,wesmess,,,,false
+L,,Marco,3,,,false,,Anthony,2,,,false
+M,,wesmess,3,,,false,,romaine lettuce,1,,,false
+N,,Bye1,,,,true,,Marco,,,,false
+O,,ddhj,0,,,false,,corlido bandido,3,,,false
+P,,Anthony,,,,false,,Bye2,,,,true
+Q,,Anthony,,,,false,,Bye1,,,,true
+R,,corlido bandido,3,,,false,,wesmess,1,,,false
+S,,Marco,2,,,false,,ddhj,3,,,false
+T,,Bye2,,,,true,,romaine lettuce,,,,false
+U,,wesmess,3,,,false,,Marco,0,,,false
+V,,ddhj,0,,,false,,Anthony,3,,,false
+W,,Bye1,,,,true,,Bye2,,,,false
+X,,romaine lettuce,0,,,false,,corlido bandido,3,,,false
+Y,,Marco,3,,,false,,romaine lettuce,2,,,false
+Z,,Bye2,,,,true,,corlido bandido,,,,false
+AA,,Anthony,1,,,false,,wesmess,3,,,false
+AB,,Bye1,,,,true,,ddhj,,,,false

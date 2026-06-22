@@ -1,0 +1,43 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Darnell Thinmints,1,,,false,,Chris Paga,0,,,false
+B,,Panda Naomi,1,,,false,,D3,0,,,false
+C,,Andrew Ortega,,,,false,,D2,,,,true
+D,,Cloud Allen,1,,,false,,Drew,0,,,false
+E,,Spencer Ratchford,,,,true,,Michael Beltran,,,,false
+F,,JonnyMatrix,,,,false,,D1,,,,true
+G,,Dylan Smith,1,,,false,,Darnell Thinmints,0,,,false
+H,,JPong,0,,,false,,Lorenzo,1,,,false
+I,,FPA Arthur,1,,,false,,Panda Naomi,0,,,false
+J,,Mike Blomgren,1,,,false,,Andrew Ortega,0,,,false
+K,,Chris Delp,0,,,false,,Cloud Allen,1,,,false
+L,,James Matthews,0,,,false,,Jason Palmer,1,,,false
+M,,Darth Jose,1,,,false,,Michael Beltran,0,,,false
+N,,Josh Featherstone,1,,,false,,JonnyMatrix,0,,,false
+O,,Dylan Smith,1,,,false,,Lorenzo,0,,,false
+P,,FPA Arthur,1,,,false,,Mike Blomgren,0,,,false
+Q,,Cloud Allen,1,,,false,,Jason Palmer,0,,,false
+R,,Darth Jose,1,,,false,,Josh Featherstone,0,,,false
+S,,Dylan Smith,1,,,false,,FPA Arthur,0,,,false
+T,,Cloud Allen,0,,,false,,Darth Jose,1,,,false
+U,,Dylan Smith,1,,,false,,Darth Jose,0,,,false
+X,,JonnyMatrix,1,,,false,,Chris Paga,0,,,false
+Y,,James Matthews,,,,false,,D3,,,,true
+Z,,Chris Delp,,,,false,,D2,,,,true
+AA,,Andrew Ortega,0,,,false,,Drew,1,,,false
+AB,,JPong,,,,false,,Spencer Ratchford,,,,true
+AC,,Darnell Thinmints,,,,false,,D1,,,,true
+AD,,Michael Beltran,1,,,false,,JonnyMatrix,0,,,false
+AE,,James Matthews,0,,,false,,Chris Delp,1,,,false
+AF,,Panda Naomi,0,,,false,,Drew,1,,,false
+AG,,JPong,1,,,false,,Darnell Thinmints,0,,,false
+AH,,Mike Blomgren,1,,,false,,Michael Beltran,0,,,false
+AI,,Lorenzo,0,,,false,,Chris Delp,1,,,false
+AJ,,Josh Featherstone,1,,,false,,Drew,0,,,false
+AK,,Jason Palmer,0,,,false,,JPong,1,,,false
+AL,,Mike Blomgren,1,,,false,,Chris Delp,0,,,false
+AM,,Josh Featherstone,0,,,false,,JPong,1,,,false
+AN,,Cloud Allen,0,,,false,,Mike Blomgren,1,,,false
+AO,,FPA Arthur,1,,,false,,JPong,0,,,false
+AP,,Mike Blomgren,0,,,false,,FPA Arthur,1,,,false
+AQ,,Darth Jose,0,,,false,,FPA Arthur,1,,,false
+V,,Dylan Smith,1,,,false,,FPA Arthur,0,,,false

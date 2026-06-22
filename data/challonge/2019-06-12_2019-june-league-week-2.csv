@@ -1,0 +1,22 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,JD,2,,,false,,Laura,0,,,false
+B,,Anthony,0,,,false,,Corley,1,,,false
+C,,Justin,0,,,false,,Wes,1,,,false
+D,,Corley,2,,,false,,Justin,0,,,false
+E,,Laura,1,,,false,,Anthony,0,,,false
+F,,Amanda,1,,,false,,JD,0,,,false
+G,,Anthony,2,,,false,,Amanda,0,,,false
+H,,Justin,1,,,false,,Laura,0,,,false
+I,,Wes,2,,,false,,Corley,0,,,false
+J,,Laura,0,,,false,,Wes,3,,,false
+K,,Amanda,0,,,false,,Justin,1,,,false
+L,,JD,0,,,false,,Anthony,1,,,false
+M,,Justin,0,,,false,,JD,1,,,false
+N,,Wes,3,,,false,,Amanda,0,,,false
+O,,Corley,1,,,false,,Laura,0,,,false
+P,,Amanda,0,,,false,,Corley,3,,,false
+Q,,JD,0,,,false,,Wes,2,,,false
+R,,Anthony,2,,,false,,Justin,0,,,false
+S,,Wes,3,,,false,,Anthony,0,,,false
+T,,Corley,0,,,false,,JD,2,,,false
+U,,Laura,2,,,false,,Amanda,0,,,false

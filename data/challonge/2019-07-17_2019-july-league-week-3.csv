@@ -1,0 +1,13 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,corley,3,,,false,,we s,0,,,false
+B,,tyler,3,,,false,,Sir doodoohead of jones,1,,,false
+C,,Sir doodoohead of jones,2,,,false,,corley,3,,,false
+D,,we s,3,,,false,,tyler,2,,,false
+E,,tyler,2,,,false,,corley,3,,,false
+F,,we s,3,,,false,,Sir doodoohead of jones,0,,,false
+G,,we s,3,,,false,,corley,0,,,false
+H,,Sir doodoohead of jones,3,,,false,,tyler,1,,,false
+I,,corley,3,,,false,,Sir doodoohead of jones,0,,,false
+J,,tyler,3,,,false,,we s,0,,,false
+K,,corley,1,,,false,,tyler,3,,,false
+L,,Sir doodoohead of jones,0,,,false,,we s,3,,,false

@@ -1,0 +1,19 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Penney,0,,,false,,Tyler,"1,1",,,false
+B,,Jen,0,,,false,,Kenny,"2,0",,,false
+C,,Wes,2,,,false,,Tyler,"0,2",,,false
+D,,Marco,2,,,false,,Amanda,"0,0",,,false
+E,,Corley,3,,,false,,Kenny,"0,2",,,false
+F,,Laura,0,,,false,,Brian,"2,0",,,false
+G,,Wes,3,,,false,,Amanda,"0,2",,,false
+H,,Corley,2,,,false,,Brian,"0,2",,,false
+I,,Wes,2,,,false,,Corley,"0,2",,,false
+L,,Laura,0,,,false,,Penney,"1,0",,,false
+M,,Marco,0,,,false,,Jen,"3,2",,,false
+N,,Kenny,3,,,false,,Penney,"0,0",,,false
+O,,Tyler,2,,,false,,Jen,"0,1",,,false
+P,,Amanda,0,,,false,,Kenny,"3,0",,,false
+Q,,Brian,2,,,false,,Tyler,"0,1",,,false
+R,,Kenny,1,,,false,,Brian,"0,0",,,false
+S,,Corley,2,,,false,,Kenny,"0,2",,,false
+J,,Wes,3,,,false,,Corley,"0,1",,,false

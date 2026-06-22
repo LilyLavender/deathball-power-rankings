@@ -1,0 +1,19 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Carson,0,,,false,,Zabi,1,,,false
+B,,Gabi,0,,,false,,Cecily,1,,,false
+C,,Spencer,0,,,false,,Zabi,1,,,false
+D,,Emma,0,,,false,,Jordan,1,,,false
+E,,Loren,0,,,false,,Cecily,1,,,false
+F,,Arabelle,0,,,false,,James,1,,,false
+G,,Zabi,0,,,false,,Jordan,1,,,false
+H,,Cecily,1,,,false,,James,0,,,false
+I,,Jordan,1,,,false,,Cecily,0,,,false
+L,,Arabelle,1,,,false,,Carson,0,,,false
+M,,Emma,1,,,false,,Gabi,0,,,false
+N,,Loren,0,,,false,,Arabelle,1,,,false
+O,,Spencer,0,,,false,,Emma,1,,,false
+P,,Zabi,1,,,false,,Arabelle,0,,,false
+Q,,James,1,,,false,,Emma,0,,,false
+R,,Zabi,0,,,false,,James,1,,,false
+S,,Cecily,0,,,false,,James,1,,,false
+J,,Jordan,1,,,false,,James,0,,,false

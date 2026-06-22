@@ -1,0 +1,36 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Qp,1,,,false,,New guy,0,,,false
+B,,Laura d,1,,,false,,Joe w,0,,,false
+C,,Dwight s,1,,,false,,Dylan d,0,,,false
+D,,Somewes,1,,,false,,Kelly p,0,,,false
+E,,Josh k,1,,,false,,Dan f,0,,,false
+F,,Kevan s,1,,,false,,Shauna f,0,,,false
+G,,Francis s,0,,,false,,Jyro,1,,,false
+H,,Dylan d,1,,,false,,Dan f,0,,,false
+I,,Joe w,1,,,false,,Shauna f,0,,,false
+J,,Francis s,1,,,false,,Kelly p,0,,,false
+K,,Jyro,1,,,false,,New guy,0,,,false
+L,,Dwight s,0,,,false,,Kevan s,1,,,false
+M,,Laura d,0,,,false,,Josh k,1,,,false
+N,,Qp,1,,,false,,Somewes,0,,,false
+O,,Somewes,1,,,false,,Dylan d,0,,,false
+P,,Dwight s,0,,,false,,Joe w,1,,,false
+Q,,Laura d,0,,,false,,Francis s,1,,,false
+R,,Dan f,0,,,false,,New guy,1,,,false
+S,,Shauna f,0,,,false,,Kelly p,1,,,false
+T,,Josh k,1,,,false,,Jyro,0,,,false
+U,,Qp,0,,,false,,Kevan s,1,,,false
+V,,Shauna f,0,,,false,,Dan f,1,,,false
+W,,Dwight s,1,,,false,,Kelly p,0,,,false
+X,,Laura d,0,,,false,,Dylan d,1,,,false
+Y,,Joe w,0,,,false,,New guy,1,,,false
+Z,,Jyro,0,,,false,,Somewes,1,,,false
+AA,,Qp,0,,,false,,Francis s,1,,,false
+AB,,Josh k,0,,,false,,Kevan s,1,,,false
+AC,,Dwight s,1,,,false,,New guy,0,,,false
+AD,,Jyro,1,,,false,,Dylan d,0,,,false
+AE,,Qp,1,,,false,,Joe w,0,,,false
+AF,,Dan f,0,,,false,,Kelly p,1,,,false
+AG,,Shauna f,0,,,false,,Laura d,1,,,false
+AH,,Josh k,0,,,false,,Francis s,1,,,false
+AI,,Kevan s,0,,,false,,Somewes,1,,,false

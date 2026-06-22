@@ -1,0 +1,20 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Ethan,1,,,false,,Ryan,0,,,false
+B,,Colby,1,,,false,,Tayler,0,,,false
+C,,Mike,0,,,false,,Ethan,1,,,false
+D,,Anthony,1,,,false,,Nick,0,,,false
+E,,Diago,1,,,false,,Colby,0,,,false
+F,,Vern,1,,,false,,Greg,0,,,false
+G,,Ethan,1,,,false,,Anthony,0,,,false
+H,,Diago,0,,,false,,Vern,1,,,false
+I,,Ethan,0,,,false,,Vern,1,,,false
+L,,Greg,1,,,false,,Ryan,0,,,false
+M,,Nick,1,,,false,,Tayler,0,,,false
+N,,Colby,1,,,false,,Greg,0,,,false
+O,,Mike,1,,,false,,Nick,0,,,false
+P,,Anthony,0,,,false,,Colby,1,,,false
+Q,,Diago,1,,,false,,Mike,0,,,false
+R,,Colby,0,,,false,,Diago,1,,,false
+S,,Ethan,1,,,false,,Diago,0,,,false
+J,,Vern,,,,false,,Ethan,,,,false
+K,,,,,,false,,,,,,false

@@ -1,0 +1,18 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,DougyFresh,0,,,false,,Blue,1,,,false
+B,,Ash,0,,,false,,Blue,1,,,false
+C,,kelsi,0,,,false,,Slicefury,1,,,false
+D,,Bearmarket/Chris,1,,,false,,Clark,0,,,false
+E,,Blockchain,1,,,false,,Dadd,0,,,false
+F,,Blue,0,,,false,,Slicefury,1,,,false
+G,,Bearmarket/Chris,0,,,false,,Blockchain,1,,,false
+H,,Slicefury,0,,,false,,Blockchain,1,,,false
+K,,Dadd,1,,,false,,DougyFresh,0,,,false
+L,,Clark,0,,,false,,Dadd,1,,,false
+M,,kelsi,0,,,false,,Ash,1,,,false
+N,,Blue,0,,,false,,Dadd,1,,,false
+O,,Bearmarket/Chris,0,,,false,,Ash,1,,,false
+P,,Dadd,1,,,false,,Ash,0,,,false
+Q,,Slicefury,1,,,false,,Dadd,0,,,false
+I,,Blockchain,0,,,false,,Slicefury,1,,,false
+J,,Slicefury,1,,,false,,Blockchain,0,,,false

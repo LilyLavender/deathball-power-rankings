@@ -1,0 +1,19 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Zfighter,0,,,false,,Ara,1,,,false
+B,,TheDade,0,,,false,,Seth,1,,,false
+C,,Slicefury,1,,,false,,Ara,0,,,false
+D,,DFCBlockchain,1,,,false,,Rodrigo,0,,,false
+E,,Bryan M,1,,,false,,Seth,0,,,false
+F,,Max,0,,,false,,GregGoblin,1,,,false
+G,,Slicefury,1,,,false,,DFCBlockchain,0,,,false
+H,,Bryan M,1,,,false,,GregGoblin,0,,,false
+I,,Slicefury,0,,,false,,Bryan M,1,,,false
+L,,Max,1,,,false,,Zfighter,0,,,false
+M,,Rodrigo,1,,,false,,TheDade,0,,,false
+N,,Seth,1,,,false,,Max,0,,,false
+O,,Ara,0,,,false,,Rodrigo,1,,,false
+P,,DFCBlockchain,0,,,false,,Seth,1,,,false
+Q,,GregGoblin,0,,,false,,Rodrigo,1,,,false
+R,,Seth,1,,,false,,Rodrigo,0,,,false
+S,,Slicefury,1,,,false,,Seth,0,,,false
+J,,Bryan M,1,,,false,,Slicefury,0,,,false

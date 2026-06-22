@@ -1,0 +1,6 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Amelia,0,,,false,,Joe,1,,,false
+B,,Joel,1,,,false,,Meg,0,,,false
+C,,Raven,1,,,false,,Joe,0,,,false
+D,,Mallory,0,,,false,,Joel,1,,,false
+E,,Raven,,,,false,,Joel,,,,false

@@ -1,0 +1,8 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,HOLA,5,,,false,,ELI,2,,,false
+B,,NSAMA,1,,,false,,CHAYAN,5,,,false
+C,,HOLA,3,,,false,,CHAYAN,5,,,false
+F,,ELI,2,,,false,,NSAMA,5,,,false
+G,,HOLA,5,,,false,,NSAMA,1,,,false
+D,,CHAYAN,2,,,false,,HOLA,5,,,false
+E,,HOLA,5,,,false,,CHAYAN,2,,,false

@@ -1,0 +1,29 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Tyler,1,,,false,,Poopoofacejohnson,3,,,false
+B,,Mario boii,1,,,false,,Marco,3,,,false
+C,,corley,3,,,false,,JD,2,,,false
+D,,Kenny,3,,,false,,Amanda,1,,,false
+E,,JD,3,,,false,,Kenny,1,,,false
+F,,Amanda,0,,,false,,Tyler,3,,,false
+G,,Marco,0,,,false,,corley,3,,,false
+H,,Poopoofacejohnson,0,,,false,,Mario boii,3,,,false
+I,,Kenny,1,,,false,,Marco,3,,,false
+J,,corley,3,,,false,,Poopoofacejohnson,1,,,false
+K,,Tyler,0,,,false,,Mario boii,3,,,false
+L,,Amanda,0,,,false,,JD,3,,,false
+M,,Mario boii,3,,,false,,corley,2,,,false
+N,,Marco,3,,,false,,Amanda,1,,,false
+O,,Poopoofacejohnson,2,,,false,,Kenny,3,,,false
+P,,JD,1,,,false,,Tyler,3,,,false
+Q,,JD,3,,,false,,Marco,1,,,false
+R,,Kenny,1,,,false,,Mario boii,3,,,false
+S,,Amanda,0,,,false,,Poopoofacejohnson,3,,,false
+T,,Tyler,0,,,false,,corley,3,,,false
+U,,Mario boii,1,,,false,,Amanda,0,,,false
+V,,Poopoofacejohnson,0,,,false,,JD,3,,,false
+W,,Marco,3,,,false,,Tyler,2,,,false
+X,,corley,3,,,false,,Kenny,2,,,false
+Y,,Amanda,0,,,false,,corley,0,,,false
+Z,,Tyler,3,,,false,,Kenny,1,,,false
+AA,,JD,1,,,false,,Mario boii,3,,,false
+AB,,Marco,3,,,false,,Poopoofacejohnson,1,,,false

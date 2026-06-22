@@ -1,0 +1,9 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+E,,Maetrix,3,,,false,,Austin,1,,,false
+D,,Austin,0,,,false,,Maetrix,2,,,false
+I,,Austin,1,,,false,,Chris,0,,,false
+H,,Kris,1,,,false,,Chris,2,,,false
+B,,Austin,2,,,false,,Chris,1,,,false
+C,,Maetrix,0,,,false,,Ryan,0,,,true
+G,,Ryan,0,,,true,,Kris,0,,,false
+A,,Chris,2,,,false,,Kris,1,,,false

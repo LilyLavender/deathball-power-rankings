@@ -1,0 +1,22 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Armando,0,,,false,,Bryan,1,,,false
+B,,Elena,0,,,false,,Greg,1,,,false
+C,,Seth,0,,,false,,Vernon,1,,,false
+D,,Greg,0,,,false,,Seth,1,,,false
+E,,Bryan,0,,,false,,Elena,1,,,false
+F,,Jordan,1,,,false,,Armando,0,,,false
+G,,Elena,0,,,false,,Jordan,1,,,false
+H,,Seth,0,,,false,,Bryan,1,,,false
+I,,Vernon,1,,,false,,Greg,0,,,false
+J,,Bryan,1,,,false,,Vernon,0,,,false
+K,,Jordan,1,,,false,,Seth,0,,,false
+L,,Armando,0,,,false,,Elena,1,,,false
+M,,Seth,1,,,false,,Armando,0,,,false
+N,,Vernon,0,,,false,,Jordan,1,,,false
+O,,Greg,0,,,false,,Bryan,1,,,false
+P,,Jordan,1,,,false,,Greg,0,,,false
+Q,,Armando,0,,,false,,Vernon,1,,,false
+R,,Elena,0,,,false,,Seth,1,,,false
+S,,Vernon,1,,,false,,Elena,0,,,false
+T,,Greg,1,,,false,,Armando,0,,,false
+U,,Bryan,1,,,false,,Jordan,0,,,false

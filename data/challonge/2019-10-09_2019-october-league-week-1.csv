@@ -1,0 +1,29 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Romaine lettuce,0,,,false,,nobody,0,,,false
+B,,Josh,3,,,false,,Marco,2,,,false
+C,,Wess Mess,3,,,false,,Amanda,1,,,false
+D,,Don Juan,3,,,false,,LongDickJohnson,2,,,false
+E,,Amanda,2,,,false,,Don Juan,3,,,false
+F,,LongDickJohnson,3,,,false,,Romaine lettuce,1,,,false
+G,,Marco,1,,,false,,Wess Mess,3,,,false
+H,,nobody,0,,,false,,Josh,0,,,false
+I,,Don Juan,2,,,false,,Marco,3,,,false
+J,,Wess Mess,0,,,false,,nobody,0,,,false
+K,,Romaine lettuce,1,,,false,,Josh,3,,,false
+L,,LongDickJohnson,3,,,false,,Amanda,2,,,false
+M,,Josh,1,,,false,,Wess Mess,3,,,false
+N,,Marco,3,,,false,,LongDickJohnson,1,,,false
+O,,nobody,0,,,false,,Don Juan,0,,,false
+P,,Amanda,1,,,false,,Romaine lettuce,3,,,false
+Q,,Amanda,2,,,false,,Marco,3,,,false
+R,,Don Juan,0,,,false,,Josh,3,,,false
+S,,LongDickJohnson,0,,,false,,nobody,0,,,false
+T,,Romaine lettuce,0,,,false,,Wess Mess,3,,,false
+U,,Josh,3,,,false,,LongDickJohnson,1,,,false
+V,,nobody,0,,,false,,Amanda,0,,,false
+W,,Marco,0,,,false,,Romaine lettuce,3,,,false
+X,,Wess Mess,3,,,false,,Don Juan,1,,,false
+Y,,LongDickJohnson,0,,,false,,Wess Mess,3,,,false
+Z,,Romaine lettuce,3,,,false,,Don Juan,1,,,false
+AA,,Amanda,2,,,false,,Josh,3,,,false
+AB,,Marco,0,,,false,,nobody,0,,,false

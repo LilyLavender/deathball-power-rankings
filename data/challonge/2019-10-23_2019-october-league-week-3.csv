@@ -1,0 +1,29 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,josh,2,,,false,,42069,3,,,false
+B,,shit eater,3,,,false,,Amanda,1,,,false
+C,,Lawrence,0,,,false,,blake,3,,,false
+D,,qp,3,,,false,,marco,1,,,false
+E,,blake,2,,,false,,qp,3,,,false
+F,,marco,0,,,false,,josh,3,,,false
+G,,Amanda,3,,,false,,Lawrence,1,,,false
+H,,42069,1,,,false,,shit eater,3,,,false
+I,,qp,3,,,false,,Amanda,1,,,false
+J,,Lawrence,1,,,false,,42069,3,,,false
+K,,josh,3,,,false,,shit eater,2,,,false
+L,,marco,1,,,false,,blake,3,,,false
+M,,shit eater,3,,,false,,Lawrence,0,,,false
+N,,Amanda,2,,,false,,marco,3,,,false
+O,,42069,1,,,false,,qp,3,,,false
+P,,blake,2,,,false,,josh,3,,,false
+Q,,blake,2,,,false,,Amanda,3,,,false
+R,,qp,0,,,false,,shit eater,0,,,false
+S,,marco,2,,,false,,42069,3,,,false
+T,,josh,3,,,false,,Lawrence,1,,,false
+U,,shit eater,2,,,false,,marco,3,,,false
+V,,42069,2,,,false,,blake,3,,,false
+W,,Amanda,2,,,false,,josh,3,,,false
+X,,Lawrence,0,,,false,,qp,0,,,false
+Y,,marco,2,,,false,,Lawrence,3,,,false
+Z,,josh,0,,,false,,qp,0,,,false
+AA,,blake,0,,,false,,shit eater,3,,,false
+AB,,Amanda,0,,,false,,42069,3,,,false

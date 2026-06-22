@@ -1,0 +1,16 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Jordan,0,,,false,,Vernon,1,,,false
+B,,Greg,1,,,false,,Emma,0,,,false
+C,,Arabelle,1,,,false,,Armando,0,,,false
+D,,Elena,1,,,false,,Alisa,0,,,false
+E,,Vernon,1,,,false,,Greg,0,,,false
+F,,Arabelle,0,,,false,,Elena,1,,,false
+G,,Vernon,1,,,false,,Elena,0,,,false
+J,,Jordan,1,,,false,,Emma,0,,,false
+K,,Armando,1,,,false,,Alisa,0,,,false
+L,,Arabelle,0,,,false,,Jordan,1,,,false
+M,,Greg,1,,,false,,Armando,0,,,false
+N,,Jordan,1,,,false,,Greg,0,,,false
+O,,Elena,1,,,false,,Jordan,0,,,false
+H,,Vernon,0,,,false,,Elena,1,,,false
+I,,Elena,1,,,false,,Vernon,0,,,false

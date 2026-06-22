@@ -1,0 +1,25 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Claire,0,,,false,,#1TechBryan,1,,,false
+B,,Sea,0,,,false,,Charlotte,1,,,false
+C,,AJ,0,,,false,,Aro,1,,,false
+D,,Dokota,1,,,false,,Tye,0,,,false
+E,,Alex,0,,,false,,Lizz,1,,,false
+F,,Blockchain1337,1,,,false,,#1TechBryan,0,,,false
+G,,Charlotte,1,,,false,,Aro,0,,,false
+H,,Payton,0,,,false,,Dokota,1,,,false
+I,,Slicefury,1,,,false,,Lizz,0,,,false
+J,,Blockchain1337,0,,,false,,Charlotte,1,,,false
+K,,Dokota,0,,,false,,Slicefury,1,,,false
+L,,Charlotte,0,,,false,,Slicefury,1,,,false
+O,,Sea,1,,,false,,AJ,0,,,false
+P,,Lizz,0,,,false,,Claire,1,,,false
+Q,,Payton,0,,,false,,Sea,1,,,false
+R,,Aro,1,,,false,,Tye,0,,,false
+S,,#1TechBryan,1,,,false,,Alex,0,,,false
+T,,Claire,1,,,false,,Sea,0,,,false
+U,,Aro,0,,,false,,#1TechBryan,1,,,false
+V,,Blockchain1337,1,,,false,,Claire,0,,,false
+W,,Dokota,0,,,false,,#1TechBryan,1,,,false
+X,,Blockchain1337,1,,,false,,#1TechBryan,0,,,false
+Y,,Charlotte,0,,,false,,Blockchain1337,1,,,false
+M,,Slicefury,1,,,false,,Blockchain1337,0,,,false

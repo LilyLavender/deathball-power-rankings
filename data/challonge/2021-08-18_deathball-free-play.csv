@@ -1,0 +1,8 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,ChaseChase,0,,,false,,Charli,1,,,false
+B,,Andrew,1,,,false,,HS Bryan,0,,,false
+C,,Alex,1,,,false,,Paga,0,,,false
+D,,Josh,1,,,false,,Crystal,0,,,false
+E,,Charli,1,,,false,,Andrew,0,,,false
+F,,Alex,0,,,false,,Josh,1,,,false
+G,,Charli,1,,,false,,Josh,0,,,false

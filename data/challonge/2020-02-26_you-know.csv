@@ -1,0 +1,8 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Bobbie,0,,,false,,QP,1,,,false
+B,,Blake,0,,,false,,Lawrence,1,,,false
+C,,Alex,0,,,false,,Marco,1,,,false
+D,,Zach,1,,,false,,Corley,0,,,false
+E,,QP,0,,,false,,Lawrence,1,,,false
+F,,Marco,1,,,false,,Zach,0,,,false
+G,,Lawrence,1,,,false,,Marco,0,,,false

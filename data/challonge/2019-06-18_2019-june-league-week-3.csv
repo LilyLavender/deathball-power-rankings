@@ -1,0 +1,29 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,WalkOn,0,,,false,,Corley,0,,,false
+B,,Ddhj,1,,,false,,Justin,0,,,false
+C,,Wess Mess,1,,,false,,Micah,0,,,false
+D,,JD,2,,,false,,Marco,0,,,false
+E,,Micah,0,,,false,,JD,1,,,false
+F,,Marco,0,,,false,,WalkOn,0,,,false
+G,,Justin,0,,,false,,Wess Mess,3,,,false
+H,,Corley,0,,,false,,Ddhj,1,,,false
+I,,JD,2,,,false,,Justin,0,,,false
+J,,Wess Mess,1,,,false,,Corley,0,,,false
+K,,WalkOn,0,,,false,,Ddhj,0,,,false
+L,,Marco,2,,,false,,Micah,0,,,false
+M,,Ddhj,0,,,false,,Wess Mess,3,,,false
+N,,Justin,0,,,false,,Marco,2,,,false
+O,,Corley,3,,,false,,JD,0,,,false
+P,,Micah,0,,,false,,WalkOn,0,,,false
+Q,,Micah,0,,,false,,Justin,3,,,false
+R,,JD,0,,,false,,Ddhj,2,,,false
+S,,Marco,1,,,false,,Corley,0,,,false
+T,,WalkOn,0,,,false,,Wess Mess,0,,,false
+U,,Ddhj,0,,,false,,Marco,1,,,false
+V,,Corley,2,,,false,,Micah,0,,,false
+W,,Justin,0,,,false,,WalkOn,0,,,false
+X,,Wess Mess,1,,,false,,JD,0,,,false
+Y,,Marco,2,,,false,,Wess Mess,0,,,false
+Z,,WalkOn,0,,,false,,JD,0,,,false
+AA,,Micah,1,,,false,,Ddhj,0,,,false
+AB,,Justin,0,,,false,,Corley,2,,,false

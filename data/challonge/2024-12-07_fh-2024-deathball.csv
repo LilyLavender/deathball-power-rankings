@@ -1,0 +1,28 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Andrew Griner,0,,,false,,David Pavao,1,,,false
+B,,Ally,1,,,false,,Arthur Frohlich,0,,,false
+C,,Noah,1,,,false,,Jeremy Mulhaney,0,,,false
+D,,Chris Waterman,0,,,false,,Franky Pinkston,1,,,false
+E,,Jake Lawall,1,,,false,,Malloy,0,,,false
+F,,John Ryan,1,,,false,,Rachel Maria,0,,,false
+G,,Josh Freeman,1,,,false,,David Pavao,0,,,false
+H,,Ally,0,,,false,,Noah,1,,,false
+I,,Nicolo Fusato,0,,,false,,Franky Pinkston,1,,,false
+J,,Jake Lawall,1,,,false,,John Ryan,0,,,false
+K,,Josh Freeman,1,,,false,,Noah,0,,,false
+L,,Franky Pinkston,0,,,false,,Jake Lawall,1,,,false
+M,,Josh Freeman,1,,,false,,Jake Lawall,0,,,false
+P,,Arthur Frohlich,1,,,false,,Jeremy Mulhaney,0,,,false
+Q,,Malloy,1,,,false,,Rachel Maria,0,,,false
+R,,John Ryan,1,,,false,,Andrew Griner,0,,,false
+S,,Nicolo Fusato,1,,,false,,Arthur Frohlich,0,,,false
+T,,Ally,1,,,false,,Chris Waterman,0,,,false
+U,,David Pavao,0,,,false,,Malloy,1,,,false
+V,,John Ryan,1,,,false,,Nicolo Fusato,0,,,false
+W,,Ally,0,,,false,,Malloy,1,,,false
+X,,Noah,1,,,false,,John Ryan,0,,,false
+Y,,Franky Pinkston,0,,,false,,Malloy,1,,,false
+Z,,Noah,0,,,false,,Malloy,1,,,false
+AA,,Jake Lawall,0,,,false,,Malloy,1,,,false
+N,,Josh Freeman,0,,,false,,Malloy,1,,,false
+O,,Malloy,0,,,false,,Josh Freeman,1,,,false

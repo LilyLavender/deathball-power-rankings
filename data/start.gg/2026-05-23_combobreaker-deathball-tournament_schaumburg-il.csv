@@ -1,0 +1,67 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+AH,Mr,Skoots,2,,,false,,zachaction,1,,,false
+AG,Mr,Skoots,2,,,false,,zachaction,1,,,false
+BO,,zachaction,2,,,false,,Sgt Spankcakes,0,,,false
+BN,,SoaringSloth,0,,,false,,Sgt Spankcakes,2,,,false
+AE,Mr,Skoots,2,,,false,,SoaringSloth,0,,,false
+AF,,zachaction,2,,,false,,Sgt Spankcakes,0,,,false
+BL,,SoaringSloth,2,,,false,,Con,0,,,false
+BM,,Sgt Spankcakes,2,,,false,,RHEASTARGIRL,0,,,false
+BJ,,FakeGamer,1,,,false,,Con,2,,,false
+BK,,RHEASTARGIRL,2,,,false,PFaB I SCS,Enickma,0,,,false
+AA,Mr,Skoots,2,,,false,,RHEASTARGIRL,0,,,false
+AB,PFaB I SCS,Enickma,0,,,false,,SoaringSloth,2,,,false
+AC,,zachaction,2,,,false,,Kelz,0,,,false
+AD,,Con,0,,,false,,Sgt Spankcakes,2,,,false
+BF,,Kelz,1,,,false,,FakeGamer,2,,,false
+BG,,Con,2,,,false,Logan Arcade,mosspassion,0,,,false
+BH,,RHEASTARGIRL,2,,,false,,esoterics,1,,,false
+BI,PFaB I SCS,Enickma,2,,,false,,LilyLambda,0,,,false
+BB,,FakeGamer,2,,,false,,MrFruples,1,,,false
+BC,,Ohnnabananna,0,,,false,Logan Arcade,mosspassion,2,,,false
+BD,,esoterics,2,,,false,Psychic Drive,Nikalou,1,,,false
+BE,,Gunstar Green,0,,,false,,LilyLambda,2,,,false
+S,Mr,Skoots,2,,,false,Logan Arcade,mosspassion,0,,,false
+T,,RHEASTARGIRL,2,,,false,,doesNotComphoot,0,,,false
+U,PFaB I SCS,Enickma,2,,,false,FHK,RatGaming,0,,,false
+V,,SoaringSloth,2,,,false,,FakeGamer,0,,,false
+W,,zachaction,2,,,false,,LilyLambda,0,,,false
+X,,Gunstar Green,1,,,false,,Kelz,2,,,false
+Y,,Con,2,,,false,,Mallard,0,,,false
+Z,,Sgt Spankcakes,2,,,false,,esoterics,0,,,false
+AT,,FakeGamer,2,,,false,,Anasazi,1,,,false
+AU,FHK,RatGaming,1,,,false,,MrFruples,2,,,false
+AV,,doesNotComphoot,1,,,false,,Ohnnabananna,2,,,false
+AW,Logan Arcade,mosspassion,2,,,false,,Badguy,0,,,false
+AX,,esoterics,2,,,false,FHK,treemang,1,,,false
+AY,,Mallard,0,,,true,Psychic Drive,Nikalou,0,,,false
+AZ,,Gunstar Green,2,,,false,,ickisuno,0,,,false
+BA,,LilyLambda,2,,,false,,TacBac,1,,,false
+AL,,Anasazi,2,,,false,,bushmang,0,,,false
+AM,FHK,Bootyfrogs,0,,,false,,MrFruples,2,,,false
+AN,,GARZON,0,,,true,,Ohnnabananna,0,,,false
+AO,OFFWORLD,Pops,0,,,true,,Badguy,0,,,false
+AP,FHK,BigSnackary,1,,,false,FHK,treemang,2,,,false
+AQ,,TS4EliteGamer,0,,,false,Psychic Drive,Nikalou,2,,,false
+AR,,Rox,0,,,false,,ickisuno,2,,,false
+AS,,TacBac,2,,,false,FHK,Toaster,0,,,false
+C,Mr,Skoots,2,,,false,FHK,Toaster,0,,,false
+D,Logan Arcade,mosspassion,2,,,false,,TacBac,1,,,false
+E,,RHEASTARGIRL,2,,,false,,ickisuno,0,,,false
+F,,Rox,1,,,false,,doesNotComphoot,2,,,false
+G,Psychic Drive,Nikalou,1,,,false,PFaB I SCS,Enickma,2,,,false
+H,FHK,RatGaming,2,,,false,,TS4EliteGamer,1,,,false
+I,,SoaringSloth,2,,,false,FHK,treemang,1,,,false
+J,,FakeGamer,2,,,false,Nifchat,Nif,0,,,false
+K,,zachaction,2,,,false,,Badguy,0,,,false
+L,OFFWORLD,Pops,0,,,true,,LilyLambda,0,,,false
+M,,Ohnnabananna,0,,,false,,Gunstar Green,2,,,false
+N,,Kelz,0,,,false,,GARZON,0,,,true
+O,,Con,2,,,false,,MrFruples,0,,,false
+P,FHK,Bootyfrogs,1,,,false,,Mallard,2,,,false
+Q,,Sgt Spankcakes,2,,,false,,bushmang,1,,,false
+R,,esoterics,2,,,false,LILY,AndrewWS3,0,,,false
+AJ,LILY,AndrewWS3,0,,,false,,Anasazi,2,,,false
+AK,Nifchat,Nif,0,,,true,FHK,BigSnackary,0,,,false
+A,,Anasazi,1,,,false,FHK,Toaster,2,,,false
+B,,Badguy,2,,,false,FHK,BigSnackary,0,,,false

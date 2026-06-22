@@ -1,0 +1,8 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Charli,1,,,false,,Andrew,0,,,false
+B,,Justice,0,,,false,,Cloud,1,,,false
+C,,Colin,0,,,false,,Sarah,1,,,false
+D,,Bryce,1,,,false,,Shantia,0,,,false
+E,,Charli,1,,,false,,Cloud,0,,,false
+F,,Sarah,0,,,false,,Bryce,1,,,false
+G,,Charli,1,,,false,,Bryce,0,,,false

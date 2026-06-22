@@ -1,0 +1,21 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,marco,3,,,false,,donald,1,,,false
+B,,Amanda,0,,,false,,Corley,3,,,false
+C,,Lawrence,3,,,false,,Bobbie,2,,,false
+D,,Laura,2,,,false,,josh,3,,,false
+E,,tj,1,,,false,,wes,3,,,false
+F,,tj,3,,,false,,donald,1,,,false
+G,,Laura,1,,,false,,Bobbie,3,,,false
+H,,wes,2,,,false,,Amanda,3,,,false
+I,,Lawrence,1,,,false,,josh,3,,,false
+J,,marco,3,,,false,,Corley,0,,,false
+K,,Corley,3,,,false,,Bobbie,2,,,false
+L,,Lawrence,1,,,false,,wes,3,,,false
+M,,Amanda,3,,,false,,tj,0,,,false
+N,,donald,1,,,false,,Laura,3,,,false
+O,,marco,1,,,false,,josh,3,,,false
+P,,tj,0,,,false,,Laura,0,,,false
+Q,,donald,0,,,false,,Lawrence,0,,,false
+R,,wes,0,,,false,,Bobbie,0,,,false
+S,,josh,0,,,false,,Corley,0,,,false
+T,,marco,0,,,false,,Amanda,0,,,false

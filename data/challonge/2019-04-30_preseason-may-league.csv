@@ -1,0 +1,16 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Christop,0,,,false,,Logan,1,,,false
+B,,Tyler,0,,,false,,Matt,1,,,false
+C,,Jay,0,,,false,,Brian,1,,,false
+D,,Matt,1,,,false,,Jay,0,,,false
+E,,Brian,0,,,false,,Christop,1,,,false
+F,,Logan,1,,,false,,Tyler,0,,,false
+G,,Brian,1,,,false,,Matt,0,,,false
+H,,Jay,0,,,false,,Logan,1,,,false
+I,,Christop,0,,,false,,Tyler,1,,,false
+J,,Tyler,0,,,false,,Jay,1,,,false
+K,,Logan,1,,,false,,Brian,0,,,false
+L,,Matt,0,,,false,,Christop,1,,,false
+M,,Brian,0,,,false,,Tyler,1,,,false
+N,,Christop,1,,,false,,Jay,0,,,false
+O,,Matt,1,,,false,,Logan,0,,,false

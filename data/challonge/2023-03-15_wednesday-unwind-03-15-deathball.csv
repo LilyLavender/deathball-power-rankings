@@ -1,0 +1,45 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Coke,1,,,false,,Blue,0,,,false
+B,,Joey,0,,,false,,Sierra,1,,,false
+C,,Christian,1,,,false,,Aaron,0,,,false
+D,,Beluga,1,,,false,,reegybo,0,,,false
+E,,Tilted then Gio,0,,,false,,Troy,1,,,false
+F,,Gordon,0,,,false,,Fidel,1,,,false
+G,,Dozing,0,,,false,,June,1,,,false
+H,,Creative Destruction,1,,,false,,Coke,0,,,false
+I,,Caden/Glass Window,0,,,false,,Benny,1,,,false
+J,,Jerry Garcia,1,,,false,,Sierra,0,,,false
+K,,Emily (ROI),0,,,false,,Christian,1,,,false
+L,,Blockchain,0,,,false,,Beluga,1,,,false
+M,,Mitchell,1,,,false,,Troy,0,,,false
+N,,Andrewwww,1,,,false,,Fidel,0,,,false
+O,,Bowen,1,,,false,,June,0,,,false
+P,,Creative Destruction,1,,,false,,Benny,0,,,false
+Q,,Jerry Garcia,0,,,false,,Christian,1,,,false
+R,,Beluga,1,,,false,,Mitchell,0,,,false
+S,,Andrewwww,1,,,false,,Bowen,0,,,false
+T,,Creative Destruction,1,,,false,,Christian,0,,,false
+U,,Beluga,0,,,false,,Andrewwww,1,,,false
+V,,Creative Destruction,0,,,false,,Andrewwww,1,,,false
+Y,,June,0,,,false,,Blue,1,,,false
+Z,,Troy,0,,,false,,Joey,1,,,false
+AA,,Blockchain,1,,,false,,Aaron,0,,,false
+AB,,Emily (ROI),1,,,false,,reegybo,0,,,false
+AC,,Sierra,0,,,false,,Tilted then Gio,1,,,false
+AD,,Caden/Glass Window,0,,,false,,Gordon,1,,,false
+AE,,Coke,1,,,false,,Dozing,0,,,false
+AF,,Fidel,1,,,false,,Blue,0,,,false
+AG,,Joey,1,,,false,,Blockchain,0,,,false
+AH,,Emily (ROI),0,,,false,,Tilted then Gio,1,,,false
+AI,,Gordon,0,,,false,,Coke,1,,,false
+AJ,,Jerry Garcia,1,,,false,,Fidel,0,,,false
+AK,,Benny,0,,,false,,Joey,1,,,false
+AL,,Bowen,0,,,false,,Tilted then Gio,1,,,false
+AM,,Mitchell,0,,,false,,Coke,1,,,false
+AN,,Jerry Garcia,0,,,false,,Joey,1,,,false
+AO,,Tilted then Gio,1,,,false,,Coke,0,,,false
+AP,,Beluga,0,,,false,,Joey,1,,,false
+AQ,,Christian,0,,,false,,Tilted then Gio,1,,,false
+AR,,Joey,0,,,false,,Tilted then Gio,1,,,false
+AS,,Creative Destruction,0,,,false,,Tilted then Gio,1,,,false
+W,,Andrewwww,1,,,false,,Tilted then Gio,0,,,false

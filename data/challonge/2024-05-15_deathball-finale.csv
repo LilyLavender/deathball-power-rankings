@@ -1,0 +1,18 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Blockchain,0,,,false,,Dade,1,,,false
+B,,Simple interest,1,,,false,,Dade,0,,,false
+C,,Slicefury,1,,,false,,Stabby,0,,,false
+D,,Bryan P,1,,,false,,Mad Max Tyler,0,,,false
+E,,Doug,1,,,false,,Joe,0,,,false
+F,,Simple interest,0,,,false,,Slicefury,1,,,false
+G,,Bryan P,1,,,false,,Doug,0,,,false
+H,,Slicefury,0,,,false,,Bryan P,1,,,false
+K,,Joe,0,,,false,,Blockchain,1,,,false
+L,,Mad Max Tyler,1,,,false,,Blockchain,0,,,false
+M,,Stabby,0,,,false,,Dade,1,,,false
+N,,Simple interest,0,,,false,,Mad Max Tyler,1,,,false
+O,,Doug,1,,,false,,Dade,0,,,false
+P,,Mad Max Tyler,1,,,false,,Doug,0,,,false
+Q,,Slicefury,1,,,false,,Mad Max Tyler,0,,,false
+I,,Bryan P,0,,,false,,Slicefury,1,,,false
+J,,Slicefury,1,,,false,,Bryan P,0,,,false

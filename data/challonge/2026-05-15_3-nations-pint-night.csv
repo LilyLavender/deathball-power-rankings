@@ -1,0 +1,11 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Callen,1,,,false,,Evan,0,,,false
+B,,Devon,1,,,false,,Jed,0,,,false
+C,,Saul,1,,,false,,Carl,0,,,false
+D,,Greg,1,,,false,,Callen,0,,,false
+E,,Hellman,1,,,false,,Noelle,0,,,false
+F,,Ethan,1,,,false,,Devon,0,,,false
+G,,Bryan,1,,,false,,Saul,0,,,false
+H,,Greg,1,,,false,,Hellman,0,,,false
+I,,Ethan,0,,,false,,Bryan,1,,,false
+J,,Greg,0,,,false,,Bryan,1,,,false

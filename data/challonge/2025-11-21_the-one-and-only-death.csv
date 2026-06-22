@@ -1,0 +1,23 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Greg,1,,,false,,Darian,0,,,false
+B,,Anthony,0,,,false,,Bryan,1,,,false
+C,,Ethan,1,,,false,,Anthony S,0,,,false
+D,,Andrew,1,,,false,,Misses Spoom,0,,,false
+E,,Spoom,1,,,false,,Greg,0,,,false
+F,,Faulkner,0,,,false,,Bryan,1,,,false
+G,,Vernon,0,,,false,,Ethan,1,,,false
+H,,Ryan,0,,,false,,Andrew,1,,,false
+I,,Spoom,0,,,false,,Bryan,1,,,false
+J,,Ethan,0,,,false,,Andrew,1,,,false
+K,,Bryan,1,,,false,,Andrew,0,,,false
+N,,Ryan,0,,,false,,Darian,1,,,false
+O,,Vernon,1,,,false,,Anthony,0,,,false
+P,,Faulkner,0,,,false,,Anthony S,1,,,false
+Q,,Greg,1,,,false,,Misses Spoom,0,,,false
+R,,Darian,0,,,false,,Vernon,1,,,false
+S,,Anthony S,1,,,false,,Greg,0,,,false
+T,,Spoom,0,,,false,,Vernon,1,,,false
+U,,Ethan,0,,,false,,Anthony S,1,,,false
+V,,Vernon,0,,,false,,Anthony S,1,,,false
+W,,Andrew,0,,,false,,Anthony S,1,,,false
+L,,Bryan,1,,,false,,Anthony S,0,,,false

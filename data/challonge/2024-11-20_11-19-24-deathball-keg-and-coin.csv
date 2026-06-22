@@ -1,0 +1,20 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,PublicAlly,0,,,false,,josh,1,,,false
+B,,Jeremy,1,,,false,,Jason,0,,,false
+C,,nicolo,0,,,false,,josh,1,,,false
+D,,jacoby,1,,,false,,amethyst,0,,,false
+E,,john,1,,,false,,Jeremy,0,,,false
+F,,Denise,1,,,false,,xary,0,,,false
+G,,josh,0,,,false,,jacoby,1,,,false
+H,,john,1,,,false,,Denise,0,,,false
+I,,jacoby,1,,,false,,john,0,,,false
+L,,xary,0,,,false,,PublicAlly,1,,,false
+M,,amethyst,1,,,false,,Jason,0,,,false
+N,,Jeremy,1,,,false,,PublicAlly,0,,,false
+O,,nicolo,0,,,false,,amethyst,1,,,false
+P,,josh,1,,,false,,Jeremy,0,,,false
+Q,,Denise,0,,,false,,amethyst,1,,,false
+R,,josh,1,,,false,,amethyst,0,,,false
+S,,john,0,,,false,,josh,1,,,false
+J,,jacoby,,,,false,,josh,,,,false
+K,,,,,,false,,,,,,false

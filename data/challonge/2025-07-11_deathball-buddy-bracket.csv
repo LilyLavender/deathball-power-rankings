@@ -1,0 +1,15 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Mrlink2k,2,,,false,,marcy,0,,,false
+B,,Willy,2,,,false,,Clover,0,,,false
+C,,Keucher,2,,,false,,Audrey,0,,,false
+D,,Jaq,2,,,false,,Aces,0,,,false
+E,,Mrlink2k,2,,,false,,Willy,1,,,false
+F,,Keucher,2,,,false,,Jaq,0,,,false
+G,,Mrlink2k,2,,,false,,Keucher,1,,,false
+J,,marcy,2,,,false,,Clover,1,,,false
+K,,Audrey,2,,,false,,Aces,0,,,false
+L,,Jaq,1,,,false,,marcy,0,,,false
+M,,Willy,2,,,false,,Audrey,0,,,false
+N,,Jaq,1,,,false,,Willy,2,,,false
+O,,Keucher,1,,,false,,Willy,2,,,false
+H,,Mrlink2k,3,,,false,,Willy,0,,,false

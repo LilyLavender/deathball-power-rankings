@@ -1,0 +1,29 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Alex,0,,,false,,Chris B,1,,,false
+B,,Kyle G,0,,,false,,Jenna,1,,,false
+C,,Steve,0,,,false,,Chaco,1,,,false
+D,,Cody,1,,,false,,Quinn,0,,,false
+E,,Ryan,0,,,false,,Dylan,1,,,false
+F,,Lev,1,,,false,,Alexander,0,,,false
+G,,Cesar,0,,,false,,Brandon,1,,,false
+H,,Jcc,0,,,false,,Chris B,1,,,false
+I,,Jenna,0,,,false,,Chaco,1,,,false
+J,,Cody,1,,,false,,Dylan,0,,,false
+K,,Lev,1,,,false,,Brandon,0,,,false
+L,,Chris B,1,,,false,,Chaco,0,,,false
+M,,Cody,1,,,false,,Lev,0,,,false
+N,,Chris B,1,,,false,,Cody,0,,,false
+Q,,Kyle G,0,,,false,,Steve,1,,,false
+R,,Quinn,1,,,false,,Ryan,0,,,false
+S,,Alexander,0,,,false,,Cesar,1,,,false
+T,,Brandon,0,,,false,,Alex,1,,,false
+U,,Dylan,1,,,false,,Steve,0,,,false
+V,,Jenna,1,,,false,,Quinn,0,,,false
+W,,Jcc,0,,,false,,Cesar,1,,,false
+X,,Alex,1,,,false,,Dylan,0,,,false
+Y,,Jenna,0,,,false,,Cesar,1,,,false
+Z,,Chaco,0,,,false,,Alex,1,,,false
+AA,,Lev,0,,,false,,Cesar,1,,,false
+AB,,Alex,1,,,false,,Cesar,0,,,false
+AC,,Cody,0,,,false,,Alex,1,,,false
+O,,Chris B,1,,,false,,Alex,0,,,false

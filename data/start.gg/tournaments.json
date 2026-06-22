@@ -1,0 +1,6701 @@
+{
+ "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview": {
+  "url": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+  "event_id": 1615861,
+  "tournament_id": 907296,
+  "fetched_at": "2026-06-22T01:10:59.836Z",
+  "tournament": {
+   "id": 907296,
+   "name": "ComboBreaker DeathBall Tournament",
+   "startAt": 1779573600,
+   "city": "Schaumburg",
+   "addrState": "IL"
+  },
+  "event": {
+   "id": 1615861,
+   "name": "1v1 Deathball"
+  },
+  "entrants": [
+   {
+    "id": 23625093,
+    "participants": [
+     {
+      "id": 21682245,
+      "gamerTag": "BigSnackary",
+      "prefix": "FHK"
+     }
+    ]
+   },
+   {
+    "id": 23625059,
+    "participants": [
+     {
+      "id": 21682216,
+      "gamerTag": "Toaster",
+      "prefix": "FHK"
+     }
+    ]
+   },
+   {
+    "id": 23624980,
+    "participants": [
+     {
+      "id": 21682156,
+      "gamerTag": "Anasazi",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 23624949,
+    "participants": [
+     {
+      "id": 21682125,
+      "gamerTag": "Badguy",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23624893,
+    "participants": [
+     {
+      "id": 21682075,
+      "gamerTag": "MrFruples",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23624880,
+    "participants": [
+     {
+      "id": 21682063,
+      "gamerTag": "Enickma",
+      "prefix": "PFaB I SCS"
+     }
+    ]
+   },
+   {
+    "id": 23624726,
+    "participants": [
+     {
+      "id": 21681935,
+      "gamerTag": "treemang",
+      "prefix": "FHK"
+     }
+    ]
+   },
+   {
+    "id": 23624685,
+    "participants": [
+     {
+      "id": 21681909,
+      "gamerTag": "bushmang",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 23624635,
+    "participants": [
+     {
+      "id": 21681863,
+      "gamerTag": "Gunstar Green",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23624547,
+    "participants": [
+     {
+      "id": 21681795,
+      "gamerTag": "ickisuno",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23623543,
+    "participants": [
+     {
+      "id": 21680951,
+      "gamerTag": "doesNotComphoot",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23623372,
+    "participants": [
+     {
+      "id": 21680806,
+      "gamerTag": "GARZON",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 23622926,
+    "participants": [
+     {
+      "id": 21680428,
+      "gamerTag": "AndrewWS3",
+      "prefix": "LILY"
+     }
+    ]
+   },
+   {
+    "id": 23622025,
+    "participants": [
+     {
+      "id": 21679681,
+      "gamerTag": "Nif",
+      "prefix": "Nifchat"
+     }
+    ]
+   },
+   {
+    "id": 23620784,
+    "participants": [
+     {
+      "id": 21678598,
+      "gamerTag": "TS4EliteGamer",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 23618579,
+    "participants": [
+     {
+      "id": 21676728,
+      "gamerTag": "Mallard",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23618557,
+    "participants": [
+     {
+      "id": 21676712,
+      "gamerTag": "LilyLambda",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23618146,
+    "participants": [
+     {
+      "id": 21676381,
+      "gamerTag": "TacBac",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 23617671,
+    "participants": [
+     {
+      "id": 21676036,
+      "gamerTag": "mosspassion",
+      "prefix": "Logan Arcade"
+     }
+    ]
+   },
+   {
+    "id": 23616404,
+    "participants": [
+     {
+      "id": 21675049,
+      "gamerTag": "Pops",
+      "prefix": "OFFWORLD"
+     }
+    ]
+   },
+   {
+    "id": 23616101,
+    "participants": [
+     {
+      "id": 21674792,
+      "gamerTag": "Bootyfrogs",
+      "prefix": "FHK"
+     }
+    ]
+   },
+   {
+    "id": 23615938,
+    "participants": [
+     {
+      "id": 21674635,
+      "gamerTag": "RatGaming",
+      "prefix": "FHK"
+     }
+    ]
+   },
+   {
+    "id": 23615909,
+    "participants": [
+     {
+      "id": 21674608,
+      "gamerTag": "FakeGamer",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23615760,
+    "participants": [
+     {
+      "id": 21674468,
+      "gamerTag": "esoterics",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 23614773,
+    "participants": [
+     {
+      "id": 21673604,
+      "gamerTag": "Kelz",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 23599829,
+    "participants": [
+     {
+      "id": 21660531,
+      "gamerTag": "Rox",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23453402,
+    "participants": [
+     {
+      "id": 21530615,
+      "gamerTag": "RHEASTARGIRL",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23377560,
+    "participants": [
+     {
+      "id": 21470123,
+      "gamerTag": "Ohnnabananna",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23377512,
+    "participants": [
+     {
+      "id": 21470084,
+      "gamerTag": "Sgt Spankcakes",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23373701,
+    "participants": [
+     {
+      "id": 21467287,
+      "gamerTag": "SoaringSloth",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23371969,
+    "participants": [
+     {
+      "id": 21466146,
+      "gamerTag": "Nikalou",
+      "prefix": "Psychic Drive"
+     }
+    ]
+   },
+   {
+    "id": 23366673,
+    "participants": [
+     {
+      "id": 21461526,
+      "gamerTag": "Con",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23366576,
+    "participants": [
+     {
+      "id": 21461447,
+      "gamerTag": "zachaction",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 23366495,
+    "participants": [
+     {
+      "id": 21461369,
+      "gamerTag": "Skoots",
+      "prefix": "Mr"
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 103269810,
+    "identifier": "AH",
+    "round": 7,
+    "winnerId": 23366495,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366495
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23366576
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269809,
+    "identifier": "AG",
+    "round": 6,
+    "winnerId": 23366495,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366495
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23366576
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269937,
+    "identifier": "BO",
+    "round": -12,
+    "winnerId": 23366576,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366576
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23377512
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269936,
+    "identifier": "BN",
+    "round": -11,
+    "winnerId": 23377512,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23373701
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23377512
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269807,
+    "identifier": "AE",
+    "round": 5,
+    "winnerId": 23366495,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366495
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23373701
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269808,
+    "identifier": "AF",
+    "round": 5,
+    "winnerId": 23366576,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366576
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23377512
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269934,
+    "identifier": "BL",
+    "round": -10,
+    "winnerId": 23373701,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23373701
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23366673
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269935,
+    "identifier": "BM",
+    "round": -10,
+    "winnerId": 23377512,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23377512
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23453402
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269932,
+    "identifier": "BJ",
+    "round": -9,
+    "winnerId": 23366673,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615909
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23366673
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269933,
+    "identifier": "BK",
+    "round": -9,
+    "winnerId": 23453402,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23453402
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624880
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269803,
+    "identifier": "AA",
+    "round": 4,
+    "winnerId": 23366495,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366495
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23453402
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269804,
+    "identifier": "AB",
+    "round": 4,
+    "winnerId": 23373701,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624880
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23373701
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269805,
+    "identifier": "AC",
+    "round": 4,
+    "winnerId": 23366576,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366576
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23614773
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269806,
+    "identifier": "AD",
+    "round": 4,
+    "winnerId": 23377512,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366673
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23377512
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269928,
+    "identifier": "BF",
+    "round": -8,
+    "winnerId": 23615909,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23614773
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23615909
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269929,
+    "identifier": "BG",
+    "round": -8,
+    "winnerId": 23366673,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366673
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23617671
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269930,
+    "identifier": "BH",
+    "round": -8,
+    "winnerId": 23453402,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23453402
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23615760
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269931,
+    "identifier": "BI",
+    "round": -8,
+    "winnerId": 23624880,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624880
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618557
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269924,
+    "identifier": "BB",
+    "round": -7,
+    "winnerId": 23615909,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615909
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624893
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269925,
+    "identifier": "BC",
+    "round": -7,
+    "winnerId": 23617671,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23377560
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23617671
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269926,
+    "identifier": "BD",
+    "round": -7,
+    "winnerId": 23615760,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615760
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23371969
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269927,
+    "identifier": "BE",
+    "round": -7,
+    "winnerId": 23618557,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624635
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618557
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269795,
+    "identifier": "S",
+    "round": 3,
+    "winnerId": 23366495,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366495
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23617671
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269796,
+    "identifier": "T",
+    "round": 3,
+    "winnerId": 23453402,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23453402
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23623543
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269797,
+    "identifier": "U",
+    "round": 3,
+    "winnerId": 23624880,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624880
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23615938
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269798,
+    "identifier": "V",
+    "round": 3,
+    "winnerId": 23373701,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23373701
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23615909
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269799,
+    "identifier": "W",
+    "round": 3,
+    "winnerId": 23366576,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366576
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618557
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269800,
+    "identifier": "X",
+    "round": 3,
+    "winnerId": 23614773,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624635
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23614773
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269801,
+    "identifier": "Y",
+    "round": 3,
+    "winnerId": 23366673,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366673
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618579
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269802,
+    "identifier": "Z",
+    "round": 3,
+    "winnerId": 23377512,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23377512
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23615760
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269916,
+    "identifier": "AT",
+    "round": -6,
+    "winnerId": 23615909,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615909
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624980
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269917,
+    "identifier": "AU",
+    "round": -6,
+    "winnerId": 23624893,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615938
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624893
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269918,
+    "identifier": "AV",
+    "round": -6,
+    "winnerId": 23377560,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23623543
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23377560
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269919,
+    "identifier": "AW",
+    "round": -6,
+    "winnerId": 23617671,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23617671
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624949
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269920,
+    "identifier": "AX",
+    "round": -6,
+    "winnerId": 23615760,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615760
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624726
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269921,
+    "identifier": "AY",
+    "round": -6,
+    "winnerId": 23371969,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23618579
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23371969
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269922,
+    "identifier": "AZ",
+    "round": -6,
+    "winnerId": 23624635,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624635
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624547
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269923,
+    "identifier": "BA",
+    "round": -6,
+    "winnerId": 23618557,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23618557
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618146
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269908,
+    "identifier": "AL",
+    "round": -5,
+    "winnerId": 23624980,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624980
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624685
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269909,
+    "identifier": "AM",
+    "round": -5,
+    "winnerId": 23624893,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23616101
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624893
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269910,
+    "identifier": "AN",
+    "round": -5,
+    "winnerId": 23377560,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23623372
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23377560
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269911,
+    "identifier": "AO",
+    "round": -5,
+    "winnerId": 23624949,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23616404
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624949
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269912,
+    "identifier": "AP",
+    "round": -5,
+    "winnerId": 23624726,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23625093
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624726
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269913,
+    "identifier": "AQ",
+    "round": -5,
+    "winnerId": 23371969,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23620784
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23371969
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269914,
+    "identifier": "AR",
+    "round": -5,
+    "winnerId": 23624547,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23599829
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624547
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269915,
+    "identifier": "AS",
+    "round": -5,
+    "winnerId": 23618146,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23618146
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23625059
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269779,
+    "identifier": "C",
+    "round": 2,
+    "winnerId": 23366495,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366495
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23625059
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269780,
+    "identifier": "D",
+    "round": 2,
+    "winnerId": 23617671,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23617671
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618146
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269781,
+    "identifier": "E",
+    "round": 2,
+    "winnerId": 23453402,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23453402
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624547
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269782,
+    "identifier": "F",
+    "round": 2,
+    "winnerId": 23623543,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23599829
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23623543
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269783,
+    "identifier": "G",
+    "round": 2,
+    "winnerId": 23624880,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23371969
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624880
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269784,
+    "identifier": "H",
+    "round": 2,
+    "winnerId": 23615938,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615938
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23620784
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269785,
+    "identifier": "I",
+    "round": 2,
+    "winnerId": 23373701,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23373701
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624726
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269786,
+    "identifier": "J",
+    "round": 2,
+    "winnerId": 23615909,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615909
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23622025
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269787,
+    "identifier": "K",
+    "round": 2,
+    "winnerId": 23366576,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366576
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624949
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269788,
+    "identifier": "L",
+    "round": 2,
+    "winnerId": 23618557,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23616404
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618557
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269789,
+    "identifier": "M",
+    "round": 2,
+    "winnerId": 23624635,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23377560
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624635
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269790,
+    "identifier": "N",
+    "round": 2,
+    "winnerId": 23614773,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23614773
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23623372
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269791,
+    "identifier": "O",
+    "round": 2,
+    "winnerId": 23366673,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23366673
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624893
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269792,
+    "identifier": "P",
+    "round": 2,
+    "winnerId": 23618579,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23616101
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23618579
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269793,
+    "identifier": "Q",
+    "round": 2,
+    "winnerId": 23377512,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23377512
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624685
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269794,
+    "identifier": "R",
+    "round": 2,
+    "winnerId": 23615760,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23615760
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23622926
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269892,
+    "identifier": "AJ",
+    "round": -4,
+    "winnerId": 23624980,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23622926
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23624980
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269900,
+    "identifier": "AK",
+    "round": -4,
+    "winnerId": 23625093,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23622025
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23625093
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269748,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 23625059,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624980
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23625059
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 103269764,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 23624949,
+    "slots": [
+     {
+      "entrant": {
+       "id": 23624949
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 23625093
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   }
+  ]
+ },
+ "https://www.start.gg/tournament/deathball-leaderboard-shad-6/events/deathball-1v1-bracket/brackets/2221771/3225242/overview": {
+  "url": "https://www.start.gg/tournament/deathball-leaderboard-shad-6/events/deathball-1v1-bracket/brackets/2221771/3225242/overview",
+  "event_id": 1574215,
+  "tournament_id": 887581,
+  "fetched_at": "2026-06-22T01:11:06.066Z",
+  "tournament": {
+   "id": 887581,
+   "name": "DeathBall @ Leaderboard Shad #6",
+   "startAt": 1773014400,
+   "city": "Jacksonville",
+   "addrState": "FL"
+  },
+  "event": {
+   "id": 1574215,
+   "name": "DeathBall 1v1 Bracket"
+  },
+  "entrants": [
+   {
+    "id": 22854063,
+    "participants": [
+     {
+      "id": 20999185,
+      "gamerTag": "Jay",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 22854050,
+    "participants": [
+     {
+      "id": 20999176,
+      "gamerTag": "Bicker",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22854047,
+    "participants": [
+     {
+      "id": 20999173,
+      "gamerTag": "Cole",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22854048,
+    "participants": [
+     {
+      "id": 20999174,
+      "gamerTag": "Ty",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22854049,
+    "participants": [
+     {
+      "id": 20999175,
+      "gamerTag": "Squid",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22854046,
+    "participants": [
+     {
+      "id": 20999172,
+      "gamerTag": "Austin",
+      "prefix": null
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 100240359,
+    "identifier": "E",
+    "round": 3,
+    "winnerId": 22854047,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854047
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854046
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240375,
+    "identifier": "K",
+    "round": -6,
+    "winnerId": 22854063,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854046
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854063
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240374,
+    "identifier": "J",
+    "round": -5,
+    "winnerId": 22854063,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854063
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854048
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240357,
+    "identifier": "C",
+    "round": 2,
+    "winnerId": 22854047,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854047
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854050
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240358,
+    "identifier": "D",
+    "round": 2,
+    "winnerId": 22854046,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854046
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854049
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240372,
+    "identifier": "H",
+    "round": -4,
+    "winnerId": 22854063,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854049
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854063
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240373,
+    "identifier": "I",
+    "round": -4,
+    "winnerId": 22854048,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854050
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854048
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240354,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 22854050,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854063
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854050
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240356,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 22854049,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854048
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854049
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240360,
+    "identifier": "F",
+    "round": 4,
+    "winnerId": null,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22854047
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22854063
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100240361,
+    "identifier": "G",
+    "round": 4,
+    "winnerId": null,
+    "slots": [
+     {
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "entrant": null,
+      "standing": null
+     }
+    ],
+    "games": null
+   }
+  ]
+ },
+ "https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview": {
+  "url": "https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview",
+  "event_id": 1570287,
+  "tournament_id": 885703,
+  "fetched_at": "2026-06-22T01:11:14.751Z",
+  "tournament": {
+   "id": 885703,
+   "name": "DeathBall @ Leaderboard Shad #5",
+   "startAt": 1772413200,
+   "city": "Jacksonville",
+   "addrState": "FL"
+  },
+  "event": {
+   "id": 1570287,
+   "name": "DeathBall 1v1 Bracket"
+  },
+  "entrants": [
+   {
+    "id": 22779614,
+    "participants": [
+     {
+      "id": 20929783,
+      "gamerTag": "Alex",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22779615,
+    "participants": [
+     {
+      "id": 20929784,
+      "gamerTag": "Ty",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22779611,
+    "participants": [
+     {
+      "id": 20929780,
+      "gamerTag": "Carson",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22779612,
+    "participants": [
+     {
+      "id": 20929781,
+      "gamerTag": "Chris",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22779613,
+    "participants": [
+     {
+      "id": 20929782,
+      "gamerTag": "Maetrix",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22779608,
+    "participants": [
+     {
+      "id": 20929777,
+      "gamerTag": "Dan",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22779609,
+    "participants": [
+     {
+      "id": 20929778,
+      "gamerTag": "Sam",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22779610,
+    "participants": [
+     {
+      "id": 20929779,
+      "gamerTag": "Tim",
+      "prefix": null
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 99976823,
+    "identifier": "G",
+    "round": 3,
+    "winnerId": 22779608,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779608
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779610
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976839,
+    "identifier": "O",
+    "round": -6,
+    "winnerId": 22779614,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779610
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779614
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976838,
+    "identifier": "N",
+    "round": -5,
+    "winnerId": 22779614,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779614
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779613
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976821,
+    "identifier": "E",
+    "round": 2,
+    "winnerId": 22779608,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779608
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779611
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976822,
+    "identifier": "F",
+    "round": 2,
+    "winnerId": 22779610,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779614
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779610
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976836,
+    "identifier": "L",
+    "round": -4,
+    "winnerId": 22779614,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779614
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779612
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976837,
+    "identifier": "M",
+    "round": -4,
+    "winnerId": 22779613,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779611
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779613
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976834,
+    "identifier": "J",
+    "round": -3,
+    "winnerId": 22779612,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779615
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779612
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976835,
+    "identifier": "K",
+    "round": -3,
+    "winnerId": 22779613,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779609
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779613
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976817,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 22779608,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779608
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779615
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976818,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 22779611,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779611
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779612
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976819,
+    "identifier": "C",
+    "round": 1,
+    "winnerId": 22779614,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779609
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779614
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976820,
+    "identifier": "D",
+    "round": 1,
+    "winnerId": 22779610,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779610
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779613
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976824,
+    "identifier": "H",
+    "round": 4,
+    "winnerId": null,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22779608
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22779614
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99976825,
+    "identifier": "I",
+    "round": 4,
+    "winnerId": null,
+    "slots": [
+     {
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "entrant": null,
+      "standing": null
+     }
+    ],
+    "games": null
+   }
+  ]
+ },
+ "https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview": {
+  "url": "https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview",
+  "event_id": 1566908,
+  "tournament_id": 884082,
+  "fetched_at": "2026-06-22T01:11:15.599Z",
+  "tournament": {
+   "id": 884082,
+   "name": "DeathBall @ Leaderboard Shad #4",
+   "startAt": 1771808400,
+   "city": "Jacksonville",
+   "addrState": "FL"
+  },
+  "event": {
+   "id": 1566908,
+   "name": "DeathBall 1v1 Bracket"
+  },
+  "entrants": [
+   {
+    "id": 22708327,
+    "participants": [
+     {
+      "id": 20865342,
+      "gamerTag": "Logan",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22708324,
+    "participants": [
+     {
+      "id": 20865339,
+      "gamerTag": "L",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22708325,
+    "participants": [
+     {
+      "id": 20865340,
+      "gamerTag": "Jay",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22708326,
+    "participants": [
+     {
+      "id": 20865341,
+      "gamerTag": "Zane",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22708322,
+    "participants": [
+     {
+      "id": 20865337,
+      "gamerTag": "Cole",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22708323,
+    "participants": [
+     {
+      "id": 20865338,
+      "gamerTag": "Ve",
+      "prefix": null
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 99697697,
+    "identifier": "F",
+    "round": 4,
+    "winnerId": 22708326,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708322
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708326
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 3
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697698,
+    "identifier": "G",
+    "round": 4,
+    "winnerId": 22708326,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708326
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708322
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697696,
+    "identifier": "E",
+    "round": 3,
+    "winnerId": 22708322,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708322
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708327
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697712,
+    "identifier": "K",
+    "round": -6,
+    "winnerId": 22708326,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708327
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708326
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697711,
+    "identifier": "J",
+    "round": -5,
+    "winnerId": 22708326,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708323
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708326
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697694,
+    "identifier": "C",
+    "round": 2,
+    "winnerId": 22708322,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708326
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708322
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697695,
+    "identifier": "D",
+    "round": 2,
+    "winnerId": 22708327,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708325
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708327
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697709,
+    "identifier": "H",
+    "round": -4,
+    "winnerId": 22708323,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708325
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708323
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697710,
+    "identifier": "I",
+    "round": -4,
+    "winnerId": 22708326,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708326
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708324
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697691,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 22708322,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708323
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708322
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 99697693,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 22708327,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22708324
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22708327
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   }
+  ]
+ },
+ "https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v1-bracket/brackets/2228855/3234121/overview": {
+  "url": "https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v1-bracket/brackets/2228855/3234121/overview",
+  "event_id": 1579722,
+  "tournament_id": 890164,
+  "fetched_at": "2026-06-22T01:11:16.279Z",
+  "tournament": {
+   "id": 890164,
+   "name": "DeathBall @ Leaderboard Shad #7",
+   "startAt": 1773619200,
+   "city": "Jacksonville",
+   "addrState": "FL"
+  },
+  "event": {
+   "id": 1579722,
+   "name": "DeathBall 1v1 Bracket"
+  },
+  "entrants": [
+   {
+    "id": 22924206,
+    "participants": [
+     {
+      "id": 21065190,
+      "gamerTag": "Ryan",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22924203,
+    "participants": [
+     {
+      "id": 21065187,
+      "gamerTag": "Maetrix",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22924204,
+    "participants": [
+     {
+      "id": 21065188,
+      "gamerTag": "Kris",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22924205,
+    "participants": [
+     {
+      "id": 21065189,
+      "gamerTag": "Chris",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 22924202,
+    "participants": [
+     {
+      "id": 21065186,
+      "gamerTag": "Austin",
+      "prefix": null
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 100493132,
+    "identifier": "E",
+    "round": 4,
+    "winnerId": 22924203,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924203
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 3
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924202
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100493131,
+    "identifier": "D",
+    "round": 3,
+    "winnerId": 22924203,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924202
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924203
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100493147,
+    "identifier": "I",
+    "round": -6,
+    "winnerId": 22924202,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924202
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924205
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100493146,
+    "identifier": "H",
+    "round": -5,
+    "winnerId": 22924205,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924204
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924205
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100493129,
+    "identifier": "B",
+    "round": 2,
+    "winnerId": 22924202,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924202
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924205
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100493130,
+    "identifier": "C",
+    "round": 2,
+    "winnerId": 22924203,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924203
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924206
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100493144,
+    "identifier": "G",
+    "round": -4,
+    "winnerId": 22924204,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924206
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924204
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 100493126,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 22924205,
+    "slots": [
+     {
+      "entrant": {
+       "id": 22924205
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 22924204
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   }
+  ]
+ },
+ "https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/events/deathball-1v1/brackets/2116019/3086684/overview": {
+  "url": "https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/events/deathball-1v1/brackets/2116019/3086684/overview",
+  "event_id": 1490967,
+  "tournament_id": 845049,
+  "fetched_at": "2026-06-22T01:11:24.887Z",
+  "tournament": {
+   "id": 845049,
+   "name": "Psychic Drive Arcade Tournaments @Youma2025",
+   "startAt": 1761962400,
+   "city": "Detroit",
+   "addrState": "MI"
+  },
+  "event": {
+   "id": 1490967,
+   "name": "deathball 1v1"
+  },
+  "entrants": [
+   {
+    "id": 21735054,
+    "participants": [
+     {
+      "id": 19968503,
+      "gamerTag": "KeifDunes",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21735052,
+    "participants": [
+     {
+      "id": 19966495,
+      "gamerTag": "KroKo",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 21735046,
+    "participants": [
+     {
+      "id": 19968496,
+      "gamerTag": "Joe",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21735045,
+    "participants": [
+     {
+      "id": 19968495,
+      "gamerTag": "PJ",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21734995,
+    "participants": [
+     {
+      "id": 19966115,
+      "gamerTag": "Zam",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 21734984,
+    "participants": [
+     {
+      "id": 19968438,
+      "gamerTag": "Tomy",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21734951,
+    "participants": [
+     {
+      "id": 19957343,
+      "gamerTag": "helm",
+      "prefix": "OFFWORLD"
+     }
+    ]
+   },
+   {
+    "id": 21734950,
+    "participants": [
+     {
+      "id": 19958685,
+      "gamerTag": "Sadclown64",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21734248,
+    "participants": [
+     {
+      "id": 19967855,
+      "gamerTag": "Jubi",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21732899,
+    "participants": [
+     {
+      "id": 19966848,
+      "gamerTag": "Cornelius",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 21731656,
+    "participants": [
+     {
+      "id": 19965771,
+      "gamerTag": "Zenso Si",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21731468,
+    "participants": [
+     {
+      "id": 19965642,
+      "gamerTag": "CAPC0MHER0",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 21731248,
+    "participants": [
+     {
+      "id": 19965459,
+      "gamerTag": "MiDe",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21730080,
+    "participants": [
+     {
+      "id": 19958471,
+      "gamerTag": "Dave",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 21723931,
+    "participants": [
+     {
+      "id": 19958280,
+      "gamerTag": "enussi",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 21723864,
+    "participants": [
+     {
+      "id": 19958224,
+      "gamerTag": "SunnyJ",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 21722502,
+    "participants": [
+     {
+      "id": 19953778,
+      "gamerTag": "JamesPod",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 21719804,
+    "participants": [
+     {
+      "id": 19954484,
+      "gamerTag": "Pops",
+      "prefix": "OFFWORLD"
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 95790104,
+    "identifier": "R",
+    "round": 6,
+    "winnerId": 21722502,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21722502
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 3
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21723864
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790103,
+    "identifier": "Q",
+    "round": 5,
+    "winnerId": 21722502,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21722502
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 3
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21723864
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790167,
+    "identifier": "AI",
+    "round": -10,
+    "winnerId": 21723864,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21723864
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 3
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21719804
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790166,
+    "identifier": "AH",
+    "round": -9,
+    "winnerId": 21719804,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21719804
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734951
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790101,
+    "identifier": "O",
+    "round": 4,
+    "winnerId": 21722502,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21722502
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734951
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790102,
+    "identifier": "P",
+    "round": 4,
+    "winnerId": 21723864,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21735045
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21723864
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790164,
+    "identifier": "AF",
+    "round": -8,
+    "winnerId": 21719804,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21735045
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21719804
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790165,
+    "identifier": "AG",
+    "round": -8,
+    "winnerId": 21734951,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21734951
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734995
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790162,
+    "identifier": "AD",
+    "round": -7,
+    "winnerId": 21719804,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21734248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21719804
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790163,
+    "identifier": "AE",
+    "round": -7,
+    "winnerId": 21734995,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21731248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734995
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790097,
+    "identifier": "K",
+    "round": 3,
+    "winnerId": 21722502,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21722502
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21732899
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790098,
+    "identifier": "L",
+    "round": 3,
+    "winnerId": 21734951,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21734951
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790099,
+    "identifier": "M",
+    "round": 3,
+    "winnerId": 21735045,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21735045
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734995
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790100,
+    "identifier": "N",
+    "round": 3,
+    "winnerId": 21723864,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21723864
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21731248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790159,
+    "identifier": "AA",
+    "round": -6,
+    "winnerId": 21719804,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21732899
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21719804
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790160,
+    "identifier": "AB",
+    "round": -6,
+    "winnerId": 21731248,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21731248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21730080
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790161,
+    "identifier": "AC",
+    "round": -6,
+    "winnerId": 21734995,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21734995
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 3
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21731656
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790158,
+    "identifier": "Z",
+    "round": -6,
+    "winnerId": 21734248,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21734248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734984
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790154,
+    "identifier": "V",
+    "round": -5,
+    "winnerId": 21734984,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21735052
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734984
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790155,
+    "identifier": "W",
+    "round": -5,
+    "winnerId": 21719804,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21731468
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21719804
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790156,
+    "identifier": "X",
+    "round": -5,
+    "winnerId": 21730080,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21730080
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21723931
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790157,
+    "identifier": "Y",
+    "round": -5,
+    "winnerId": 21731656,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21731656
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21735046
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790089,
+    "identifier": "C",
+    "round": 2,
+    "winnerId": 21722502,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21722502
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21735046
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790090,
+    "identifier": "D",
+    "round": 2,
+    "winnerId": 21732899,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21731656
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21732899
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790091,
+    "identifier": "E",
+    "round": 2,
+    "winnerId": 21734951,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21723931
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734951
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790092,
+    "identifier": "F",
+    "round": 2,
+    "winnerId": 21734248,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21730080
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790093,
+    "identifier": "G",
+    "round": 2,
+    "winnerId": 21735045,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21719804
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21735045
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790094,
+    "identifier": "H",
+    "round": 2,
+    "winnerId": 21734995,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21731468
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734995
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790095,
+    "identifier": "I",
+    "round": 2,
+    "winnerId": 21723864,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21723864
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734984
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790096,
+    "identifier": "J",
+    "round": 2,
+    "winnerId": 21731248,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21731248
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21734950
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790146,
+    "identifier": "T",
+    "round": -4,
+    "winnerId": 21735052,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21734950
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21735052
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790150,
+    "identifier": "U",
+    "round": -4,
+    "winnerId": 21730080,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21730080
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21735054
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790074,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 21735046,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21735046
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21735052
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 95790082,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 21735045,
+    "slots": [
+     {
+      "entrant": {
+       "id": 21735045
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 21735054
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   }
+  ]
+ },
+ "https://www.start.gg/tournament/yomi-158/events/wednesday-unwind-deathball/brackets/1745566/2590463/overview": {
+  "url": "https://www.start.gg/tournament/yomi-158/events/wednesday-unwind-deathball/brackets/1745566/2590463/overview",
+  "event_id": 1202748,
+  "tournament_id": 702707,
+  "fetched_at": "2026-06-22T01:11:32.808Z",
+  "tournament": {
+   "id": 702707,
+   "name": "Yomi 158",
+   "startAt": 1724891400,
+   "city": "Denton",
+   "addrState": "TX"
+  },
+  "event": {
+   "id": 1202748,
+   "name": "Wednesday Unwind Deathball"
+  },
+  "entrants": [
+   {
+    "id": 17629566,
+    "participants": [
+     {
+      "id": 16343364,
+      "gamerTag": "Ethan",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17629446,
+    "participants": [
+     {
+      "id": 16343272,
+      "gamerTag": "Blue Moon",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17627303,
+    "participants": [
+     {
+      "id": 16341370,
+      "gamerTag": "Cocaine Biceps",
+      "prefix": "RGG | BN"
+     }
+    ]
+   },
+   {
+    "id": 17626846,
+    "participants": [
+     {
+      "id": 16340958,
+      "gamerTag": "Kalkaita",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17626482,
+    "participants": [
+     {
+      "id": 16340626,
+      "gamerTag": "Shinhua",
+      "prefix": "PlayBBCF"
+     }
+    ]
+   },
+   {
+    "id": 17626244,
+    "participants": [
+     {
+      "id": 16340416,
+      "gamerTag": "SlickArrow",
+      "prefix": "BN"
+     }
+    ]
+   },
+   {
+    "id": 17616323,
+    "participants": [
+     {
+      "id": 16331679,
+      "gamerTag": "Mundo",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17615872,
+    "participants": [
+     {
+      "id": 16331311,
+      "gamerTag": "Meowthmix",
+      "prefix": ""
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 78941627,
+    "identifier": "H",
+    "round": 4,
+    "winnerId": 17626846,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17626846
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626244
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941626,
+    "identifier": "G",
+    "round": 3,
+    "winnerId": 17626846,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17629446
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626846
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941642,
+    "identifier": "O",
+    "round": -6,
+    "winnerId": 17626244,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17629446
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626244
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941641,
+    "identifier": "N",
+    "round": -5,
+    "winnerId": 17626244,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17626482
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626244
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941624,
+    "identifier": "E",
+    "round": 2,
+    "winnerId": 17629446,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17629566
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17629446
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941625,
+    "identifier": "F",
+    "round": 2,
+    "winnerId": 17626846,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17626846
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17616323
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941639,
+    "identifier": "L",
+    "round": -4,
+    "winnerId": 17626482,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17616323
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": -1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626482
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": null
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941640,
+    "identifier": "M",
+    "round": -4,
+    "winnerId": 17626244,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17629566
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626244
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941637,
+    "identifier": "J",
+    "round": -3,
+    "winnerId": 17626482,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17627303
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626482
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941638,
+    "identifier": "K",
+    "round": -3,
+    "winnerId": 17626244,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17626244
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17615872
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941620,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 17629566,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17627303
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17629566
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941621,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 17629446,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17629446
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626482
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941622,
+    "identifier": "C",
+    "round": 1,
+    "winnerId": 17626846,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17626244
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17626846
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 78941623,
+    "identifier": "D",
+    "round": 1,
+    "winnerId": 17616323,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17616323
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17615872
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   }
+  ]
+ },
+ "https://www.start.gg/tournament/yomi-162/events/wednesday-unwind-deathball-free-to-join/brackets/1773284/2627178/overview": {
+  "url": "https://www.start.gg/tournament/yomi-162/events/wednesday-unwind-deathball-free-to-join/brackets/1773284/2627178/overview",
+  "event_id": 1223916,
+  "tournament_id": 713459,
+  "fetched_at": "2026-06-22T01:11:38.334Z",
+  "tournament": {
+   "id": 713459,
+   "name": "Yomi 162",
+   "startAt": 1727310600,
+   "city": "Denton",
+   "addrState": "TX"
+  },
+  "event": {
+   "id": 1223916,
+   "name": "Wednesday Unwind - Deathball - Free to join!"
+  },
+  "entrants": [
+   {
+    "id": 17926132,
+    "participants": [
+     {
+      "id": 16596595,
+      "gamerTag": "Doorman2",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17926031,
+    "participants": [
+     {
+      "id": 16598053,
+      "gamerTag": "MaJunior魔",
+      "prefix": null
+     }
+    ]
+   },
+   {
+    "id": 17925675,
+    "participants": [
+     {
+      "id": 16597759,
+      "gamerTag": "Proteus",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17925444,
+    "participants": [
+     {
+      "id": 16597516,
+      "gamerTag": "looper_siffrin",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17925398,
+    "participants": [
+     {
+      "id": 16597475,
+      "gamerTag": "sl0th",
+      "prefix": ""
+     }
+    ]
+   },
+   {
+    "id": 17924672,
+    "participants": [
+     {
+      "id": 16596855,
+      "gamerTag": "BigSkaFan",
+      "prefix": "FUG"
+     }
+    ]
+   },
+   {
+    "id": 17922207,
+    "participants": [
+     {
+      "id": 16594603,
+      "gamerTag": "Kalkaita",
+      "prefix": ""
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 80192786,
+    "identifier": "G",
+    "round": 4,
+    "winnerId": 17925444,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17925444
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17922207
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192785,
+    "identifier": "F",
+    "round": 3,
+    "winnerId": 17925444,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17925444
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17924672
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192801,
+    "identifier": "M",
+    "round": -6,
+    "winnerId": 17922207,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17924672
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17922207
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192800,
+    "identifier": "L",
+    "round": -5,
+    "winnerId": 17922207,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17925398
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17922207
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192783,
+    "identifier": "D",
+    "round": 2,
+    "winnerId": 17925444,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17922207
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17925444
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192784,
+    "identifier": "E",
+    "round": 2,
+    "winnerId": 17924672,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17924672
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17925675
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192798,
+    "identifier": "J",
+    "round": -4,
+    "winnerId": 17925398,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17925675
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17925398
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192799,
+    "identifier": "K",
+    "round": -4,
+    "winnerId": 17922207,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17922207
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17926132
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192797,
+    "identifier": "I",
+    "round": -3,
+    "winnerId": 17926132,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17926031
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17926132
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192780,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 17925444,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17925398
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17925444
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192781,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 17924672,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17926031
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17924672
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 80192782,
+    "identifier": "C",
+    "round": 1,
+    "winnerId": 17925675,
+    "slots": [
+     {
+      "entrant": {
+       "id": 17925675
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 17926132
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   }
+  ]
+ }
+}

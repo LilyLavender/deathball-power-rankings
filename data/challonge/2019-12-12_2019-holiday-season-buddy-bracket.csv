@@ -1,0 +1,11 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,nick,2,,,false,,alec,3,,,false
+B,,adam,3,,,false,,Rachel,0,,,false
+C,,alec,0,,,false,,adam,3,,,false
+D,,Jose,1,,,false,,nick,3,,,false
+E,,adam,1,,,false,,Jose,3,,,false
+F,,Rachel,2,,,false,,alec,3,,,false
+G,,Jose,3,,,false,,Rachel,0,,,false
+H,,nick,3,,,false,,adam,1,,,false
+I,,Rachel,3,,,false,,nick,1,,,false
+J,,alec,0,,,false,,Jose,3,,,false

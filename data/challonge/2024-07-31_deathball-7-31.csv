@@ -1,0 +1,14 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Ara,0,,,false,,Rodrigo,1,,,false
+B,,Joey,1,,,false,,Doug,0,,,false
+C,,Max,0,,,false,,Blockchain,1,,,false
+D,,greggoblin,1,,,false,,Rodrigo,0,,,false
+E,,Joey,0,,,false,,Blockchain,1,,,false
+F,,greggoblin,0,,,false,,Blockchain,1,,,false
+I,,Doug,0,,,false,,Max,1,,,false
+J,,Joey,0,,,false,,Ara,1,,,false
+K,,Rodrigo,0,,,false,,Max,1,,,false
+L,,Ara,0,,,false,,Max,1,,,false
+M,,greggoblin,1,,,false,,Max,0,,,false
+G,,Blockchain,0,,,false,,greggoblin,1,,,false
+H,,greggoblin,,,,false,,Blockchain,,,,false

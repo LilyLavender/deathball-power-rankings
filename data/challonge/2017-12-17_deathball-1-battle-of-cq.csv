@@ -1,0 +1,24 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Adam,2,,,false,,Lisa,1,,,false
+B,,Blake,2,,,false,,Alex H,0,,,false
+C,,Craig,2,,,false,,Hell,0,,,false
+D,,Nick,1,,,false,,Courtney,2,,,false
+E,,Ken,2,,,false,,Adam,0,,,false
+F,,Matt,1,,,false,,Blake,2,,,false
+G,,Kris,0,,,false,,Craig,2,,,false
+H,,Carl,2,,,false,,Courtney,1,,,false
+I,,Ken,1,,,false,,Blake,2,,,false
+J,,Craig,1,,,false,,Carl,2,,,false
+K,,Blake,2,,,false,,Carl,1,,,false
+N,,Courtney,1,,,false,,Lisa,2,,,false
+O,,Kris,1,,,false,,Alex H,2,,,false
+P,,Matt,2,,,false,,Hell,1,,,false
+Q,,Adam,0,,,false,,Nick,2,,,false
+R,,Lisa,0,,,false,,Alex H,2,,,false
+S,,Matt,2,,,false,,Nick,1,,,false
+T,,Ken,2,,,false,,Alex H,0,,,false
+U,,Craig,2,,,false,,Matt,0,,,false
+V,,Ken,0,,,false,,Craig,2,,,false
+W,,Carl,0,,,false,,Craig,2,,,false
+L,,Blake,0,,,false,,Craig,2,,,false
+M,,Craig,2,,,false,,Blake,1,,,false

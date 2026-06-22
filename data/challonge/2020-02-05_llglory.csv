@@ -1,0 +1,13 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Matt Hew,0,,,false,,Laura,1,,,false
+B,,Zach,0,,,false,,Wes,1,,,false
+C,,Alex,0,,,false,,Corley,1,,,false
+D,,Bobbie,1,,,false,,Lawrence,0,,,false
+E,,Josh,0,,,false,,Blake,1,,,false
+F,,Donald,1,,,false,,Laura,0,,,false
+G,,Wes,0,,,false,,Corley,1,,,false
+H,,Rachel,0,,,false,,Bobbie,1,,,false
+I,,Casey,0,,,false,,Blake,1,,,false
+J,,Donald,1,,,false,,Corley,0,,,false
+K,,Bobbie,0,,,false,,Blake,1,,,false
+L,,Donald,0,,,false,,Blake,1,,,false
