@@ -1,0 +1,18 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,David,2,,,false,,Ben,"3,2",,,false
+B,,Ross,3,,,false,,Ben,"1,1",,,false
+C,,Kate,3,,,false,,Joe,"0,3",,,false
+D,,Nathan,3,,,false,,Liam,"0,3",,,false
+E,,Pat,3,,,false,,Sergio,"1,0",,,false
+F,,Ross,3,,,false,,Kate,"2,3",,,false
+G,,Nathan,3,,,false,,Sergio,"0,3",,,false
+H,,Ross,3,,,false,,Nathan,"2,3",,,false
+K,,Pat,3,,,false,,David,"2,3",,,false
+L,,Liam,3,,,false,,Pat,"0,3",,,false
+M,,Joe,1,,,false,,Ben,"3,2",,,false
+N,,Kate,3,,,false,,Liam,"2,1",,,false
+O,,Sergio,3,,,false,,Ben,"1,3",,,false
+P,,Kate,2,,,false,,Sergio,"3,3",,,false
+Q,,Nathan,3,,,false,,Kate,"1,3",,,false
+I,,Ross,3,,,false,,Nathan,"2,0",,,false
+J,,Nathan,2,,,false,,Ross,"3,3",,,false

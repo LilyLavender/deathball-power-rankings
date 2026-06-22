@@ -99,3 +99,10 @@ https://challonge.com/y7upbs7h
 https://challonge.com/my7fsi0o
 https://challonge.com/4afozcud
 https://challonge.com/9yxjnhn
+https://challonge.com/j8vw1s68
+https://challonge.com/qvpui3oy
+https://challonge.com/oy3nenv
+https://challonge.com/yux670gx
+https://challonge.com/qpjkijqc
+https://challonge.com/9eis0ou0
+https://challonge.com/dbgdc

@@ -1,0 +1,22 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Javier,0,,,false,,Jojo,"3,1",,,false
+B,,Greg,3,,,false,,Chris,"2,1",,,false
+C,,Monica,2,,,false,,Joe,"3,3",,,false
+D,,Nathan,3,,,false,,Jojo,"0,1",,,false
+E,,Dawn,1,,,false,,Bella,"3,2",,,false
+F,,Vivvian,3,,,false,,Chris,"1,3",,,false
+G,,Ross,2,,,false,,Monica,"3,3",,,false
+H,,Nathan,3,,,false,,Bella,"2,1",,,false
+I,,Vivvian,1,,,false,,Ross,"3,0",,,false
+J,,Nathan,3,,,false,,Ross,"1,2",,,false
+M,,Monica,0,,,false,,Javier,"3,2",,,false
+N,,Dawn,2,,,false,,Greg,"3,0",,,false
+O,,Jojo,2,,,false,,Joe,"3,0",,,false
+P,,Chris,1,,,false,,Javier,"3,1",,,false
+Q,,Greg,2,,,false,,Joe,"3,3",,,false
+R,,Bella,3,,,false,,Javier,"0,0",,,false
+S,,Vivvian,3,,,false,,Greg,"1,3",,,false
+T,,Javier,2,,,false,,Vivvian,"3,1",,,false
+U,,Nathan,2,,,false,,Vivvian,"3,3",,,false
+K,,Ross,1,,,false,,Nathan,"3,3",,,false
+L,,Nathan,0,,,false,,Ross,"3,1",,,false
