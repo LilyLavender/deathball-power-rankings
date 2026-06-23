@@ -1,5 +1,5 @@
 {
-  "_schema": "Per-tournament location overrides, keyed by tournament URL (the same keys used in challonge/tournaments.json and start.gg/tournaments.json). `city` and `state` are the general location; `location` is the specific venue (a bar, arcade, convention hall, etc).",
+  "_schema": "Per-tournament location/date overrides, keyed by tournament URL (the same keys used in challonge/tournaments.json and start.gg/tournaments.json). `city` and `state` are the general location; `location` is the specific venue (a bar, arcade, convention hall, etc). `date` (YYYY-MM-DD, optional) overrides the tournament's fetched date.",
   "locations": {
     "https://challonge.com/sgdq2025_deathball": { "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
     "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview": { "city": "Schaumburg", "state": "IL", "location": "Combo Breaker" },
@@ -9,8 +9,8 @@
     "https://fpaplayers.challonge.com/18ykixya": { "state": "TX", "location": "Free Play" },
     "https://challonge.com/n9p41ln6": { "state": "TX", "location": "Free Play" },
     "https://challonge.com/DBmpls": { "city": "Minneapolis", "state": "MN", "location": "Up-Down" },
-    "https://challonge.com/dbcha20190507": { "city": "Chattanooga", "state": "TN" },
-    "https://challonge.com/dbcha20190514": { "city": "Chattanooga", "state": "TN" },
+    "https://challonge.com/dbcha20190507": { "city": "Chattanooga", "state": "TN", "date": "2019-05-07" },
+    "https://challonge.com/dbcha20190514": { "city": "Chattanooga", "state": "TN", "date": "2019-05-14" },
     "https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/events/deathball-1v1/brackets/2116019/3086684/overview": { "city": "Detroit", "state": "MI", "location": "Psychic Drive" },
     "https://challonge.com/deathballgdc1": { "city": "San Francisco", "state": "CA", "location": "GDC" },
     "https://challonge.com/hq29vy8o": { "city": "Grapevine", "state": "TX", "location": "QuakeCon" },
@@ -95,7 +95,7 @@
     "https://challonge.com/verqiocz": { "city": "Houston", "state": "TX", "location": "HTX Cidercade" },
     "https://challonge.com/gbi26365": { "city": "Houston", "state": "TX", "location": "HTX Cidercade" },
     "https://challonge.com/hnka8nck": { "city": "Houston", "state": "TX", "location": "HTX Cidercade" },
-    "https://challonge.com/ib6mgq92": { "city": "Dallas", "state": "TX"},
+    "https://challonge.com/ib6mgq92": { "city": "Fort Worth", "state": "TX"},
     "https://challonge.com/j6j18cco": { "state": "TX", "location": "Free Play" },
     "https://challonge.com/hywcea1u": { "state": "TX", "location": "Free Play" },
     "https://challonge.com/vsaq3lmm": { "state": "TX", "location": "Free Play" },
@@ -117,7 +117,7 @@
     "https://challonge.com/qpjkijqc": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" },
     "https://challonge.com/9eis0ou0": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" },
     "https://challonge.com/dbgdc": { "city": "San Francisco", "state": "CA", "location": "GDC" },
-    "LINK": { "city": "CITY", "state": "STATE", "location": "LOCATION" }
+    "LINK": { "city": "CITY", "state": "STATE", "location": "LOCATION", "date": "YYYY-MM-DD" }
   }
 }
 

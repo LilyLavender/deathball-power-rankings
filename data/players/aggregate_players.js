@@ -95,6 +95,10 @@ function resolveLocation(url, builtIn) {
   return formatLocation(override || builtIn);
 }
 
+function resolveDate(url, builtIn) {
+  return tournamentLocations[url]?.date || builtIn;
+}
+
 function processChallonge(map, tournaments) {
   const store = JSON.parse(fs.readFileSync(path.join(DATA_ROOT, 'challonge', 'tournaments.json'), 'utf8'));
   for (const [url, rec] of Object.entries(store)) {
@@ -106,7 +110,7 @@ function processChallonge(map, tournaments) {
     tournaments.push({
       name: label,
       url,
-      date: (t.started_at || t.created_at || '').slice(0, 10),
+      date: resolveDate(url, (t.started_at || t.created_at || '').slice(0, 10)),
       location,
       participants: t.participants.length,
       matches: t.matches.length,
@@ -135,7 +139,7 @@ function processStartgg(map, tournaments) {
     tournaments.push({
       name: label,
       url,
-      date: rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : '',
+      date: resolveDate(url, rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : ''),
       location,
       participants: rec.entrants.length,
       matches: rec.sets.length,
