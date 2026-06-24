@@ -4,7 +4,7 @@
 //
 // Applies manual dedup/identity config from data/player-identities.json
 // (alias merges + name-collision splits), and enriches output with
-// data/player-info.json (location, contact) and data/tournament-locations.json.
+// data/player-info.json (city/state) and data/tournament-locations.json.
 //
 // Usage: node aggregate_players.js
 // Writes:
@@ -180,19 +180,23 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Players are keyed by backend id (see resolveIdentity), so player-info.json
+// is looked up by id first — that's the only way to attach info to one
+// specific person when several unrelated people share a display name (e.g.
+// the Joe/Ethan splits) — falling back to the display name for the common
+// case of an unambiguous, unsplit name.
 function buildPlayerRows(players, tournamentLocationByUrl) {
-  return [...players.values()]
-    .map((p) => {
+  return [...players.entries()]
+    .map(([id, p]) => {
       const name = displayName(p);
-      const info = playerInfo[name] || {};
+      const info = playerInfo[id] || playerInfo[name] || {};
       return {
         name,
         wins: p.wins,
         losses: p.losses,
         games: p.games,
         winPct: p.games > 0 ? p.wins / p.games : 0,
-        location: info.location || '',
-        contact: info.contact || {},
+        location: [info.city, info.state].filter(Boolean).join(', '),
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
           label,
@@ -203,18 +207,11 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
     .sort((a, b) => b.winPct - a.winPct || b.games - a.games);
 }
 
-function contactString(contact) {
-  return Object.entries(contact)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('; ');
-}
-
 function writeCsv(rows) {
-  const header = ['Player', 'Wins', 'Losses', 'Games Played', 'Win %', 'Location', 'Contact', 'Tournament Count', 'Tournaments'];
+  const header = ['Player', 'Wins', 'Losses', 'Games Played', 'Win %', 'Location', 'Tournament Count', 'Tournaments'];
   const csvRows = rows.map((p) => [
     p.name, p.wins, p.losses, p.games, (p.winPct * 100).toFixed(1),
-    p.location, contactString(p.contact),
+    p.location,
     p.tournaments.length,
     p.tournaments.map((t) => t.label).join('; '),
   ]);
@@ -303,11 +300,9 @@ function writeHtml(playerRows, tournamentRows) {
     const tournamentLinks = p.tournaments
       .map((t) => `<a href="${escapeHtml(t.url)}" target="_blank" rel="noopener"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
       .join(', ');
-    const contact = contactString(p.contact);
     return `<tr>
       <td>${escapeHtml(p.name)}</td>
       <td>${escapeHtml(p.location)}</td>
-      <td>${escapeHtml(contact)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
@@ -349,7 +344,6 @@ function writeHtml(playerRows, tournamentRows) {
       <tr>
         <th data-type="string">Player</th>
         <th data-type="string">Location</th>
-        <th data-type="string">Contact</th>
         <th data-type="number">Wins</th>
         <th data-type="number">Losses</th>
         <th data-type="number">Games</th>

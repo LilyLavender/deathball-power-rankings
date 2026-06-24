@@ -278,6 +278,12 @@
       ]
     },
     {
+      "name": "Ethan",
+      "resolutions": [
+        { "id": "ethan-yomi158", "canonical": "Ethan", "tournaments": ["https://www.start.gg/tournament/yomi-158/events/wednesday-unwind-deathball/brackets/1745566/2590463/overview"] }
+      ]
+    },
+    {
       "name": "Justin",
       "resolutions": [
         { "id": "justin-deathball", "canonical": "Justin", "tournaments": ["https://fpaplayers.challonge.com/puf4t590"] },
