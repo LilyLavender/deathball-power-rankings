@@ -18,8 +18,13 @@
             const valB = Number(cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent);
             return asc ? valA - valB : valB - valA;
           }
-          const valA = cellA.textContent.trim().toLowerCase();
-          const valB = cellB.textContent.trim().toLowerCase();
+          const valA = (cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent).trim().toLowerCase();
+          const valB = (cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent).trim().toLowerCase();
+          if (th.dataset.blankLast === 'true') {
+            const blankA = valA === '';
+            const blankB = valB === '';
+            if (blankA !== blankB) return blankA ? 1 : -1;
+          }
           return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
         rows.forEach((r) => tbody.appendChild(r));

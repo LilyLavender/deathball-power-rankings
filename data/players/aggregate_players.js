@@ -197,6 +197,10 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
         games: p.games,
         winPct: p.games > 0 ? p.wins / p.games : 0,
         location: [info.city, info.state].filter(Boolean).join(', '),
+        // Sort key for the Location column: state first, then city — not the
+        // display string, so "OH" (no city) sorts against other states by
+        // state alone rather than colliding with cities of the same name.
+        locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
           label,
@@ -234,6 +238,7 @@ tr:hover { background: #1c1c1c; }
 a { color: #6cf; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .numeric { text-align: right; }
+.col-location { white-space: nowrap; }
 #count { color: #888; margin-bottom: 1rem; }
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #333; }
 .tab-button { background: none; border: none; color: #aaa; font-size: 1rem; padding: 0.6rem 1rem; cursor: pointer; }
@@ -266,8 +271,13 @@ function writeJs() {
             const valB = Number(cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent);
             return asc ? valA - valB : valB - valA;
           }
-          const valA = cellA.textContent.trim().toLowerCase();
-          const valB = cellB.textContent.trim().toLowerCase();
+          const valA = (cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent).trim().toLowerCase();
+          const valB = (cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent).trim().toLowerCase();
+          if (th.dataset.blankLast === 'true') {
+            const blankA = valA === '';
+            const blankB = valB === '';
+            if (blankA !== blankB) return blankA ? 1 : -1;
+          }
           return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
         rows.forEach((r) => tbody.appendChild(r));
@@ -302,7 +312,7 @@ function writeHtml(playerRows, tournamentRows) {
       .join(', ');
     return `<tr>
       <td>${escapeHtml(p.name)}</td>
-      <td>${escapeHtml(p.location)}</td>
+      <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${escapeHtml(p.location)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
@@ -343,7 +353,7 @@ function writeHtml(playerRows, tournamentRows) {
     <thead>
       <tr>
         <th data-type="string">Player</th>
-        <th data-type="string">Location</th>
+        <th data-type="string" data-blank-last="true" class="col-location">Location</th>
         <th data-type="number">Wins</th>
         <th data-type="number">Losses</th>
         <th data-type="number">Games</th>
