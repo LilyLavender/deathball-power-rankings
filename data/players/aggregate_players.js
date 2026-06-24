@@ -22,7 +22,8 @@ function readJson(filePath, fallback) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-const identities = readJson(path.join(DATA_ROOT, 'player-identities.json'), { aliases: [], splits: [] });
+const identities = readJson(path.join(DATA_ROOT, 'player-identities.json'), { aliases: [], splits: [], hidden: [] });
+const hiddenNames = new Set((identities.hidden || []).map((n) => n.trim().toLowerCase()));
 const playerInfo = readJson(path.join(DATA_ROOT, 'player-info.json'), { players: {} }).players || {};
 const tournamentLocations = readJson(path.join(DATA_ROOT, 'tournament-locations.json'), { locations: {} }).locations || {};
 
@@ -40,31 +41,34 @@ function resolveParticipantName(p) {
   return raw.replace(/ \(invitation pending\)$/, '');
 }
 
-// Resolve a raw name (as it appears in tournament data) to its canonical
-// form, using the manual config. Splits are checked first (they need the
-// tournament context to disambiguate), then simple aliases.
-function resolveCanonicalName(rawName, tournamentUrl) {
+// Resolve a raw name (as it appears in tournament data) to its identity:
+// { id, name }. `id` is the unique backend key (never shown to users —
+// it's what lets two unrelated people both display as "Alex" without
+// merging). `name` is the display name. Splits are checked first (they
+// need the tournament context to disambiguate), then simple aliases.
+function resolveIdentity(rawName, tournamentUrl) {
   const trimmed = normName(rawName);
   const lower = trimmed.toLowerCase();
 
   const split = (identities.splits || []).find((s) => normName(s.name).toLowerCase() === lower);
   if (split) {
     const resolution = (split.resolutions || []).find((r) => (r.tournaments || []).includes(tournamentUrl));
-    if (resolution) return resolution.canonical;
-    if (split.default) return split.default;
+    if (resolution) return { id: resolution.id, name: resolution.canonical };
+    if (split.default) return { id: split.default.id, name: split.default.canonical };
   }
 
   const alias = (identities.aliases || []).find((a) => (a.names || []).some((n) => normName(n).toLowerCase() === lower));
-  if (alias) return alias.canonical;
+  if (alias) return { id: alias.id || alias.canonical.toLowerCase(), name: alias.canonical };
 
-  return trimmed;
+  return { id: lower, name: trimmed };
 }
 
-// Players are then merged case-insensitively (e.g. "corley" / "Corley"
-// from different sources), keeping whichever capitalization shows up most.
-function getPlayer(map, canonicalName) {
-  if (!canonicalName) return null;
-  const key = canonicalName.toLowerCase();
+// Players are then merged by id (e.g. "corley" / "Corley" from different
+// sources share the id "corley"), keeping whichever capitalization of the
+// display name shows up most.
+function getPlayer(map, identity) {
+  if (!identity || !identity.id) return null;
+  const key = identity.id;
   if (!map.has(key)) {
     map.set(key, {
       wins: 0, losses: 0, games: 0,
@@ -73,7 +77,7 @@ function getPlayer(map, canonicalName) {
     });
   }
   const player = map.get(key);
-  player.nameCounts.set(canonicalName, (player.nameCounts.get(canonicalName) || 0) + 1);
+  player.nameCounts.set(identity.name, (player.nameCounts.get(identity.name) || 0) + 1);
   return player;
 }
 
@@ -82,8 +86,9 @@ function displayName(player) {
 }
 
 function recordMatch(map, winnerRawName, loserRawName, tournamentUrl, tournamentLabel) {
-  const winner = getPlayer(map, resolveCanonicalName(winnerRawName, tournamentUrl));
-  const loser = getPlayer(map, resolveCanonicalName(loserRawName, tournamentUrl));
+  if (hiddenNames.has(normName(winnerRawName).toLowerCase()) || hiddenNames.has(normName(loserRawName).toLowerCase())) return;
+  const winner = getPlayer(map, resolveIdentity(winnerRawName, tournamentUrl));
+  const loser = getPlayer(map, resolveIdentity(loserRawName, tournamentUrl));
   if (!winner || !loser) return;
   winner.wins += 1;
   winner.games += 1;
