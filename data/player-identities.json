@@ -298,6 +298,14 @@
       "default": { "id": "ethan-dfw", "canonical": "Ethan" }
     },
     {
+      "name": "Jordan",
+      "resolutions": [
+        { "id": "jordan-freeplay", "canonical": "Jordan", "tournaments": ["https://fpaplayers.challonge.com/paiq649r", "https://fpaplayers.challonge.com/sjcdrupw", "https://fpaplayers.challonge.com/9pafceez"] },
+        { "id": "jordan-dfw-2025", "canonical": "Jordan", "tournaments": ["https://challonge.com/hhs16meh", "https://challonge.com/napw4zzb", "https://challonge.com/w31sc2d1", "https://challonge.com/9yxjnhn"] },
+        { "id": "jordan-dbjax5", "canonical": "Jordan", "tournaments": ["https://challonge.com/9eis0ou0"] }
+      ]
+    },
+    {
       "name": "Justin",
       "resolutions": [
         { "id": "justin-deathball", "canonical": "Justin", "tournaments": ["https://fpaplayers.challonge.com/puf4t590"] },
