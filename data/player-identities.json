@@ -12,7 +12,7 @@
     { "names": ["ChaseChase"], "canonical": "Chase", "id": "chase-freeplay-dbc9" },
     { "names": ["Chris Baldwin", "Chris B"], "canonical": "Chris Baldwin" },
     { "names": ["Cloud", "Cloud Allen", "TheMentalLizard"], "canonical": "TheMentalLizard" },
-    { "names": ["Clover", "Cloverbugged"], "canonical": "Clover" },
+    { "names": ["Clover", "Cloverbugged"], "canonical": "Cloverbugged" },
     { "names": ["Corley", "corlido bandido", "rustybicycle", "Christopher Corley", "Christop", "shit eater"], "canonical": "Corley" },
     { "names": ["David Pavao", "David"], "canonical": "David Pavao" },
     { "names": ["kumachine", "Chris Delp"], "canonical": "kumachine" },
@@ -39,7 +39,7 @@
     { "names": ["HeartOfOak", "ItsRedbird"], "canonical": "HeartOfOak" },
     { "names": ["lilywhitesail", "lily j"], "canonical": "lilywhitesail" },
     { "names": ["Prisma_Goat", "Prisma"], "canonical": "Prisma_Goat" },
-    { "names": ["Cellshine", "Evan F"], "canonical": "Cellshine" },
+    { "names": ["Cellshine", "Evan F", "Evan Favill"], "canonical": "Cellshine" },
     { "names": ["hlemke", "Hayden"], "canonical": "hlemke" },
     { "names": ["tprice3"], "canonical": "Troy", "id": "troy-deathball-28th" },
     { "names": ["pepperouchau"], "canonical": "Nathan", "id": "nathan-28th" },
@@ -75,7 +75,11 @@
     { "names": ["Nicolo Fusato", "nicolo"], "canonical": "Nicolo Fusato" },
     { "names": ["Patrick", "Pat"], "canonical": "Patrick" },
     { "names": ["Richard", "Richard [DFW]"], "canonical": "Richard" },
-    { "names": ["willyjwillyj", "Willy"], "canonical": "willyjwillyj" }
+    { "names": ["willyjwillyj", "Willy"], "canonical": "willyjwillyj" },
+    { "names": ["30Aces", "Aces"], "canonical": "30Aces" },
+    { "names": ["Caden/Glass Window"], "canonical": "Glass Window" },
+    { "names": ["Chacko", "Dexter Chacko"], "canonical": "Chacko" },
+    { "names": ["dammitmalloy", "Malloy"], "canonical": "dammitmalloy" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -290,7 +294,8 @@
       "name": "Ethan",
       "resolutions": [
         { "id": "ethan-yomi158", "canonical": "Ethan", "tournaments": ["https://www.start.gg/tournament/yomi-158/events/wednesday-unwind-deathball/brackets/1745566/2590463/overview"] }
-      ]
+      ],
+      "default": { "id": "ethan-dfw", "canonical": "Ethan" }
     },
     {
       "name": "Justin",
