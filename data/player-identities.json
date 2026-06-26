@@ -26,7 +26,8 @@
     { "names": ["Chan", "Chayan", "KQHTX", "DBHTX FOUNDER"], "canonical": "Chan" },
     { "names": ["Eduardo2332", "Eduardo Gabriel Martinez Banda"], "canonical": "Eduardo2332" },
     { "names": ["Mosspassion", "nickyD"], "canonical": "Mosspassion" },
-    { "names": ["podcastboy69", "Joshua Wade Freeman"], "canonical": "podcastboy69" },
+    { "names": ["Scott Wilkewitz", "Scott W."], "canonical": "Scott Wilkewitz" },
+    { "names": ["SliceFury", "NotNormalProductions"], "canonical": "SliceFury" },
     { "names": ["tcarsonj", "TJ Carson"], "canonical": "tcarsonj" },
     { "names": ["andrewrobk", "Turbo"], "canonical": "andrewrobk" },
     { "names": ["Nonkillerkeen"], "canonical": "Bree", "id": "bree-bumblebash" },
@@ -41,7 +42,7 @@
     { "names": ["Prisma_Goat", "Prisma"], "canonical": "Prisma_Goat" },
     { "names": ["Cellshine", "Evan F", "Evan Favill"], "canonical": "Cellshine" },
     { "names": ["hlemke", "Hayden"], "canonical": "hlemke" },
-    { "names": ["tprice3"], "canonical": "Troy", "id": "troy-deathball-28th" },
+    { "names": ["tprice3"], "canonical": "Troy", "id": "troy-deathb4ll" },
     { "names": ["pepperouchau"], "canonical": "Nathan", "id": "nathan-28th" },
     { "names": ["NatNied"], "canonical": "Nathan", "id": "nathan-dbjax" },
     { "names": ["Dylan Conrad"], "canonical": "Dylan Conrad", "id": "dylan-campdb" },
@@ -64,7 +65,7 @@
     { "names": ["Jaq3", "Jaq"], "canonical": "Jaq3" },
     { "names": ["Jeremy Mulhaney", "jeremy"], "canonical": "Jeremy Mulhaney" },
     { "names": ["John Ryan", "john"], "canonical": "John Ryan" },
-    { "names": ["Josh Freeman", "Josh F"], "canonical": "Josh Freeman", "id": "josh-1203-keg" },
+    { "names": ["Josh Freeman", "Josh F", "podcastboy69", "Joshua Wade Freeman"], "canonical": "Josh Freeman", "id": "josh-1203-keg" },
     { "names": ["Josh k"], "canonical": "Josh k", "id": "josh-2019-league" },
     { "names": ["LongDickJohnson"], "canonical": "doodooheadjones" },
     { "names": ["Kasi White", "Kasi"], "canonical": "Kasi White" },
@@ -197,7 +198,8 @@
     {
       "name": "Troy",
       "resolutions": [
-        { "id": "troy-deathball-28th", "canonical": "Troy", "tournaments": ["https://challonge.com/DBmpls", "https://challonge.com/deathb4ll"] },
+        { "id": "troy-dbmpls", "canonical": "Troy", "tournaments": ["https://challonge.com/DBmpls"] },
+        { "id": "troy-deathb4ll", "canonical": "Troy", "tournaments": ["https://challonge.com/deathb4ll"] },
         { "id": "troy-wednesday-unwind", "canonical": "Troy", "tournaments": ["https://challonge.com/n9p41ln6"] }
       ]
     },
