@@ -1,21 +1,35 @@
 // Aggregate per-player stats (record, win%, games played, tournaments
-// attended) across ../challonge/tournaments.json and ../start.gg/tournaments.json,
-// and build a flat list of all tournaments.
+// attended) and Glicko-2 power rankings across all tournament sources.
 //
 // Applies manual dedup/identity config from data/player-identities.json
 // (alias merges + name-collision splits), and enriches output with
 // data/player-info.json (city/state) and data/tournament-locations.json.
+//
+// Manual match enrichment: data/manual-matches.json
 //
 // Usage: node aggregate_players.js
 // Writes:
 //   data/players/players.csv
 //   index.html / index.css / index.js (repo root)
 
+'use strict';
+
 const fs = require('fs');
 const path = require('path');
+const glicko2 = require('./glicko2');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
+
+// --- Glicko-2 tuning constants ---
+const GLICKO_DEFAULT_R = 1500;
+const GLICKO_DEFAULT_RD = 350;
+const GLICKO_DEFAULT_SIGMA = 0.06;
+const GLICKO_RD_DECAY_PER_MONTH = 5;    // RD added (quadratically) per inactive month
+const GLICKO_UNCERTAIN_RD_THRESHOLD = 150; // rows above this RD are dimmed
+const GLICKO_CLOSE_GAME_SCORE = 0.85;   // win score for a game won by ≤1 goal
+
+// ---------------------------------
 
 function readJson(filePath, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
@@ -31,21 +45,11 @@ function normName(name) {
   return (name || '').trim();
 }
 
-// participant.name is blank when the player registered via their Challonge
-// account instead of a custom name; username covers that case, falling back
-// further to display_name for invited-but-unlinked participants. display_name
-// bakes in a literal " (invitation pending)" suffix for unaccepted invites,
-// which we strip since it's not part of the player's actual name.
 function resolveParticipantName(p) {
   const raw = p.name || p.username || p.display_name || '';
   return raw.replace(/ \(invitation pending\)$/, '');
 }
 
-// Resolve a raw name (as it appears in tournament data) to its identity:
-// { id, name }. `id` is the unique backend key (never shown to users —
-// it's what lets two unrelated people both display as "Alex" without
-// merging). `name` is the display name. Splits are checked first (they
-// need the tournament context to disambiguate), then simple aliases.
 function resolveIdentity(rawName, tournamentUrl) {
   const trimmed = normName(rawName);
   const lower = trimmed.toLowerCase();
@@ -63,16 +67,13 @@ function resolveIdentity(rawName, tournamentUrl) {
   return { id: lower, name: trimmed };
 }
 
-// Players are then merged by id (e.g. "corley" / "Corley" from different
-// sources share the id "corley"), keeping whichever capitalization of the
-// display name shows up most.
 function getPlayer(map, identity) {
   if (!identity || !identity.id) return null;
   const key = identity.id;
   if (!map.has(key)) {
     map.set(key, {
       wins: 0, losses: 0, games: 0,
-      tournaments: new Map(), // url -> label; multiple tournaments share names, so key by url
+      tournaments: new Map(),
       nameCounts: new Map(),
     });
   }
@@ -98,8 +99,6 @@ function recordMatch(map, winnerRawName, loserRawName, tournamentUrl, tournament
   loser.tournaments.set(tournamentUrl, tournamentLabel);
 }
 
-// city/state are the general location, `location` is the specific venue
-// (a bar, arcade, convention hall, etc) — combined as "Venue, City, ST".
 function formatLocation(loc) {
   if (!loc) return '';
   return [loc.location, [loc.city, loc.state].filter(Boolean).join(', ')].filter(Boolean).join(', ');
@@ -114,56 +113,115 @@ function resolveDate(url, builtIn) {
   return tournamentLocations[url]?.date || builtIn;
 }
 
-function processChallonge(map, tournaments) {
-  const store = JSON.parse(fs.readFileSync(path.join(DATA_ROOT, 'challonge', 'tournaments.json'), 'utf8'));
+// Returns months elapsed between two YYYY-MM-DD strings. Returns 0 if either is missing.
+function monthsBetween(dateA, dateB) {
+  if (!dateA || !dateB) return 0;
+  const a = new Date(dateA);
+  const b = new Date(dateB);
+  return Math.max(0, (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()));
+}
+
+// Expand a match's score into arrays of Glicko result values [0,1] for winner and loser.
+// Set counts: "3-1" → winner gets [1,1,1,0], loser gets [0,0,0,1]
+// Games array: each game is a mini-match; close games (margin ≤1) use GLICKO_CLOSE_GAME_SCORE
+function expandScore(match) {
+  if (match.games) {
+    const winnerResults = [];
+    const loserResults = [];
+    for (const { winnerGoals, loserGoals } of match.games) {
+      const winnerWonGame = winnerGoals > loserGoals;
+      const margin = Math.abs(winnerGoals - loserGoals);
+      const winScore = margin <= 1 ? GLICKO_CLOSE_GAME_SCORE : 1.0;
+      winnerResults.push(winnerWonGame ? winScore : 1 - winScore);
+      loserResults.push(winnerWonGame ? 1 - winScore : winScore);
+    }
+    return { winnerResults, loserResults };
+  }
+
+  const wins = match.winnerSets != null ? match.winnerSets : 1;
+  const losses = match.loserSets != null ? match.loserSets : 0;
+  return {
+    winnerResults: [...Array(Math.max(wins, 1)).fill(1.0), ...Array(Math.max(losses, 0)).fill(0.0)],
+    loserResults: [...Array(Math.max(wins, 1)).fill(0.0), ...Array(Math.max(losses, 0)).fill(1.0)],
+  };
+}
+
+// --- Data collection ---
+
+function collectChallonge() {
+  const storePath = path.join(DATA_ROOT, 'challonge', 'tournaments.json');
+  if (!fs.existsSync(storePath)) return [];
+  const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+  const result = [];
+
   for (const [url, rec] of Object.entries(store)) {
     if (!rec.tournament) continue;
     const t = rec.tournament;
     const label = t.name.trim();
-    const location = resolveLocation(url, null);
-
-    tournaments.push({
-      name: label,
-      url,
-      date: resolveDate(url, (t.started_at || t.created_at || '').slice(0, 10)),
-      location,
-      participants: t.participants.length,
-      matches: t.matches.length,
-      source: 'Challonge',
-    });
-
     const nameById = new Map(t.participants.map((p) => [p.participant.id, resolveParticipantName(p.participant)]));
+
+    const matches = [];
     for (const m of t.matches) {
       const mm = m.match;
       if (!mm.winner_id || !mm.loser_id) continue;
       const winnerName = nameById.get(mm.winner_id);
       const loserName = nameById.get(mm.loser_id);
       if (!winnerName || !loserName) continue;
-      recordMatch(map, winnerName, loserName, url, label);
+
+      const isDQ = mm.forfeited === true;
+
+      let winnerSets = null;
+      let loserSets = null;
+      if (!isDQ && mm.scores_csv) {
+        const raw = mm.scores_csv.split(',')[0]; // take first game entry
+        const dashIdx = raw.indexOf('-');
+        if (dashIdx > 0) {
+          const p1Raw = parseInt(raw.slice(0, dashIdx), 10);
+          const p2Raw = parseInt(raw.slice(dashIdx + 1), 10);
+          if (!isNaN(p1Raw) && !isNaN(p2Raw)) {
+            let p1Sets = p1Raw;
+            let p2Sets = p2Raw;
+            // "0-0" means untracked — fall back to 1-0
+            if (p1Sets === p2Sets) {
+              p1Sets = mm.winner_id === mm.player1_id ? 1 : 0;
+              p2Sets = mm.winner_id === mm.player2_id ? 1 : 0;
+            }
+            winnerSets = mm.winner_id === mm.player1_id ? p1Sets : p2Sets;
+            loserSets = mm.winner_id === mm.player1_id ? p2Sets : p1Sets;
+          }
+        }
+      }
+
+      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ });
     }
+
+    result.push({
+      url,
+      label,
+      date: resolveDate(url, (t.started_at || t.created_at || '').slice(0, 10)),
+      location: resolveLocation(url, null),
+      participants: t.participants.length,
+      matchCount: matches.length,
+      source: 'Challonge',
+      matches,
+    });
   }
+
+  return result;
 }
 
-function processStartgg(map, tournaments) {
-  const store = JSON.parse(fs.readFileSync(path.join(DATA_ROOT, 'start.gg', 'tournaments.json'), 'utf8'));
+function collectStartgg() {
+  const storePath = path.join(DATA_ROOT, 'start.gg', 'tournaments.json');
+  if (!fs.existsSync(storePath)) return [];
+  const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+  const result = [];
+
   for (const [url, rec] of Object.entries(store)) {
     if (!rec.entrants || !rec.sets) continue;
     const label = rec.tournament.name.trim();
-    const location = resolveLocation(url, { city: rec.tournament.city, state: rec.tournament.addrState });
+    const nameByEntrantId = new Map(rec.entrants.map((e) => [e.id, e.participants[0]?.gamerTag]));
 
-    tournaments.push({
-      name: label,
-      url,
-      date: resolveDate(url, rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : ''),
-      location,
-      participants: rec.entrants.length,
-      matches: rec.sets.length,
-      source: 'start.gg',
-    });
-
-    const nameByEntrantId = new Map(
-      rec.entrants.map((e) => [e.id, e.participants[0]?.gamerTag])
-    );
+    const matches = [];
     for (const s of rec.sets) {
       if (!s.winnerId || s.slots.length !== 2 || !s.slots.every((sl) => sl.entrant)) continue;
       const loserSlot = s.slots.find((sl) => sl.entrant.id !== s.winnerId);
@@ -171,20 +229,179 @@ function processStartgg(map, tournaments) {
       const winnerName = nameByEntrantId.get(s.winnerId);
       const loserName = nameByEntrantId.get(loserSlot.entrant.id);
       if (!winnerName || !loserName) continue;
-      recordMatch(map, winnerName, loserName, url, label);
+
+      const winnerSlot = s.slots.find((sl) => sl.entrant.id === s.winnerId);
+      const winnerRaw = winnerSlot?.standing?.stats?.score?.value;
+      const loserRaw = loserSlot?.standing?.stats?.score?.value;
+      const isDQ = loserRaw === -1;
+
+      const winnerSets = !isDQ && winnerRaw != null && winnerRaw >= 0 ? winnerRaw : null;
+      const loserSets = !isDQ && loserRaw != null && loserRaw >= 0 ? loserRaw : null;
+
+      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ });
+    }
+
+    result.push({
+      url,
+      label,
+      date: resolveDate(url, rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : ''),
+      location: resolveLocation(url, { city: rec.tournament.city, state: rec.tournament.addrState }),
+      participants: rec.entrants.length,
+      matchCount: matches.length,
+      source: 'start.gg',
+      matches,
+    });
+  }
+
+  return result;
+}
+
+// Converts a raw manual-matches.json entry into a normalised match object.
+function resolveManualMatch(m) {
+  if (m.games) {
+    let p1Wins = 0;
+    let p2Wins = 0;
+    const parsed = m.games.map((g) => {
+      const [p1Goals, p2Goals] = g.split('-').map(Number);
+      if (p1Goals > p2Goals) p1Wins++;
+      else p2Wins++;
+      return { p1Goals, p2Goals };
+    });
+
+    if (p1Wins === p2Wins) {
+      console.warn(`Manual match: tied game count in games array (p1=${m.p1}, p2=${m.p2}), defaulting p1 as winner`);
+      p1Wins++;
+    }
+
+    const p1IsWinner = p1Wins > p2Wins;
+    // Normalise all game scores to winner-first perspective
+    const games = parsed.map(({ p1Goals, p2Goals }) => ({
+      winnerGoals: p1IsWinner ? p1Goals : p2Goals,
+      loserGoals: p1IsWinner ? p2Goals : p1Goals,
+    }));
+
+    return {
+      winnerName: p1IsWinner ? m.p1 : m.p2,
+      loserName: p1IsWinner ? m.p2 : m.p1,
+      winnerSets: null,
+      loserSets: null,
+      games,
+      isDQ: false,
+    };
+  }
+
+  if (m.score) {
+    const [a, b] = m.score.split('-').map(Number);
+    if (a === b) console.warn(`Manual match: tied score "${m.score}" (p1=${m.p1}, p2=${m.p2}), defaulting p1 as winner`);
+    const p1IsWinner = a >= b;
+    return {
+      winnerName: p1IsWinner ? m.p1 : m.p2,
+      loserName: p1IsWinner ? m.p2 : m.p1,
+      winnerSets: p1IsWinner ? a : b,
+      loserSets: p1IsWinner ? b : a,
+      games: null,
+      isDQ: false,
+    };
+  }
+
+  // No score provided — treat as a plain win for p1
+  return {
+    winnerName: m.p1,
+    loserName: m.p2,
+    winnerSets: 1,
+    loserSets: 0,
+    games: null,
+    isDQ: false,
+  };
+}
+
+// Returns Map<tournamentUrl, normalised match[]> for known URLs only.
+function loadManualMatches(knownUrls) {
+  const raw = readJson(path.join(DATA_ROOT, 'manual-matches.json'), { matches: [] }).matches || [];
+  const byUrl = new Map();
+  for (const m of raw) {
+    if (!m.tournament) { console.warn('Manual match missing tournament URL, skipping'); continue; }
+    if (!knownUrls.has(m.tournament)) {
+      console.warn(`Manual match references unknown tournament: ${m.tournament}`);
+      continue;
+    }
+    if (!byUrl.has(m.tournament)) byUrl.set(m.tournament, []);
+    byUrl.get(m.tournament).push(resolveManualMatch(m));
+  }
+  return byUrl;
+}
+
+// --- Core processing ---
+
+// Processes all tournaments in chronological order, building both the player
+// stats map (for the Players tab) and the Glicko state map (for Rankings).
+function processChronologically(allTournaments, players, glicko) {
+  for (const tournament of allTournaments) {
+    // Snapshot pre-period Glicko state for every participant in this tournament.
+    // Decay is applied lazily here (based on time since each player last played).
+    const preStates = new Map();
+
+    for (const match of tournament.matches) {
+      for (const rawName of [match.winnerName, match.loserName]) {
+        if (!rawName) continue;
+        if (hiddenNames.has(normName(rawName).toLowerCase())) continue;
+        const identity = resolveIdentity(rawName, tournament.url);
+        if (!identity || !identity.id) continue;
+        const id = identity.id;
+        if (preStates.has(id)) continue;
+
+        const current = glicko.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA, lastActiveDate: null };
+        const months = monthsBetween(current.lastActiveDate, tournament.date);
+        preStates.set(id, glicko2.decayRd(current, months, GLICKO_RD_DECAY_PER_MONTH, GLICKO_DEFAULT_RD));
+      }
+    }
+
+    // Accumulate Glicko results per player for this rating period.
+    const periodResults = new Map(); // id -> [{r, rd, score}]
+
+    for (const match of tournament.matches) {
+      const { winnerName, loserName, isDQ } = match;
+      if (!winnerName || !loserName) continue;
+
+      // Always update win/loss stats for the Players tab
+      recordMatch(players, winnerName, loserName, tournament.url, tournament.label);
+
+      // DQ matches do not affect Glicko ratings
+      if (isDQ) continue;
+      if (hiddenNames.has(normName(winnerName).toLowerCase()) || hiddenNames.has(normName(loserName).toLowerCase())) continue;
+
+      const winnerId = resolveIdentity(winnerName, tournament.url).id;
+      const loserId = resolveIdentity(loserName, tournament.url).id;
+      const winnerState = preStates.get(winnerId);
+      const loserState = preStates.get(loserId);
+      if (!winnerState || !loserState) continue;
+
+      const { winnerResults, loserResults } = expandScore(match);
+
+      if (!periodResults.has(winnerId)) periodResults.set(winnerId, []);
+      if (!periodResults.has(loserId)) periodResults.set(loserId, []);
+
+      for (const score of winnerResults) {
+        periodResults.get(winnerId).push({ r: loserState.r, rd: loserState.rd, score });
+      }
+      for (const score of loserResults) {
+        periodResults.get(loserId).push({ r: winnerState.r, rd: winnerState.rd, score });
+      }
+    }
+
+    // Apply Glicko period update for players with non-DQ results
+    for (const [id, results] of periodResults) {
+      if (results.length === 0) continue;
+      const preState = preStates.get(id);
+      if (!preState) continue;
+      const updated = glicko2.updatePeriod(preState, results);
+      glicko.set(id, { ...updated, lastActiveDate: tournament.date || preState.lastActiveDate });
     }
   }
 }
 
-function escapeHtml(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+// --- Output builders ---
 
-// Players are keyed by backend id (see resolveIdentity), so player-info.json
-// is looked up by id first — that's the only way to attach info to one
-// specific person when several unrelated people share a display name (e.g.
-// the Joe/Ethan splits) — falling back to the display name for the common
-// case of an unambiguous, unsplit name.
 function buildPlayerRows(players, tournamentLocationByUrl) {
   return [...players.entries()]
     .map(([id, p]) => {
@@ -197,9 +414,6 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
         games: p.games,
         winPct: p.games > 0 ? p.wins / p.games : 0,
         location: [info.city, info.state].filter(Boolean).join(', '),
-        // Sort key for the Location column: state first, then city — not the
-        // display string, so "OH" (no city) sorts against other states by
-        // state alone rather than colliding with cities of the same name.
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
@@ -209,6 +423,36 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
       };
     })
     .sort((a, b) => b.winPct - a.winPct || b.games - a.games);
+}
+
+function buildRankingRows(players, glicko) {
+  return [...players.entries()]
+    .map(([id, p]) => {
+      const name = displayName(p);
+      const info = playerInfo[id] || playerInfo[name] || {};
+      const g = glicko.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
+      return {
+        name,
+        r: g.r,
+        rd: g.rd,
+        conservativeRating: glicko2.conservativeRating(g),
+        wins: p.wins,
+        losses: p.losses,
+        games: p.games,
+        winPct: p.games > 0 ? p.wins / p.games : 0,
+        location: [info.city, info.state].filter(Boolean).join(', '),
+        locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
+        uncertain: g.rd > GLICKO_UNCERTAIN_RD_THRESHOLD,
+      };
+    })
+    .filter((r) => r.games > 0)
+    .sort((a, b) => b.conservativeRating - a.conservativeRating);
+}
+
+// --- Writers ---
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function writeCsv(rows) {
@@ -234,11 +478,15 @@ th { cursor: pointer; user-select: none; position: sticky; top: 0; background: #
 th:hover { background: #222; }
 th.sorted-asc::after { content: " \\25B2"; }
 th.sorted-desc::after { content: " \\25BC"; }
+th.no-sort { cursor: default; }
+th.no-sort:hover { background: #1a1a1a; }
 tr:hover { background: #1c1c1c; }
 a { color: #6cf; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .numeric { text-align: right; }
 .col-location { white-space: nowrap; }
+.rank-num { text-align: right; color: #888; min-width: 2rem; }
+.uncertain { opacity: 0.55; }
 #count { color: #888; margin-bottom: 1rem; }
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #333; }
 .tab-button { background: none; border: none; color: #aaa; font-size: 1rem; padding: 0.6rem 1rem; cursor: pointer; }
@@ -246,6 +494,10 @@ a:hover { text-decoration: underline; }
 .tab-button.active { color: #6cf; border-bottom: 2px solid #6cf; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
+.tab-controls { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 0.75rem; }
+.tab-controls label { color: #aaa; font-size: 0.9rem; }
+.tab-controls select { background: #222; color: #eee; border: 1px solid #444; border-radius: 3px; padding: 0.2rem 0.4rem; font-size: 0.9rem; }
+.ranking-count { color: #888; font-size: 0.9rem; }
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
 }
@@ -256,6 +508,7 @@ function writeJs() {
     const tbody = table.tBodies[0];
     const headers = [...table.querySelectorAll('th')];
     headers.forEach((th, colIndex) => {
+      if (th.classList.contains('no-sort')) return;
       th.addEventListener('click', () => {
         const asc = !th.classList.contains('sorted-asc');
         headers.forEach((h) => h.classList.remove('sorted-asc', 'sorted-desc'));
@@ -298,14 +551,43 @@ function writeJs() {
     });
   }
 
+  function enableRankingsFilter() {
+    const panel = document.getElementById('rankings-tab');
+    if (!panel) return;
+    const select = panel.querySelector('.min-games-select');
+    const tbody = panel.querySelector('table tbody');
+    const countEl = panel.querySelector('.ranking-count');
+    if (!select || !tbody) return;
+
+    function applyFilter() {
+      const minGames = parseInt(select.value, 10) || 0;
+      let rank = 1;
+      let count = 0;
+      for (const row of tbody.rows) {
+        const games = parseInt(row.dataset.games, 10);
+        const show = !isNaN(games) && games >= minGames;
+        row.hidden = !show;
+        if (show) {
+          row.cells[0].textContent = rank++;
+          count++;
+        }
+      }
+      if (countEl) countEl.textContent = count + ' players ranked.';
+    }
+
+    select.addEventListener('change', applyFilter);
+    applyFilter();
+  }
+
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
+  enableRankingsFilter();
 })();
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), js);
 }
 
-function writeHtml(playerRows, tournamentRows) {
+function writeHtml(playerRows, allTournaments, rankingRows) {
   const playerTableRows = playerRows.map((p) => {
     const tournamentLinks = p.tournaments
       .map((t) => `<a href="${escapeHtml(t.url)}" target="_blank" rel="noopener"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
@@ -322,16 +604,28 @@ function writeHtml(playerRows, tournamentRows) {
     </tr>`;
   }).join('\n');
 
-  const tournamentTableRows = [...tournamentRows]
+  const tournamentTableRows = [...allTournaments]
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .map((t) => `<tr>
-      <td><a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.name)}</a></td>
+      <td><a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.label)}</a></td>
       <td data-sort="${t.date}">${escapeHtml(t.date)}</td>
       <td>${escapeHtml(t.location)}</td>
       <td>${escapeHtml(t.source)}</td>
       <td class="numeric" data-sort="${t.participants}">${t.participants}</td>
-      <td class="numeric" data-sort="${t.matches}">${t.matches}</td>
+      <td class="numeric" data-sort="${t.matchCount}">${t.matchCount}</td>
     </tr>`).join('\n');
+
+  const rankingTableRows = rankingRows.map((p, i) => {
+    return `<tr data-games="${p.games}"${p.uncertain ? ' class="uncertain"' : ''}>
+      <td class="rank-num">${i + 1}</td>
+      <td>${escapeHtml(p.name)}</td>
+      <td class="numeric" data-sort="${p.conservativeRating.toFixed(4)}">${Math.round(p.r)}</td>
+      <td class="numeric" data-sort="${p.rd.toFixed(4)}">&#xB1;${Math.round(p.rd)}</td>
+      <td class="numeric" data-sort="${p.games}">${p.games}</td>
+      <td class="numeric" data-sort="${p.winPct}">${(p.winPct * 100).toFixed(1)}%</td>
+      <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${escapeHtml(p.location)}</td>
+    </tr>`;
+  }).join('\n');
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -345,6 +639,7 @@ function writeHtml(playerRows, tournamentRows) {
 <div class="tabs">
   <button class="tab-button active" data-tab="players-tab">Players</button>
   <button class="tab-button" data-tab="tournaments-tab">Tournaments</button>
+  <button class="tab-button" data-tab="rankings-tab">Power Rankings</button>
 </div>
 
 <div id="players-tab" class="tab-panel active">
@@ -369,7 +664,7 @@ ${playerTableRows}
 </div>
 
 <div id="tournaments-tab" class="tab-panel">
-  <div id="count">${tournamentRows.length} tournaments. Click a column header to sort.</div>
+  <div id="count">${allTournaments.length} tournaments. Click a column header to sort.</div>
   <table data-sortable>
     <thead>
       <tr>
@@ -387,6 +682,36 @@ ${tournamentTableRows}
   </table>
 </div>
 
+<div id="rankings-tab" class="tab-panel">
+  <div class="tab-controls">
+    <label>Min games:
+      <select class="min-games-select">
+        <option value="1">All</option>
+        <option value="5" selected>5+</option>
+        <option value="10">10+</option>
+        <option value="20">20+</option>
+      </select>
+    </label>
+    <span class="ranking-count"></span>
+  </div>
+  <table data-sortable>
+    <thead>
+      <tr>
+        <th class="no-sort rank-num">#</th>
+        <th data-type="string">Player</th>
+        <th data-type="number" class="sorted-desc">Rating</th>
+        <th data-type="number">RD</th>
+        <th data-type="number">Games</th>
+        <th data-type="number">Win %</th>
+        <th data-type="string" data-blank-last="true" class="col-location">Location</th>
+      </tr>
+    </thead>
+    <tbody>
+${rankingTableRows}
+    </tbody>
+  </table>
+</div>
+
 <script src="index.js"></script>
 </body>
 </html>
@@ -396,25 +721,36 @@ ${tournamentTableRows}
 }
 
 function main() {
-  const players = new Map();
-  const tournaments = [];
-  processChallonge(players, tournaments);
-  processStartgg(players, tournaments);
+  const challongeTournaments = collectChallonge();
+  const startggTournaments = collectStartgg();
+  const allTournaments = [...challongeTournaments, ...startggTournaments];
 
-  const tournamentLocationByUrl = new Map(tournaments.map((t) => [t.url, t.location]));
+  allTournaments.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  const knownUrls = new Set(allTournaments.map((t) => t.url));
+  const manualByUrl = loadManualMatches(knownUrls);
+  for (const t of allTournaments) {
+    t.matches.push(...(manualByUrl.get(t.url) || []));
+  }
+
+  const players = new Map();
+  const glicko = new Map();
+  processChronologically(allTournaments, players, glicko);
+
+  const tournamentLocationByUrl = new Map(allTournaments.map((t) => [t.url, t.location]));
   const playerRows = buildPlayerRows(players, tournamentLocationByUrl);
+  const rankingRows = buildRankingRows(players, glicko);
 
   writeCsv(playerRows);
   writeCss();
   writeJs();
-  writeHtml(playerRows, tournaments);
+  writeHtml(playerRows, allTournaments, rankingRows);
 
   console.log(`Unique players: ${playerRows.length}`);
-  console.log(`Tournaments: ${tournaments.length}`);
+  console.log(`Tournaments:    ${allTournaments.length}`);
+  console.log(`Ranked players: ${rankingRows.length}`);
   console.log(`Output: ${path.join(__dirname, 'players.csv')}`);
   console.log(`Output: ${path.join(REPO_ROOT, 'index.html')}`);
-  console.log(`Output: ${path.join(REPO_ROOT, 'index.css')}`);
-  console.log(`Output: ${path.join(REPO_ROOT, 'index.js')}`);
 }
 
 main();
