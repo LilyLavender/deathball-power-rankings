@@ -27,7 +27,28 @@ const GLICKO_DEFAULT_RD = 350;
 const GLICKO_DEFAULT_SIGMA = 0.06;
 const GLICKO_RD_DECAY_PER_MONTH = 5;    // RD added (quadratically) per inactive month
 const GLICKO_UNCERTAIN_RD_THRESHOLD = 150; // rows above this RD are dimmed
-const GLICKO_CLOSE_GAME_SCORE = 0.85;   // win score for a game won by ≤1 goal
+const GLICKO_CLOSE_GAME_SCORE = 0.85;   // win score for a game won by 1 goal  (3-2)
+const GLICKO_NEAR_GAME_SCORE  = 0.93;   // win score for a game won by 2 goals (3-1)
+
+// State/province abbreviation → full name. If a value isn't found here it is
+// passed through as-is (handles cases like "Ontario" already stored in full).
+const STATE_NAMES = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+  MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
+  MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+  NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
+  OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+  SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+  VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+  DC: 'Washington D.C.',
+  AB: 'Alberta', BC: 'British Columbia', MB: 'Manitoba', NB: 'New Brunswick',
+  NL: 'Newfoundland and Labrador', NS: 'Nova Scotia', NT: 'Northwest Territories',
+  NU: 'Nunavut', ON: 'Ontario', PE: 'Prince Edward Island', QC: 'Quebec',
+  SK: 'Saskatchewan', YT: 'Yukon',
+};
 
 // ---------------------------------
 
@@ -131,7 +152,7 @@ function expandScore(match) {
     for (const { winnerGoals, loserGoals } of match.games) {
       const winnerWonGame = winnerGoals > loserGoals;
       const margin = Math.abs(winnerGoals - loserGoals);
-      const winScore = margin <= 1 ? GLICKO_CLOSE_GAME_SCORE : 1.0;
+      const winScore = margin <= 1 ? GLICKO_CLOSE_GAME_SCORE : margin <= 2 ? GLICKO_NEAR_GAME_SCORE : 1.0;
       winnerResults.push(winnerWonGame ? winScore : 1 - winScore);
       loserResults.push(winnerWonGame ? 1 - winScore : winScore);
     }
@@ -192,7 +213,7 @@ function collectChallonge() {
         }
       }
 
-      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ });
+      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ, identifier: String(mm.identifier || mm.id || '') });
     }
 
     result.push({
@@ -238,7 +259,7 @@ function collectStartgg() {
       const winnerSets = !isDQ && winnerRaw != null && winnerRaw >= 0 ? winnerRaw : null;
       const loserSets = !isDQ && loserRaw != null && loserRaw >= 0 ? loserRaw : null;
 
-      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ });
+      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ, identifier: s.identifier || String(s.id || '') });
     }
 
     result.push({
@@ -326,7 +347,7 @@ function loadManualMatches(knownUrls) {
       continue;
     }
     if (!byUrl.has(m.tournament)) byUrl.set(m.tournament, []);
-    byUrl.get(m.tournament).push(resolveManualMatch(m));
+    byUrl.get(m.tournament).push({ ...resolveManualMatch(m), matchIndex: m.match_index || null });
   }
   return byUrl;
 }
@@ -413,8 +434,11 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
         losses: p.losses,
         games: p.games,
         winPct: p.games > 0 ? p.wins / p.games : 0,
-        location: [info.city, info.state].filter(Boolean).join(', '),
+        location: info.city
+          ? [info.city, info.state].filter(Boolean).join(', ')
+          : (STATE_NAMES[info.state] || info.state || ''),
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
+        state: info.state || '',
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
           label,
@@ -440,8 +464,11 @@ function buildRankingRows(players, glicko) {
         losses: p.losses,
         games: p.games,
         winPct: p.games > 0 ? p.wins / p.games : 0,
-        location: [info.city, info.state].filter(Boolean).join(', '),
+        location: info.city
+          ? [info.city, info.state].filter(Boolean).join(', ')
+          : (STATE_NAMES[info.state] || info.state || ''),
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
+        state: info.state || '',
         uncertain: g.rd > GLICKO_UNCERTAIN_RD_THRESHOLD,
       };
     })
@@ -503,7 +530,27 @@ a:hover { text-decoration: underline; }
 }
 
 function writeJs() {
+  const stateNamesJson = JSON.stringify({
+    AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+    CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+    HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+    KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+    MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
+    MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+    NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
+    OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+    SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+    VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+    DC: 'Washington D.C.',
+    AB: 'Alberta', BC: 'British Columbia', MB: 'Manitoba', NB: 'New Brunswick',
+    NL: 'Newfoundland and Labrador', NS: 'Nova Scotia', NT: 'Northwest Territories',
+    NU: 'Nunavut', ON: 'Ontario', PE: 'Prince Edward Island', QC: 'Quebec',
+    SK: 'Saskatchewan', YT: 'Yukon',
+  });
+
   const js = `(function () {
+  const STATE_NAMES = ${stateNamesJson};
+
   function enableSorting(table) {
     const tbody = table.tBodies[0];
     const headers = [...table.querySelectorAll('th')];
@@ -551,37 +598,97 @@ function writeJs() {
     });
   }
 
-  function enableRankingsFilter() {
-    const panel = document.getElementById('rankings-tab');
-    if (!panel) return;
-    const select = panel.querySelector('.min-games-select');
+  function populateStateFilter(panel) {
+    const select = panel.querySelector('.state-filter-select');
     const tbody = panel.querySelector('table tbody');
-    const countEl = panel.querySelector('.ranking-count');
     if (!select || !tbody) return;
+    const seen = new Set();
+    for (const row of tbody.rows) {
+      if (row.dataset.state) seen.add(row.dataset.state);
+    }
+    const sorted = [...seen].sort((a, b) =>
+      (STATE_NAMES[a] || a).localeCompare(STATE_NAMES[b] || b)
+    );
+    for (const abbr of sorted) {
+      const opt = document.createElement('option');
+      opt.value = abbr;
+      opt.dataset.label = STATE_NAMES[abbr] || abbr;
+      opt.textContent = opt.dataset.label;
+      select.appendChild(opt);
+    }
+    // Stamp base label on the hardcoded "All locations" option too
+    if (select.options[0]) select.options[0].dataset.label = select.options[0].textContent;
+  }
 
-    function applyFilter() {
-      const minGames = parseInt(select.value, 10) || 0;
-      let rank = 1;
-      let count = 0;
-      for (const row of tbody.rows) {
-        const games = parseInt(row.dataset.games, 10);
-        const show = !isNaN(games) && games >= minGames;
-        row.hidden = !show;
-        if (show) {
-          row.cells[0].textContent = rank++;
-          count++;
-        }
-      }
-      if (countEl) countEl.textContent = count + ' players ranked.';
+  function applyFilters(panel) {
+    const minGames = parseInt(panel.querySelector('.min-games-select')?.value || '0', 10);
+    const maxRdVal = panel.querySelector('.max-rd-select')?.value || 'Infinity';
+    const maxRd = maxRdVal === 'Infinity' ? Infinity : parseFloat(maxRdVal);
+    const state = panel.querySelector('.state-filter-select')?.value || '';
+    const tbody = panel.querySelector('table tbody');
+    if (!tbody) return;
+
+    // First pass: count per state for rows that pass non-state filters
+    const stateCounts = new Map();
+    let totalPassingNonState = 0;
+    for (const row of tbody.rows) {
+      const games = parseInt(row.dataset.games || '0', 10);
+      const rd = parseFloat(row.dataset.rd || '0');
+      if (minGames && games < minGames) continue;
+      if (maxRd !== Infinity && rd > maxRd) continue;
+      const rowState = row.dataset.state || '';
+      stateCounts.set(rowState, (stateCounts.get(rowState) || 0) + 1);
+      totalPassingNonState++;
     }
 
-    select.addEventListener('change', applyFilter);
-    applyFilter();
+    // Update dropdown option labels with counts
+    const stateSelect = panel.querySelector('.state-filter-select');
+    if (stateSelect) {
+      for (const opt of stateSelect.options) {
+        const label = opt.dataset.label || opt.textContent.replace(/\\s*\\(\\d+\\)$/, '');
+        const count = opt.value === '' ? totalPassingNonState : (stateCounts.get(opt.value) || 0);
+        opt.textContent = label + ' (' + count + ')';
+      }
+    }
+
+    // Second pass: apply all filters and update visibility
+    let rank = 1;
+    let visible = 0;
+    for (const row of tbody.rows) {
+      const games = parseInt(row.dataset.games || '0', 10);
+      const rd = parseFloat(row.dataset.rd || '0');
+      const rowState = row.dataset.state || '';
+      const show = (!minGames || games >= minGames)
+        && (maxRd === Infinity || rd <= maxRd)
+        && (!state || rowState === state);
+      row.hidden = !show;
+      if (show) {
+        const rankCell = row.querySelector('.rank-num');
+        if (rankCell) rankCell.textContent = rank++;
+        visible++;
+      }
+    }
+    const countEl = panel.querySelector('.filter-count');
+    if (countEl) {
+      const noun = panel.id === 'rankings-tab' ? 'players ranked' : 'unique players';
+      countEl.textContent = visible + ' ' + noun + '. Click a column header to sort.';
+    }
+  }
+
+  function initPanel(panelId) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    populateStateFilter(panel);
+    applyFilters(panel);
+    panel.querySelectorAll('.min-games-select, .max-rd-select, .state-filter-select').forEach((el) => {
+      el.addEventListener('change', () => applyFilters(panel));
+    });
   }
 
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
-  enableRankingsFilter();
+  initPanel('players-tab');
+  initPanel('rankings-tab');
 })();
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), js);
@@ -592,7 +699,7 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
     const tournamentLinks = p.tournaments
       .map((t) => `<a href="${escapeHtml(t.url)}" target="_blank" rel="noopener"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
       .join(', ');
-    return `<tr>
+    return `<tr${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
       <td>${escapeHtml(p.name)}</td>
       <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${escapeHtml(p.location)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
@@ -616,11 +723,13 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
     </tr>`).join('\n');
 
   const rankingTableRows = rankingRows.map((p, i) => {
-    return `<tr data-games="${p.games}"${p.uncertain ? ' class="uncertain"' : ''}>
+    return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}${p.uncertain ? ' class="uncertain"' : ''}>
       <td class="rank-num">${i + 1}</td>
       <td>${escapeHtml(p.name)}</td>
-      <td class="numeric" data-sort="${p.conservativeRating.toFixed(4)}">${Math.round(p.r)}</td>
+      <td class="numeric">${Math.round(p.r)}</td>
       <td class="numeric" data-sort="${p.rd.toFixed(4)}">&#xB1;${Math.round(p.rd)}</td>
+      <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
+      <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
       <td class="numeric" data-sort="${p.winPct}">${(p.winPct * 100).toFixed(1)}%</td>
       <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${escapeHtml(p.location)}</td>
@@ -643,7 +752,14 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
 </div>
 
 <div id="players-tab" class="tab-panel active">
-  <div id="count">${playerRows.length} unique players. Click a column header to sort.</div>
+  <div class="tab-controls">
+    <label>State/Province:
+      <select class="state-filter-select">
+        <option value="">All locations</option>
+      </select>
+    </label>
+    <span class="filter-count">${playerRows.length} unique players. Click a column header to sort.</span>
+  </div>
   <table data-sortable>
     <thead>
       <tr>
@@ -692,15 +808,32 @@ ${tournamentTableRows}
         <option value="20">20+</option>
       </select>
     </label>
-    <span class="ranking-count"></span>
+    <label>Max RD:
+      <select class="max-rd-select">
+        <option value="Infinity">All</option>
+        <option value="250">250</option>
+        <option value="200">200</option>
+        <option value="150" selected>150</option>
+        <option value="100">100</option>
+        <option value="50">50</option>
+      </select>
+    </label>
+    <label>State/Province:
+      <select class="state-filter-select">
+        <option value="">All locations</option>
+      </select>
+    </label>
+    <span class="filter-count"></span>
   </div>
   <table data-sortable>
     <thead>
       <tr>
-        <th class="no-sort rank-num">#</th>
+        <th data-type="number" class="sorted-asc rank-num">#</th>
         <th data-type="string">Player</th>
-        <th data-type="number" class="sorted-desc">Rating</th>
+        <th data-type="number">Rating</th>
         <th data-type="number">RD</th>
+        <th data-type="number">W</th>
+        <th data-type="number">L</th>
         <th data-type="number">Games</th>
         <th data-type="number">Win %</th>
         <th data-type="string" data-blank-last="true" class="col-location">Location</th>
@@ -730,7 +863,14 @@ function main() {
   const knownUrls = new Set(allTournaments.map((t) => t.url));
   const manualByUrl = loadManualMatches(knownUrls);
   for (const t of allTournaments) {
-    t.matches.push(...(manualByUrl.get(t.url) || []));
+    const manual = manualByUrl.get(t.url) || [];
+    if (manual.length === 0) continue;
+    // Manual entries with a match_index replace the scraped match for that slot
+    const overrideIds = new Set(manual.map((m) => m.matchIndex).filter(Boolean));
+    if (overrideIds.size > 0) {
+      t.matches = t.matches.filter((m) => !overrideIds.has(m.identifier));
+    }
+    t.matches.push(...manual);
   }
 
   const players = new Map();

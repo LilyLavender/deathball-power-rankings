@@ -60,6 +60,7 @@
     { "names": ["Francis S", "Francis"], "canonical": "Francis S" },
     { "names": ["greggoblin"], "canonical": "greggoblin", "id": "greg-recent" },
     { "names": ["HS Bryan"], "canonical": "Bryan", "id": "bryan-free-play" },
+    { "names": ["Bryan M", "#1TechBryan"], "canonical": "Bryan M", "id": "bryan-2024-2026" },
     { "names": ["Jake Lawall", "jake"], "canonical": "Jake Lawall" },
     { "names": ["James Matthews"], "canonical": "James Matthews", "id": "james-freeplay" },
     { "names": ["Jaq3", "Jaq"], "canonical": "Jaq3" },
@@ -157,7 +158,7 @@
       "name": "Bryan",
       "resolutions": [
         { "id": "bryan-free-play", "canonical": "Bryan", "tournaments": ["https://fpaplayers.challonge.com/cusnp6yj"] },
-        { "id": "bryan-2024-2026", "canonical": "Bryan", "tournaments": ["https://challonge.com/w31sc2d1", "https://challonge.com/8m265y1c", "https://challonge.com/4afozcud", "https://challonge.com/9yxjnhn"] }
+        { "id": "bryan-2024-2026", "canonical": "Bryan M", "tournaments": ["https://challonge.com/w31sc2d1", "https://challonge.com/8m265y1c", "https://challonge.com/4afozcud", "https://challonge.com/9yxjnhn"] }
       ]
     },
     {

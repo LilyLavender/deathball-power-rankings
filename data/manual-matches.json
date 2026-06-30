@@ -1,6 +1,35 @@
 {
   "_schema": "Manually entered match results to supplement scraped tournament data. All entries must reference a tournament URL that already exists in the scraped data (challonge/tournaments.json or start.gg/tournaments.json). Player names go through the same alias/split resolution as scraped data — use the name as it appears in that tournament, or a known alias from player-identities.json. `match_index` is for reference and deduplication only (ordering within a tournament does not affect Glicko-2 period updates). Either `score` or `games` must be provided. `score` is a set-count string in p1-p2 format (e.g. '3-1'); winner is inferred from who has more sets. `games` is an array of per-game goal scores in p1-p2 format (e.g. '3-2'); winner is inferred from who wins more games; close games (margin ≤1 goal) receive a reduced Glicko win score.",
-  "_example": { "p1": "somewes", "p2": "Corley", "tournament": "https://challonge.com/example", "match_index": 3, "score": "3-1" },
-  "_example_games": { "p1": "somewes", "p2": "Corley", "tournament": "https://challonge.com/example", "match_index": 5, "games": ["3-2", "0-3", "3-1"] },
-  "matches": []
+  "_example": { "p1": "somewes", "p2": "Corley", "tournament": "https://challonge.com/example", "match_index": "A3", "score": "3-1" },
+  "_example_games": { "p1": "somewes", "p2": "Corley", "tournament": "https://challonge.com/example", "match_index": "B2", "games": ["3-2", "0-3", "3-1"] },
+  "matches": [
+    {
+      "p1": "zachaction",
+      "p2": "LilyLambda",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "W",
+      "games": ["3-0", "3-2"]
+    },
+    {
+      "p1": "LilyLambda",
+      "p2": "TacBac",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "BA",
+      "games": ["2-3", "3-2", "3-1"]
+    },
+    {
+      "p1": "LilyLambda",
+      "p2": "Gunstar Green",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "BE",
+      "games": ["3-1", "3-2"]
+    },
+    {
+      "p1": "Enickma",
+      "p2": "LilyLambda",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "BI",
+      "games": ["3-2", "3-2"]
+    }
+  ]
 }
