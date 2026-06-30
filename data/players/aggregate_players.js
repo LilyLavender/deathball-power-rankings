@@ -27,8 +27,8 @@ const GLICKO_DEFAULT_RD = 350;
 const GLICKO_DEFAULT_SIGMA = 0.06;
 const GLICKO_RD_DECAY_PER_MONTH = 5;    // RD added (quadratically) per inactive month
 const GLICKO_UNCERTAIN_RD_THRESHOLD = 150; // rows above this RD are dimmed
-const GLICKO_CLOSE_GAME_SCORE = 0.85;   // win score for a game won by 1 goal  (3-2)
-const GLICKO_NEAR_GAME_SCORE  = 0.93;   // win score for a game won by 2 goals (3-1)
+const GLICKO_CLOSE_GAME_SCORE = 0.86;   // win score for a game won by 1 goal  (3-2)
+const GLICKO_NEAR_GAME_SCORE  = 0.94;   // win score for a game won by 2 goals (3-1)
 const GLICKO_WITHIN_TOURNAMENT_PASSES = 4; // iterative passes per tournament to correct new-player bias
 
 // State/province abbreviation → full name. If a value isn't found here it is
@@ -451,7 +451,9 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
         winPct: p.games > 0 ? p.wins / p.games : 0,
         location: info.city
           ? [info.city, info.state].filter(Boolean).join(', ')
-          : (STATE_NAMES[info.state] || info.state || ''),
+          : info.state
+          ? (STATE_NAMES[info.state] || info.state)
+          : (info.country || ''),
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
         state: info.state || '',
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
@@ -481,10 +483,12 @@ function buildRankingRows(players, glicko) {
         winPct: p.games > 0 ? p.wins / p.games : 0,
         location: info.city
           ? [info.city, info.state].filter(Boolean).join(', ')
-          : (STATE_NAMES[info.state] || info.state || ''),
+          : info.state
+          ? (STATE_NAMES[info.state] || info.state)
+          : (info.country || ''),
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
         state: info.state || '',
-        uncertain: g.rd > GLICKO_UNCERTAIN_RD_THRESHOLD,
+        uncertain: Math.round(g.rd) > GLICKO_UNCERTAIN_RD_THRESHOLD,
       };
     })
     .filter((r) => r.games > 0)
@@ -529,6 +533,7 @@ a:hover { text-decoration: underline; }
 .col-location { white-space: nowrap; }
 .rank-num { text-align: right; color: #888; min-width: 2rem; }
 .uncertain { opacity: 0.55; }
+.filter-dim { opacity: 0.45; }
 #count { color: #888; margin-bottom: 1rem; }
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #333; }
 .tab-button { background: none; border: none; color: #aaa; font-size: 1rem; padding: 0.6rem 1rem; cursor: pointer; }
@@ -642,6 +647,9 @@ function writeJs() {
     const state = panel.querySelector('.state-filter-select')?.value || '';
     const tbody = panel.querySelector('table tbody');
     if (!tbody) return;
+    const isRankingsTab = panel.id === 'rankings-tab';
+    const DEFAULT_MIN_GAMES = 5;
+    const DEFAULT_MAX_RD = 150;
 
     // First pass: count per state for rows that pass non-state filters
     const stateCounts = new Map();
@@ -673,10 +681,16 @@ function writeJs() {
       const games = parseInt(row.dataset.games || '0', 10);
       const rd = parseFloat(row.dataset.rd || '0');
       const rowState = row.dataset.state || '';
-      const show = (!minGames || games >= minGames)
-        && (maxRd === Infinity || rd <= maxRd)
-        && (!state || rowState === state);
+      const passesMinMax = (!minGames || games >= minGames) && (maxRd === Infinity || rd <= maxRd);
+      const passesState = !state || rowState === state;
+      const show = passesMinMax && passesState;
       row.hidden = !show;
+      if (isRankingsTab) {
+        const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
+        row.classList.toggle('filter-dim', show && !meetsDefaults);
+      } else {
+        row.classList.remove('filter-dim');
+      }
       if (show) {
         const rankCell = row.querySelector('.rank-num');
         if (rankCell) rankCell.textContent = rank++;

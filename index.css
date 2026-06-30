@@ -15,6 +15,7 @@ a:hover { text-decoration: underline; }
 .col-location { white-space: nowrap; }
 .rank-num { text-align: right; color: #888; min-width: 2rem; }
 .uncertain { opacity: 0.55; }
+.filter-dim { opacity: 0.45; }
 #count { color: #888; margin-bottom: 1rem; }
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #333; }
 .tab-button { background: none; border: none; color: #aaa; font-size: 1rem; padding: 0.6rem 1rem; cursor: pointer; }

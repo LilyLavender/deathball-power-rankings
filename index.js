@@ -77,6 +77,9 @@
     const state = panel.querySelector('.state-filter-select')?.value || '';
     const tbody = panel.querySelector('table tbody');
     if (!tbody) return;
+    const isRankingsTab = panel.id === 'rankings-tab';
+    const DEFAULT_MIN_GAMES = 5;
+    const DEFAULT_MAX_RD = 150;
 
     // First pass: count per state for rows that pass non-state filters
     const stateCounts = new Map();
@@ -108,10 +111,16 @@
       const games = parseInt(row.dataset.games || '0', 10);
       const rd = parseFloat(row.dataset.rd || '0');
       const rowState = row.dataset.state || '';
-      const show = (!minGames || games >= minGames)
-        && (maxRd === Infinity || rd <= maxRd)
-        && (!state || rowState === state);
+      const passesMinMax = (!minGames || games >= minGames) && (maxRd === Infinity || rd <= maxRd);
+      const passesState = !state || rowState === state;
+      const show = passesMinMax && passesState;
       row.hidden = !show;
+      if (isRankingsTab) {
+        const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
+        row.classList.toggle('filter-dim', show && !meetsDefaults);
+      } else {
+        row.classList.remove('filter-dim');
+      }
       if (show) {
         const rankCell = row.querySelector('.rank-num');
         if (rankCell) rankCell.textContent = rank++;
