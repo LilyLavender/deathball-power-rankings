@@ -29,6 +29,7 @@ const GLICKO_RD_DECAY_PER_MONTH = 5;    // RD added (quadratically) per inactive
 const GLICKO_UNCERTAIN_RD_THRESHOLD = 150; // rows above this RD are dimmed
 const GLICKO_CLOSE_GAME_SCORE = 0.85;   // win score for a game won by 1 goal  (3-2)
 const GLICKO_NEAR_GAME_SCORE  = 0.93;   // win score for a game won by 2 goals (3-1)
+const GLICKO_WITHIN_TOURNAMENT_PASSES = 4; // iterative passes per tournament to correct new-player bias
 
 // State/province abbreviation → full name. If a value isn't found here it is
 // passed through as-is (handles cases like "Ontario" already stored in full).
@@ -356,67 +357,81 @@ function loadManualMatches(knownUrls) {
 
 // Processes all tournaments in chronological order, building both the player
 // stats map (for the Players tab) and the Glicko state map (for Rankings).
+//
+// Each tournament runs GLICKO_WITHIN_TOURNAMENT_PASSES iterations. Each pass
+// uses the previous pass's rating estimates as opponent strength references,
+// while keeping each player's own historical prior (originalPreStates) as the
+// starting point for their update. This corrects new-player bias within an
+// event without using any information from future tournaments.
 function processChronologically(allTournaments, players, glicko) {
   for (const tournament of allTournaments) {
-    // Snapshot pre-period Glicko state for every participant in this tournament.
-    // Decay is applied lazily here (based on time since each player last played).
-    const preStates = new Map();
-
+    // Compute pre-tournament states with lazy decay — fixed across all passes.
+    const originalPreStates = new Map();
     for (const match of tournament.matches) {
       for (const rawName of [match.winnerName, match.loserName]) {
         if (!rawName) continue;
         if (hiddenNames.has(normName(rawName).toLowerCase())) continue;
         const identity = resolveIdentity(rawName, tournament.url);
         if (!identity || !identity.id) continue;
-        const id = identity.id;
-        if (preStates.has(id)) continue;
-
-        const current = glicko.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA, lastActiveDate: null };
+        if (originalPreStates.has(identity.id)) continue;
+        const current = glicko.get(identity.id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA, lastActiveDate: null };
         const months = monthsBetween(current.lastActiveDate, tournament.date);
-        preStates.set(id, glicko2.decayRd(current, months, GLICKO_RD_DECAY_PER_MONTH, GLICKO_DEFAULT_RD));
+        originalPreStates.set(identity.id, glicko2.decayRd(current, months, GLICKO_RD_DECAY_PER_MONTH, GLICKO_DEFAULT_RD));
       }
     }
 
-    // Accumulate Glicko results per player for this rating period.
-    const periodResults = new Map(); // id -> [{r, rd, score}]
+    // Opponent estimates start at originalPreStates and improve each pass.
+    let currentStates = new Map(originalPreStates);
 
-    for (const match of tournament.matches) {
-      const { winnerName, loserName, isDQ } = match;
-      if (!winnerName || !loserName) continue;
+    for (let pass = 0; pass < GLICKO_WITHIN_TOURNAMENT_PASSES; pass++) {
+      const periodResults = new Map();
 
-      // Always update win/loss stats for the Players tab
-      recordMatch(players, winnerName, loserName, tournament.url, tournament.label);
+      for (const match of tournament.matches) {
+        const { winnerName, loserName, isDQ } = match;
+        if (!winnerName || !loserName) continue;
 
-      // DQ matches do not affect Glicko ratings
-      if (isDQ) continue;
-      if (hiddenNames.has(normName(winnerName).toLowerCase()) || hiddenNames.has(normName(loserName).toLowerCase())) continue;
+        // W/L stats only on the first pass to avoid double-counting.
+        if (pass === 0) recordMatch(players, winnerName, loserName, tournament.url, tournament.label);
 
-      const winnerId = resolveIdentity(winnerName, tournament.url).id;
-      const loserId = resolveIdentity(loserName, tournament.url).id;
-      const winnerState = preStates.get(winnerId);
-      const loserState = preStates.get(loserId);
-      if (!winnerState || !loserState) continue;
+        if (isDQ) continue;
+        if (hiddenNames.has(normName(winnerName).toLowerCase()) || hiddenNames.has(normName(loserName).toLowerCase())) continue;
 
-      const { winnerResults, loserResults } = expandScore(match);
+        const winnerId = resolveIdentity(winnerName, tournament.url).id;
+        const loserId = resolveIdentity(loserName, tournament.url).id;
+        // Use currentStates for opponent strength — this is what improves each pass.
+        const winnerState = currentStates.get(winnerId);
+        const loserState = currentStates.get(loserId);
+        if (!winnerState || !loserState) continue;
 
-      if (!periodResults.has(winnerId)) periodResults.set(winnerId, []);
-      if (!periodResults.has(loserId)) periodResults.set(loserId, []);
+        const { winnerResults, loserResults } = expandScore(match);
 
-      for (const score of winnerResults) {
-        periodResults.get(winnerId).push({ r: loserState.r, rd: loserState.rd, score });
+        if (!periodResults.has(winnerId)) periodResults.set(winnerId, []);
+        if (!periodResults.has(loserId)) periodResults.set(loserId, []);
+
+        for (const score of winnerResults) {
+          periodResults.get(winnerId).push({ r: loserState.r, rd: loserState.rd, score });
+        }
+        for (const score of loserResults) {
+          periodResults.get(loserId).push({ r: winnerState.r, rd: winnerState.rd, score });
+        }
       }
-      for (const score of loserResults) {
-        periodResults.get(loserId).push({ r: winnerState.r, rd: winnerState.rd, score });
+
+      // Apply Glicko update. Each player's own prior is always originalPreStates
+      // (anchored to history); only the opponent estimates (from currentStates) vary.
+      const nextStates = new Map(currentStates);
+      for (const [id, results] of periodResults) {
+        if (!results.length) continue;
+        const preState = originalPreStates.get(id);
+        if (!preState) continue;
+        const updated = glicko2.updatePeriod(preState, results);
+        nextStates.set(id, { ...updated, lastActiveDate: tournament.date || preState.lastActiveDate });
       }
+      currentStates = nextStates;
     }
 
-    // Apply Glicko period update for players with non-DQ results
-    for (const [id, results] of periodResults) {
-      if (results.length === 0) continue;
-      const preState = preStates.get(id);
-      if (!preState) continue;
-      const updated = glicko2.updatePeriod(preState, results);
-      glicko.set(id, { ...updated, lastActiveDate: tournament.date || preState.lastActiveDate });
+    // Lock in converged ratings for this tournament's participants.
+    for (const id of originalPreStates.keys()) {
+      glicko.set(id, currentStates.get(id));
     }
   }
 }
