@@ -51,6 +51,134 @@ const STATE_NAMES = {
   SK: 'Saskatchewan', YT: 'Yukon',
 };
 
+// Flag image URL helpers
+const WIKIMEDIA_FLAG = (file) =>
+  `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}`;
+const NIBSBIN_FLAG = (file) =>
+  `https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/${encodeURIComponent(file)}`;
+const FLAG_ICON_URL = (code) =>
+  `https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/${code}.svg`;
+
+// City flags — keyed "City|STATE", values are full image URLs (two-hop verified).
+// Most are Wikimedia Commons Special:FilePath redirects; Seattle lives on wikipedia/en instead.
+const WF = (f) => WIKIMEDIA_FLAG(f); // shorthand
+const CITY_FLAGS = {
+  'Allen|TX':             WF('Flag_of_Allen,_Texas.svg'),
+  'Austin|TX':            WF('Flag_of_Austin,_Texas.svg'),
+  'Brandon|MS':           'https://upload.wikimedia.org/wikipedia/commons/8/85/Flag_of_Brandon%2C_Mississippi.png',
+  'Chattanooga|TN':       WF('Flag_of_Chattanooga,_Tennessee.svg'),
+  'Chicago|IL':           WF('Flag_of_Chicago,_Illinois.svg'),
+  'Clawson|MI':           WF('Flag_of_Clawson,_Michigan.svg'),
+  'Dallas/Fort Worth|TX': WF('Flag_of_Dallas.svg'),
+  'Detroit|MI':           WF('Flag_of_Detroit.svg'),
+  'Fort Lauderdale|FL':   WF('Flag_of_Fort_Lauderdale,_Florida.svg'),
+  'Grand Island|NE':      'https://upload.wikimedia.org/wikipedia/en/2/2a/GrandIslandNEflag.gif',
+  'Grand Rapids|MI':      WF('Flag_of_Grand_Rapids,_Michigan.svg'),
+  'Houston|TX':           WF('Flag_of_Houston,_Texas.svg'),
+  'Jacksonville|FL':      WF('Flag_of_Jacksonville,_Florida.svg'),
+  'Lansing|MI':           'https://upload.wikimedia.org/wikipedia/en/6/65/Flag_of_Lansing%2C_Michigan.svg',
+  'Lexington|KY':         'https://upload.wikimedia.org/wikipedia/commons/a/a6/Flag_of_the_Lexington_Fayette_Urban_County_Government.png',
+  'Madison|WI':           WF('Flag_of_Madison,_Wisconsin.svg'),
+  'Maple Grove|MN':       WF('Flag_of_Maple_Grove,_Minnesota.svg'),
+  'Milwaukee|WI':         WF("People's_Flag_of_Milwaukee.svg"),
+  'Minneapolis|MN':       WF('Flag_of_Minneapolis.svg'),
+  'Orange|CA':            'https://upload.wikimedia.org/wikipedia/commons/f/f3/Flag_of_Orange%2C_California.gif',
+  'Portland|OR':          WF('Flag_of_Portland,_Oregon.svg'),
+  'Richardson|TX':        WF('Flag_of_Richardson,_Texas.svg'),
+  'San Francisco|CA':     WF('Flag_of_San_Francisco.svg'),
+  'Seattle|WA':           'https://upload.wikimedia.org/wikipedia/en/6/6d/Flag_of_Seattle.svg',
+  'Westminster|CO':       WF('Flag_of_Westminster,_Colorado.svg'),
+  'Ypsilanti|MI':         'https://upload.wikimedia.org/wikipedia/en/7/75/Flag_of_Ypsilanti.svg',
+};
+
+// US state flags — keyed by abbreviation. Source: nibsbin/us-state-flags-svg via jsDelivr.
+const US_STATE_FLAGS = {
+  AL: 'Flag_of_Alabama.svg',         AK: 'Flag_of_Alaska.svg',
+  AZ: 'Flag_of_Arizona.svg',         AR: 'Flag_of_Arkansas.svg',
+  CA: 'Flag_of_California.svg',
+  CO: 'Flag_of_Colorado_designed_by_Andrew_Carlisle_Carson.svg',
+  CT: 'Flag_of_Connecticut.svg',     DE: 'Flag_of_Delaware.svg',
+  FL: 'Flag_of_Florida.svg',         GA: 'Flag_of_Georgia_(U.S._state).svg',
+  HI: 'Flag_of_Hawaii.svg',          ID: 'Flag_of_Idaho.svg',
+  IL: 'Flag_of_Illinois.svg',        IN: 'Flag_of_Indiana.svg',
+  IA: 'Flag_of_Iowa.svg',            KS: 'Flag_of_Kansas.svg',
+  KY: 'Flag_of_Kentucky.svg',        LA: 'Flag_of_Louisiana.svg',
+  ME: 'Flag_of_Maine.svg',           MD: 'Flag_of_Maryland.svg',
+  MA: 'Flag_of_Massachusetts.svg',   MI: 'Flag_of_Michigan.svg',
+  MN: 'Flag_of_Minnesota.svg',       MS: 'Flag_of_Mississippi.svg',
+  MO: 'Flag_of_Missouri.svg',        MT: 'Flag_of_Montana.svg',
+  NE: 'Flag_of_Nebraska.svg',        NV: 'Flag_of_Nevada.svg',
+  NH: 'Flag_of_New_Hampshire.svg',   NJ: 'Flag_of_New_Jersey.svg',
+  NM: 'Flag_of_New_Mexico.svg',      NY: 'Flag_of_New_York.svg',
+  NC: 'Flag_of_North_Carolina.svg',  ND: 'Flag_of_North_Dakota.svg',
+  OH: 'Flag_of_Ohio.svg',            OK: 'Flag_of_Oklahoma.svg',
+  OR: 'Flag_of_Oregon.svg',          PA: 'Flag_of_Pennsylvania.svg',
+  RI: 'Flag_of_Rhode_Island.svg',    SC: 'Flag_of_South_Carolina.svg',
+  SD: 'Flag_of_South_Dakota.svg',    TN: 'Flag_of_Tennessee.svg',
+  TX: 'Flag_of_Texas.svg',           UT: 'Flag_of_Utah.svg',
+  VT: 'Flag_of_Vermont.svg',         VA: 'Flag_of_Virginia.svg',
+  WA: 'Flag_of_Washington.svg',      WV: 'Flag_of_West_Virginia.svg',
+  WI: 'Flag_of_Wisconsin.svg',       WY: 'Flag_of_Wyoming.svg',
+  DC: 'Flag_of_the_District_of_Columbia.svg',
+};
+
+// Canadian province flags — keyed by full name (as stored in player-info). Source: Wikimedia Commons.
+const CA_PROVINCE_FLAGS = {
+  'Alberta':                    'Flag_of_Alberta.svg',
+  'British Columbia':           'Flag_of_British_Columbia.svg',
+  'Manitoba':                   'Flag_of_Manitoba.svg',
+  'New Brunswick':              'Flag_of_New_Brunswick.svg',
+  'Newfoundland and Labrador':  'Flag_of_Newfoundland_and_Labrador.svg',
+  'Nova Scotia':                'Flag_of_Nova_Scotia.svg',
+  'Northwest Territories':      'Flag_of_the_Northwest_Territories.svg',
+  'Nunavut':                    'Flag_of_Nunavut.svg',
+  'Ontario':                    'Flag_of_Ontario.svg',
+  'Prince Edward Island':       'Flag_of_Prince_Edward_Island.svg',
+  'Quebec':                     'Flag_of_Quebec.svg',
+  'Saskatchewan':               'Flag_of_Saskatchewan.svg',
+  'Yukon':                      'Flag_of_Yukon.svg',
+};
+
+// Country flags — ISO 3166-1 alpha-2 codes for flag-icons CDN SVGs.
+const COUNTRY_CODES = {
+  'United States': 'us', 'Canada': 'ca', 'Germany': 'de', 'United Kingdom': 'gb',
+  'Australia': 'au', 'France': 'fr', 'Japan': 'jp', 'Mexico': 'mx',
+  'Brazil': 'br', 'Netherlands': 'nl', 'Sweden': 'se', 'Norway': 'no',
+  'Denmark': 'dk', 'Finland': 'fi', 'Spain': 'es', 'Italy': 'it',
+  'Poland': 'pl', 'South Korea': 'kr', 'China': 'cn', 'New Zealand': 'nz',
+  'Ireland': 'ie', 'Argentina': 'ar', 'Scotland': 'gb-sct',
+};
+
+// Returns { src, title } for an <img> tag, or null if no location info.
+function flagForInfo(info) {
+  if (!info.city && !info.state && !info.country) return null;
+  const country = info.country || 'United States';
+
+  // 1. City flag (values are already full URLs)
+  if (info.city && info.state) {
+    const url = CITY_FLAGS[`${info.city}|${info.state}`];
+    if (url) return { src: url, title: info.city };
+  }
+
+  // 2. State / province flag
+  if (info.state) {
+    if (country === 'United States') {
+      const file = US_STATE_FLAGS[info.state];
+      if (file) return { src: NIBSBIN_FLAG(file), title: STATE_NAMES[info.state] || info.state };
+    } else if (country === 'Canada') {
+      const fullName = STATE_NAMES[info.state] || info.state;
+      const file = CA_PROVINCE_FLAGS[fullName];
+      if (file) return { src: WIKIMEDIA_FLAG(file), title: fullName };
+    }
+  }
+
+  // 3. Country flag
+  const code = COUNTRY_CODES[country];
+  if (code) return { src: FLAG_ICON_URL(code), title: country };
+
+  return null;
+}
+
 // ---------------------------------
 
 function readJson(filePath, fallback) {
@@ -454,6 +582,7 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
           : info.state
           ? (STATE_NAMES[info.state] || info.state)
           : (info.country || ''),
+        flag: flagForInfo(info),
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
         state: info.state || '',
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
@@ -486,6 +615,7 @@ function buildRankingRows(players, glicko) {
           : info.state
           ? (STATE_NAMES[info.state] || info.state)
           : (info.country || ''),
+        flag: flagForInfo(info),
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
         state: info.state || '',
         uncertain: Math.round(g.rd) > GLICKO_UNCERTAIN_RD_THRESHOLD,
@@ -531,6 +661,7 @@ a { color: #6cf; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .numeric { text-align: right; }
 .col-location { white-space: nowrap; }
+.loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 2px; }
 .rank-num { text-align: right; color: #888; min-width: 2rem; }
 .uncertain { opacity: 0.55; }
 .filter-dim { opacity: 0.45; }
@@ -730,7 +861,7 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
       .join(', ');
     return `<tr${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
       <td>${escapeHtml(p.name)}</td>
-      <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${escapeHtml(p.location)}</td>
+      <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${p.flag ? `<img class="loc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : ''}${escapeHtml(p.location)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
@@ -761,7 +892,7 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
       <td class="numeric" data-sort="${p.winPct}">${(p.winPct * 100).toFixed(1)}%</td>
-      <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${escapeHtml(p.location)}</td>
+      <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${p.flag ? `<img class="loc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : ''}${escapeHtml(p.location)}</td>
     </tr>`;
   }).join('\n');
 

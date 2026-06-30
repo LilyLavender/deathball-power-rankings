@@ -13,6 +13,7 @@ a { color: #6cf; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .numeric { text-align: right; }
 .col-location { white-space: nowrap; }
+.loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 2px; }
 .rank-num { text-align: right; color: #888; min-width: 2rem; }
 .uncertain { opacity: 0.55; }
 .filter-dim { opacity: 0.45; }
