@@ -619,6 +619,7 @@ function buildRankingRows(players, glicko) {
         flag: flagForInfo(info),
         locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
         state: info.state || '',
+        color: info.color || '',
         uncertain: Math.round(g.rd) > GLICKO_UNCERTAIN_RD_THRESHOLD,
       };
     })
@@ -995,7 +996,8 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
     </tr>`;
   }).join('\n');
 
-  function cardAccent(name) {
+  function cardAccent(name, colorOverride) {
+    if (colorOverride === 'green' || colorOverride === 'purple') return `card-${colorOverride}`;
     let h = 0;
     for (let i = 0; i < name.length; i++) h = (Math.imul(h, 31) + name.charCodeAt(i)) | 0;
     return (h & 1) ? 'card-purple' : 'card-green';
@@ -1003,7 +1005,7 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
 
   const rankingCardItems = rankingRows.map((p, i) => {
     const flagImg = p.flag ? `<img class="prc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : '';
-    return `<div class="pr-card ${cardAccent(p.id)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
+    return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
 <div class="prc-top">
   <div class="prc-top-left"><span class="prc-rank">${i + 1}</span><span class="prc-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span></div>
   ${flagImg}
