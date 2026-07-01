@@ -30,6 +30,34 @@
       "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
       "match_index": "BI",
       "games": ["3-2", "3-2"]
+    },
+    {
+      "p1": "zachaction",
+      "p2": "Badguy",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "K",
+      "games": ["3-0", "3-0"]
+    },
+    {
+      "p1": "zachaction",
+      "p2": "Kelz",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "AC",
+      "games": ["3-0", "3-0"]
+    },
+    {
+      "p1": "zachaction",
+      "p2": "Sgt Spankcakes",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "AF",
+      "games": ["3-0", "3-0"]
+    },
+    {
+      "p1": "zachaction",
+      "p2": "Sgt Spankcakes",
+      "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
+      "match_index": "BO",
+      "games": ["3-0", "3-0"]
     }
   ]
 }

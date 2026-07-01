@@ -24,7 +24,7 @@
     { "names": ["somewes", "wes", "wesmess", "Wess Mess", "Westley", "Mario boii", "Wizley", "we s"], "canonical": "somewes" },
     { "names": ["SkitsSkoots", "Skoots", "TC$"], "canonical": "SkitsSkoots" },
     { "names": ["Chan", "Chayan", "KQHTX", "DBHTX FOUNDER"], "canonical": "Chan" },
-    { "names": ["Eduardo2332", "Eduardo Gabriel Martinez Banda"], "canonical": "Eduardo2332" },
+    { "names": ["Eduardo2332", "Eduardo Gabriel Martinez Banda", "Eduardo"], "canonical": "Eduardo" },
     { "names": ["Mosspassion", "nickyD"], "canonical": "Mosspassion" },
     { "names": ["Scott Wilkewitz", "Scott W."], "canonical": "Scott Wilkewitz" },
     { "names": ["SliceFury", "NotNormalProductions"], "canonical": "SliceFury" },
@@ -241,13 +241,6 @@
         { "id": "joe-talon", "canonical": "Joe", "tournaments": ["https://challonge.com/7c065efq"] },
         { "id": "joe-dbjax", "canonical": "Joe", "tournaments": ["https://challonge.com/yux670gx", "https://challonge.com/qpjkijqc"] },
         { "id": "joe-youma", "canonical": "Joe", "tournaments": ["https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/events/deathball-1v1/brackets/2116019/3086684/overview"] }
-      ]
-    },
-    {
-      "name": "Eduardo",
-      "resolutions": [
-        { "id": "eduardo-baltimore", "canonical": "Eduardo", "tournaments": ["https://challonge.com/BaltDB"] },
-        { "id": "eduardo-icc", "canonical": "Eduardo", "tournaments": ["https://challonge.com/ICC_DB"] }
       ]
     },
     {

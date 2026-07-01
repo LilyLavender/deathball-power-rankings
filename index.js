@@ -76,20 +76,23 @@
     const maxRd = maxRdVal === 'Infinity' ? Infinity : parseFloat(maxRdVal);
     const state = panel.querySelector('.state-filter-select')?.value || '';
     const tbody = panel.querySelector('table tbody');
-    if (!tbody) return;
     const isRankingsTab = panel.id === 'rankings-tab';
     const DEFAULT_MIN_GAMES = 5;
     const DEFAULT_MAX_RD = 150;
 
-    // First pass: count per state for rows that pass non-state filters
+    // Use card grid as count source for rankings (avoids double-counting with table)
+    const grid = isRankingsTab ? panel.querySelector('.pr-grid') : null;
+    const countSource = grid ? [...grid.children] : (tbody ? [...tbody.rows] : []);
+
+    // First pass: count per state for items passing non-state filters
     const stateCounts = new Map();
     let totalPassingNonState = 0;
-    for (const row of tbody.rows) {
-      const games = parseInt(row.dataset.games || '0', 10);
-      const rd = parseFloat(row.dataset.rd || '0');
+    for (const el of countSource) {
+      const games = parseInt(el.dataset.games || '0', 10);
+      const rd = parseFloat(el.dataset.rd || '0');
       if (minGames && games < minGames) continue;
       if (maxRd !== Infinity && rd > maxRd) continue;
-      const rowState = row.dataset.state || '';
+      const rowState = el.dataset.state || '';
       stateCounts.set(rowState, (stateCounts.get(rowState) || 0) + 1);
       totalPassingNonState++;
     }
@@ -104,34 +107,92 @@
       }
     }
 
-    // Second pass: apply all filters and update visibility
-    let rank = 1;
-    let visible = 0;
-    for (const row of tbody.rows) {
-      const games = parseInt(row.dataset.games || '0', 10);
-      const rd = parseFloat(row.dataset.rd || '0');
-      const rowState = row.dataset.state || '';
-      const passesMinMax = (!minGames || games >= minGames) && (maxRd === Infinity || rd <= maxRd);
-      const passesState = !state || rowState === state;
-      const show = passesMinMax && passesState;
-      row.hidden = !show;
-      if (isRankingsTab) {
-        const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
-        row.classList.toggle('filter-dim', show && !meetsDefaults);
-      } else {
-        row.classList.remove('filter-dim');
-      }
-      if (show) {
-        const rankCell = row.querySelector('.rank-num');
-        if (rankCell) rankCell.textContent = rank++;
-        visible++;
+    // Apply filters to table rows
+    if (tbody) {
+      let rank = 1;
+      for (const row of tbody.rows) {
+        const games = parseInt(row.dataset.games || '0', 10);
+        const rd = parseFloat(row.dataset.rd || '0');
+        const rowState = row.dataset.state || '';
+        const passesMinMax = (!minGames || games >= minGames) && (maxRd === Infinity || rd <= maxRd);
+        const passesState = !state || rowState === state;
+        const show = passesMinMax && passesState;
+        row.hidden = !show;
+        if (isRankingsTab) {
+          const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
+          row.classList.toggle('filter-dim', show && !meetsDefaults);
+        } else {
+          row.classList.remove('filter-dim');
+        }
+        if (show) {
+          const rankCell = row.querySelector('.rank-num');
+          if (rankCell) rankCell.textContent = rank++;
+        }
       }
     }
+
+    // Apply filters to card grid (rankings tab only)
+    let visible = 0;
+    if (grid) {
+      let rank = 1;
+      for (const card of grid.children) {
+        const games = parseInt(card.dataset.games || '0', 10);
+        const rd = parseFloat(card.dataset.rd || '0');
+        const cardState = card.dataset.state || '';
+        const passesMinMax = (!minGames || games >= minGames) && (maxRd === Infinity || rd <= maxRd);
+        const passesState = !state || cardState === state;
+        const show = passesMinMax && passesState;
+        card.hidden = !show;
+        const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
+        card.classList.toggle('filter-dim', show && !meetsDefaults);
+        if (show) {
+          const rankEl = card.querySelector('.prc-rank');
+          if (rankEl) rankEl.textContent = rank;
+          rank++;
+          visible++;
+        }
+      }
+      fitCardNames(panel);
+    } else if (tbody) {
+      for (const row of tbody.rows) if (!row.hidden) visible++;
+    }
+
     const countEl = panel.querySelector('.filter-count');
     if (countEl) {
-      const noun = panel.id === 'rankings-tab' ? 'players ranked' : 'unique players';
+      const noun = isRankingsTab ? 'players ranked' : 'unique players';
       countEl.textContent = visible + ' ' + noun + '. Click a column header to sort.';
     }
+  }
+
+  function fitText(el, maxPx, minPx) {
+    el.style.fontSize = maxPx + 'px';
+    let size = maxPx;
+    while (el.scrollWidth > el.offsetWidth && size > minPx) {
+      size -= 1;
+      el.style.fontSize = size + 'px';
+    }
+  }
+
+  function fitCardNames(panel) {
+    const scope = panel || document;
+    for (const el of scope.querySelectorAll('.prc-name')) fitText(el, 18, 9);
+  }
+
+  function enableViewToggle(panel) {
+    const buttons = [...panel.querySelectorAll('.view-btn')];
+    if (!buttons.length) return;
+    const grid = panel.querySelector('.pr-grid');
+    const table = panel.querySelector('table');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const view = btn.dataset.view;
+        if (grid) grid.style.display = view === 'grid' ? '' : 'none';
+        if (table) table.style.display = view === 'table' ? '' : 'none';
+        if (view === 'grid') fitCardNames(panel);
+      });
+    });
   }
 
   function initPanel(panelId) {
@@ -142,6 +203,8 @@
     panel.querySelectorAll('.min-games-select, .max-rd-select, .state-filter-select').forEach((el) => {
       el.addEventListener('change', () => applyFilters(panel));
     });
+    enableViewToggle(panel);
+    document.fonts.ready.then(() => fitCardNames(panel));
   }
 
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
