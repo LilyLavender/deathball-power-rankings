@@ -1,0 +1,16 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,willyjwillyj,2,,,false,,HeartofOak,3,,,false
+B,,mrlink2k,0,,,false,,keucher,3,,,false
+C,,Bradley0104,3,,,false,,WooffleDee,2,,,false
+D,,Jaq,3,,,false,,justanolive,2,,,false
+E,,HeartofOak,3,,,false,,keucher,2,,,false
+F,,Bradley0104,2,,,false,,Jaq,3,,,false
+G,,HeartofOak,3,,,false,,Jaq,2,,,false
+J,,willyjwillyj,3,,,false,,mrlink2k,1,,,false
+K,,WooffleDee,3,,,false,,justanolive,2,,,false
+L,,Bradley0104,1,,,false,,willyjwillyj,3,,,false
+M,,keucher,3,,,false,,WooffleDee,2,,,false
+N,,willyjwillyj,3,,,false,,keucher,2,,,false
+O,,Jaq,1,,,false,,willyjwillyj,3,,,false
+H,,HeartofOak,1,,,false,,willyjwillyj,3,,,false
+I,,willyjwillyj,3,,,false,,HeartofOak,2,,,false
