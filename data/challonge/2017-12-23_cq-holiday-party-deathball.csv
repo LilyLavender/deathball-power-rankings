@@ -1,0 +1,13 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Lisa!,2,,,false,,Adam,1,,,false
+B,,Duc,1,,,false,,Ken,2,,,false
+C,,Andy,1,,,false,,Ryan,2,,,false
+D,,Alex,2,,,false,,Hell,0,,,false
+E,,Courtney,2,,,false,,Kris,1,,,false
+F,,Craig,2,,,false,,Lisa!,0,,,false
+G,,Ken,0,,,false,,Ryan,2,,,false
+H,,Los,2,,,false,,Alex,0,,,false
+I,,Zac,1,,,false,,Courtney,2,,,false
+J,,Craig,2,,,false,,Ryan,1,,,false
+K,,Los,0,,,false,,Courtney,2,,,false
+L,,Craig,1,,,false,,Courtney,2,,,false

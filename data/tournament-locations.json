@@ -28,8 +28,8 @@
     "https://challonge.com/h8jgrfg4": { "city": "Denton", "state": "TX", "location": "Free Play" },
     "https://challonge.com/8m265y1c": { "city": "Denton", "state": "TX", "location": "Free Play" },
     "https://challonge.com/Bb4db": { "city": "Chattanooga", "state": "TN" },
-    "https://challonge.com/dbc8": { "city": "Chattanooga", "state": "TN"},
-    "https://challonge.com/dbcha20190521": { "city": "Chattanooga", "state": "TN"},
+    "https://challonge.com/dbc8": { "city": "Chattanooga", "state": "TN" },
+    "https://challonge.com/dbcha20190521": { "city": "Chattanooga", "state": "TN" },
     "https://challonge.com/UDdeath": { "city": "Minneapolis", "state": "MN", "location": "Up-Down" },
     "https://challonge.com/4afozcud": { "city": "Denton", "state": "TX", "location": "Free Play" },
     "https://fpaplayers.challonge.com/ru8o951i": { "state": "TX", "location": "Free Play" },
@@ -95,7 +95,7 @@
     "https://challonge.com/verqiocz": { "city": "Houston", "state": "TX", "location": "HTX Cidercade" },
     "https://challonge.com/gbi26365": { "city": "Houston", "state": "TX", "location": "HTX Cidercade" },
     "https://challonge.com/hnka8nck": { "city": "Houston", "state": "TX", "location": "HTX Cidercade" },
-    "https://challonge.com/ib6mgq92": { "city": "Fort Worth", "state": "TX"},
+    "https://challonge.com/ib6mgq92": { "city": "Fort Worth", "state": "TX" },
     "https://challonge.com/j6j18cco": { "state": "TX", "location": "Free Play" },
     "https://challonge.com/hywcea1u": { "state": "TX", "location": "Free Play" },
     "https://challonge.com/vsaq3lmm": { "state": "TX", "location": "Free Play" },
@@ -117,15 +117,7 @@
     "https://challonge.com/qpjkijqc": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" },
     "https://challonge.com/9eis0ou0": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" },
     "https://challonge.com/dbgdc": { "city": "San Francisco", "state": "CA", "location": "GDC" },
+    "https://challonge.com/CQHPD": { "city": "Columbus", "state": "OH", "location": "Close Quarters" },
     "LINK": { "city": "CITY", "state": "STATE", "location": "LOCATION", "date": "YYYY-MM-DD" }
   }
 }
-
-
-
-
-
-
-
-
-

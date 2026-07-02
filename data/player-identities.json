@@ -2,6 +2,7 @@
   "_schema": "Resolves raw player names (as they appear in tournament data) to a canonical identity, before the existing case-insensitive merge runs. Unlisted names fall through to the default merge (case-insensitive exact match) unchanged. `id` fields throughout this file are backend-only keys — they are never shown to users. They exist so that two unrelated people can share the same displayed name (e.g. two different \"Alex\"s) without their stats merging.",
   "_aliases_example": "Use when multiple distinct names/usernames are the same person. All names in the list collapse to `canonical`. `id` is optional — defaults to `canonical` lowercased; only set it explicitly when you need an alias to merge into the same backend identity as a split resolution (see \"ChaseChase\" below). Example: { \"names\": [\"corlido bandido\", \"corley\"], \"canonical\": \"Corley\" }",
   "aliases": [
+    { "names": ["Alex", "Alex H"], "canonical": "Alex H", "id": "alex-cq" },
     { "names": ["Alex Zick", "Alex z"], "canonical": "Alex Zick" },
     { "names": ["Alexander", "Alexander Parrish"], "canonical": "Alexander Parrish" },
     { "names": ["Andrew Ortega", "Andrew", "Andrewwww", "Andenubs"], "canonical": "Andenubs" },
@@ -81,7 +82,8 @@
     { "names": ["30Aces", "Aces"], "canonical": "30Aces" },
     { "names": ["Caden/Glass Window"], "canonical": "Glass Window" },
     { "names": ["Chacko", "Dexter Chacko"], "canonical": "Chacko" },
-    { "names": ["dammitmalloy", "Malloy"], "canonical": "dammitmalloy" }
+    { "names": ["dammitmalloy", "Malloy"], "canonical": "dammitmalloy" },
+    { "names": ["Lisa", "Lisa!"], "canonical": "Lisa" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -95,7 +97,7 @@
     {
       "name": "Adam",
       "resolutions": [
-        { "id": "adam-battle-of-cq", "canonical": "Adam", "tournaments": ["https://challonge.com/dbcq1"] },
+        { "id": "adam-battle-of-cq", "canonical": "Adam", "tournaments": ["https://challonge.com/dbcq1", "https://challonge.com/CQHPD"] },
         { "id": "adam-2019-league", "canonical": "Adam", "tournaments": ["https://challonge.com/dbcha20190807", "https://challonge.com/dbcha20190814", "https://challonge.com/dbcha20191211buddy"] }
       ]
     },
@@ -107,7 +109,8 @@
         { "id": "alex-free-play-2021", "canonical": "Alex", "tournaments": ["https://fpaplayers.challonge.com/t6ijkayf", "https://fpaplayers.challonge.com/piz5qqo5"] },
         { "id": "alex-three-nations-brew", "canonical": "Alex", "tournaments": ["https://challonge.com/h8jgrfg4"] },
         { "id": "alex-llglory-you-know", "canonical": "Alex", "tournaments": ["https://challonge.com/cbj2mbse", "https://challonge.com/jtmg4kel"] },
-        { "id": "alex-leaderboard-shad-5", "canonical": "Alex", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview"] }
+        { "id": "alex-leaderboard-shad-5", "canonical": "Alex", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview"] },
+        { "id": "alex-cq", "canonical": "Alex", "tournaments": ["https://challonge.com/CQHPD"] }
       ]
     },
     {
@@ -325,7 +328,7 @@
     {
       "name": "Kris",
       "resolutions": [
-        { "id": "kris-battle-of-cq", "canonical": "Kris", "tournaments": ["https://challonge.com/dbcq1"] },
+        { "id": "kris-battle-of-cq", "canonical": "Kris", "tournaments": ["https://challonge.com/dbcq1", "https://challonge.com/CQHPD"] },
         { "id": "kris-shad7", "canonical": "Kris", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v1-bracket/brackets/2228855/3234121/overview"] }
       ]
     },
@@ -387,7 +390,8 @@
         { "id": "ryan-recent", "canonical": "Ryan", "tournaments": ["https://challonge.com/8m265y1c", "https://challonge.com/y7upbs7h", "https://challonge.com/my7fsi0o", "https://challonge.com/9yxjnhn"] },
         { "id": "ryan-popup-sept", "canonical": "Ryan", "tournaments": ["https://challonge.com/db20190406", "https://challonge.com/dbcha20190911"] },
         { "id": "ryan-dbjax2", "canonical": "Ryan", "tournaments": ["https://challonge.com/oy3nenv"] },
-        { "id": "ryan-shad7", "canonical": "Ryan", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v1-bracket/brackets/2228855/3234121/overview"] }
+        { "id": "ryan-shad7", "canonical": "Ryan", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v1-bracket/brackets/2228855/3234121/overview"] },
+        { "id": "ryan-dec-2017", "canonical": "Ryan", "tournaments": ["https://challonge.com/CQHPD"] }
       ]
     },
     {
