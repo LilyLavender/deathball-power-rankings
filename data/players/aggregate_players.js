@@ -213,6 +213,19 @@ function resolveIdentity(rawName, tournamentUrl) {
   return { id: lower, name: trimmed };
 }
 
+// Stats-only pass (no Glicko) — used by add_tournaments.js to build a
+// registry of known players for dedup matching against newly fetched names.
+function buildPlayerStats(allTournaments) {
+  const players = new Map();
+  for (const t of allTournaments) {
+    for (const m of t.matches) {
+      if (!m.winnerName || !m.loserName) continue;
+      recordMatch(players, m.winnerName, m.loserName, t.url, t.label);
+    }
+  }
+  return players;
+}
+
 function getPlayer(map, identity) {
   if (!identity || !identity.id) return null;
   const key = identity.id;
@@ -1174,4 +1187,16 @@ function main() {
   console.log(`Output: ${path.join(REPO_ROOT, 'index.html')}`);
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = {
+  DATA_ROOT,
+  identities,
+  hiddenNames,
+  normName,
+  resolveIdentity,
+  displayName,
+  collectChallonge,
+  collectStartgg,
+  buildPlayerStats,
+};
