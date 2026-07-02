@@ -93,6 +93,7 @@ const EVENT_PAGE_QUERY = `query EventPage($eventId: ID!, $entrantPage: Int!, $se
       pageInfo { totalPages }
       nodes {
         id
+        name
         participants { id gamerTag prefix }
       }
     }
@@ -150,8 +151,15 @@ async function fetchAllPages(eventId) {
   return { entrants: uniqueEntrants, sets: uniqueSets };
 }
 
+// participants[0].gamerTag is the normal source, but entrants occasionally
+// lack a participant gamerTag (e.g. unregistered/placeholder entrants) —
+// fall back to the entrant's own name, which start.gg always populates.
+function resolveEntrantName(e) {
+  return e.participants[0]?.gamerTag || e.name || '';
+}
+
 function toCsv(entrants, sets) {
-  const entrantById = new Map(entrants.map((e) => [e.id, e.participants[0]]));
+  const entrantById = new Map(entrants.map((e) => [e.id, { ...(e.participants[0] || {}), gamerTag: resolveEntrantName(e) }]));
 
   const header = [
     'Match Identifier', 'Top Player Prefix', 'Top Player Name', 'Top Player Stocks',

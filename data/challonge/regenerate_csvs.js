@@ -6,19 +6,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { resolveParticipantName } = require('./resolve_participant_name');
 
 const STORE_PATH = path.join(__dirname, 'tournaments.json');
 const CSV_DIR = __dirname;
-
-// participant.name is blank when the player registered via their Challonge
-// account instead of a custom name; username covers that case, falling back
-// further to display_name for invited-but-unlinked participants. display_name
-// bakes in a literal " (invitation pending)" suffix for unaccepted invites,
-// which we strip since it's not part of the player's actual name.
-function resolveParticipantName(p) {
-  const raw = p.name || p.username || p.display_name || '';
-  return raw.replace(/ \(invitation pending\)$/, '');
-}
 
 function toCsv(t) {
   const nameById = new Map(t.participants.map((p) => [p.participant.id, resolveParticipantName(p.participant)]));

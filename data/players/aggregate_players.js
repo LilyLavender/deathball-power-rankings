@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const glicko2 = require('./glicko2');
+const { resolveParticipantName } = require('../challonge/resolve_participant_name');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -195,11 +196,6 @@ function normName(name) {
   return (name || '').trim();
 }
 
-function resolveParticipantName(p) {
-  const raw = p.name || p.username || p.display_name || '';
-  return raw.replace(/ \(invitation pending\)$/, '');
-}
-
 function resolveIdentity(rawName, tournamentUrl) {
   const trimmed = normName(rawName);
   const lower = trimmed.toLowerCase();
@@ -369,7 +365,7 @@ function collectStartgg() {
   for (const [url, rec] of Object.entries(store)) {
     if (!rec.entrants || !rec.sets) continue;
     const label = rec.tournament.name.trim();
-    const nameByEntrantId = new Map(rec.entrants.map((e) => [e.id, e.participants[0]?.gamerTag]));
+    const nameByEntrantId = new Map(rec.entrants.map((e) => [e.id, e.participants[0]?.gamerTag || e.name || undefined]));
 
     const matches = [];
     for (const s of rec.sets) {
