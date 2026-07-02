@@ -13,12 +13,14 @@
 //      Everything else (exact repeats of an unambiguous name, names already
 //      covered by an alias or split resolution) is left to auto-resolve
 //      exactly as it does today — no prompt.
-//   3. For genuinely new players, asks for city/state/country (blank = skip)
+//   3. For each new tournament, asks for city/state/venue (blank = skip) and
+//      writes them to tournament-locations.json.
+//   4. For genuinely new players, asks for city/state/country (blank = skip)
 //      and an optional card color override, and writes them to
 //      player-info.json. Decisions made earlier in the same run are reused
 //      automatically (no re-asking) because they're written to the shared
 //      identities object as soon as they're made.
-//   4. Regenerates players.csv / index.html / index.css / index.js via
+//   5. Regenerates players.csv / index.html / index.css / index.js via
 //      aggregate_players.js.
 //
 // Usage: node add_tournaments.js
@@ -37,6 +39,7 @@ const { resolveParticipantName } = require('../challonge/resolve_participant_nam
 
 const IDENTITIES_PATH = path.join(DATA_ROOT, 'player-identities.json');
 const PLAYER_INFO_PATH = path.join(DATA_ROOT, 'player-info.json');
+const TOURNAMENT_LOCATIONS_PATH = path.join(DATA_ROOT, 'tournament-locations.json');
 const CHALLONGE_STORE = path.join(DATA_ROOT, 'challonge', 'tournaments.json');
 const STARTGG_STORE = path.join(DATA_ROOT, 'start.gg', 'tournaments.json');
 
@@ -45,14 +48,87 @@ function readJson(filePath, fallback) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+// These three config files are hand-curated with one compact single-line
+// entry per array/map item, not JSON.stringify(x, null, 2)'s fully-expanded
+// style. Serialize to match that convention so a save from this script
+// doesn't blow away the existing formatting on every unrelated entry.
+
+// { "a": 1, "b": [1, 2] } style: padded object braces, tight array
+// brackets, space after every colon/comma — matches the hand-authored files.
+function compactStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(compactStringify).join(', ')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value).map(([k, v]) => `${JSON.stringify(k)}: ${compactStringify(v)}`);
+    return `{ ${entries.join(', ')} }`;
+  }
+  return JSON.stringify(value);
+}
+
+function serializeIdentities(obj) {
+  const lines = ['{'];
+  const keys = Object.keys(obj);
+  keys.forEach((key, i) => {
+    const comma = i < keys.length - 1 ? ',' : '';
+    if (key === 'aliases') {
+      lines.push('  "aliases": [');
+      obj.aliases.forEach((a, j) => lines.push(`    ${compactStringify(a)}${j < obj.aliases.length - 1 ? ',' : ''}`));
+      lines.push(`  ]${comma}`);
+    } else if (key === 'splits') {
+      lines.push('  "splits": [');
+      obj.splits.forEach((s, j) => {
+        lines.push('    {');
+        lines.push(`      "name": ${JSON.stringify(s.name)},`);
+        lines.push('      "resolutions": [');
+        (s.resolutions || []).forEach((r, k) => lines.push(`        ${compactStringify(r)}${k < s.resolutions.length - 1 ? ',' : ''}`));
+        lines.push(`      ]${s.default ? ',' : ''}`);
+        if (s.default) lines.push(`      "default": ${compactStringify(s.default)}`);
+        lines.push(`    }${j < obj.splits.length - 1 ? ',' : ''}`);
+      });
+      lines.push(`  ]${comma}`);
+    } else {
+      lines.push(`  ${JSON.stringify(key)}: ${compactStringify(obj[key])}${comma}`);
+    }
+  });
+  lines.push('}');
+  return lines.join('\n') + '\n';
+}
+
+// Shared shape of player-info.json / tournament-locations.json: a handful of
+// _meta string keys, plus one map (`mapKey`) of compact single-line values.
+function serializeKeyedMap(obj, mapKey) {
+  const lines = ['{'];
+  const keys = Object.keys(obj);
+  keys.forEach((key, i) => {
+    const comma = i < keys.length - 1 ? ',' : '';
+    if (key === mapKey) {
+      const entryKeys = Object.keys(obj[mapKey]);
+      lines.push(`  ${JSON.stringify(mapKey)}: {`);
+      entryKeys.forEach((k, j) => {
+        lines.push(`    ${JSON.stringify(k)}: ${compactStringify(obj[mapKey][k])}${j < entryKeys.length - 1 ? ',' : ''}`);
+      });
+      lines.push(`  }${comma}`);
+    } else {
+      lines.push(`  ${JSON.stringify(key)}: ${compactStringify(obj[key])}${comma}`);
+    }
+  });
+  lines.push('}');
+  return lines.join('\n') + '\n';
+}
+
 const playerInfoFile = readJson(PLAYER_INFO_PATH, { players: {} });
 playerInfoFile.players = playerInfoFile.players || {};
 
+const tournamentLocationsFile = readJson(TOURNAMENT_LOCATIONS_PATH, { locations: {} });
+tournamentLocationsFile.locations = tournamentLocationsFile.locations || {};
+
 function saveIdentities() {
-  fs.writeFileSync(IDENTITIES_PATH, JSON.stringify(identities, null, 2));
+  fs.writeFileSync(IDENTITIES_PATH, serializeIdentities(identities));
 }
 function savePlayerInfo() {
-  fs.writeFileSync(PLAYER_INFO_PATH, JSON.stringify(playerInfoFile, null, 2));
+  fs.writeFileSync(PLAYER_INFO_PATH, serializeKeyedMap(playerInfoFile, 'players'));
+}
+function saveTournamentLocations() {
+  fs.writeFileSync(TOURNAMENT_LOCATIONS_PATH, serializeKeyedMap(tournamentLocationsFile, 'locations'));
 }
 
 // --- Fuzzy matching ---
@@ -180,6 +256,23 @@ async function askLocationAndColor(rl, label) {
   if (colorChoice === '1') info.color = 'purple';
   else if (colorChoice === '2') info.color = 'green';
   return info;
+}
+
+async function askTournamentLocation(rl, tournament) {
+  if (tournamentLocationsFile.locations[tournament.url]) return; // already set, don't re-ask
+
+  console.log(`\nLocation for: ${tournament.label} (${tournament.date})`);
+  const city = await ask(rl, '  City (blank = unknown): ');
+  const state = await ask(rl, '  State/Province abbreviation (blank = unknown): ');
+  const location = await ask(rl, '  Venue (blank = unknown): ');
+  const info = {};
+  if (city) info.city = city;
+  if (state) info.state = state;
+  if (location) info.location = location;
+  if (Object.keys(info).length) {
+    tournamentLocationsFile.locations[tournament.url] = info;
+    saveTournamentLocations();
+  }
 }
 
 // Merge rawName into an existing known player as an alias. Reuses the
@@ -319,6 +412,8 @@ async function main() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
     for (const t of newTournaments) {
+      await askTournamentLocation(rl, t);
+
       const isStartgg = t.source === 'start.gg';
       const names = [...new Set(rawParticipantNames(t.url, isStartgg))];
 
@@ -357,4 +452,6 @@ async function main() {
   execFileSync('node', [path.join(__dirname, 'aggregate_players.js')], { stdio: 'inherit' });
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { saveIdentities, savePlayerInfo, saveTournamentLocations };
