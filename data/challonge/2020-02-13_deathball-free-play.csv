@@ -1,0 +1,39 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Matt,1,,,false,,Petty James,0,,,false
+B,,Landon,1,,,false,,D1,0,,,false
+C,,Gaby,1,,,false,,D3,0,,,false
+D,,Gavin,1,,,false,,D2,0,,,false
+E,,Dylan Smith,1,,,false,,Matt,0,,,false
+F,,Kyle Kennedy,1,,,false,,D.Owls,0,,,false
+G,,Chris Delp,1,,,false,,Landon,0,,,false
+H,,Cloud Allen,1,,,false,,DGK,0,,,false
+I,,FPA Arthur,0,,,false,,Gaby,1,,,false
+J,,JPong,0,,,false,,J Kennedy,1,,,false
+K,,Darth Jose,1,,,false,,Gavin,0,,,false
+L,,Andrew Ortega,1,,,false,,Grillmaster,0,,,false
+M,,Dylan Smith,1,,,false,,Kyle Kennedy,0,,,false
+N,,Chris Delp,0,,,false,,Cloud Allen,1,,,false
+O,,Gaby,0,,,false,,J Kennedy,1,,,false
+P,,Darth Jose,0,,,false,,Andrew Ortega,1,,,false
+Q,,Dylan Smith,1,,,false,,Cloud Allen,0,,,false
+R,,J Kennedy,0,,,false,,Andrew Ortega,1,,,false
+S,,Dylan Smith,1,,,false,,Andrew Ortega,0,,,false
+V,,Grillmaster,1,,,false,,Petty James,0,,,false
+W,,JPong,1,,,false,,D1,0,,,false
+X,,DGK,1,,,false,,D3,0,,,false
+Y,,D.Owls,1,,,false,,D2,0,,,false
+Z,,Gavin,1,,,false,,Grillmaster,0,,,false
+AA,,FPA Arthur,1,,,false,,JPong,0,,,false
+AB,,Landon,0,,,false,,DGK,1,,,false
+AC,,Matt,1,,,false,,D.Owls,0,,,false
+AD,,Chris Delp,1,,,false,,Gavin,0,,,false
+AE,,Kyle Kennedy,0,,,false,,FPA Arthur,1,,,false
+AF,,Darth Jose,0,,,false,,DGK,1,,,false
+AG,,Gaby,1,,,false,,Matt,0,,,false
+AH,,Chris Delp,1,,,false,,FPA Arthur,0,,,false
+AI,,DGK,1,,,false,,Gaby,0,,,false
+AJ,,J Kennedy,0,,,false,,Chris Delp,1,,,false
+AK,,Cloud Allen,0,,,false,,DGK,1,,,false
+AL,,Chris Delp,0,,,false,,DGK,1,,,false
+AM,,Andrew Ortega,1,,,false,,DGK,0,,,false
+T,,Dylan Smith,1,,,false,,Andrew Ortega,0,,,false

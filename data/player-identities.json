@@ -45,7 +45,7 @@
     { "names": ["hlemke", "Hayden"], "canonical": "hlemke" },
     { "names": ["tprice3"], "canonical": "Troy", "id": "troy-deathb4ll" },
     { "names": ["pepperouchau"], "canonical": "Nathan", "id": "nathan-28th" },
-    { "names": ["NatNied"], "canonical": "Nathan", "id": "nathan-dbjax" },
+    { "names": ["NatNied", "Nathan N"], "canonical": "Nathan", "id": "nathan-dbjax" },
     { "names": ["Dylan Conrad"], "canonical": "Dylan Conrad", "id": "dylan-campdb" },
     { "names": ["Don", "Don Juan", "Donald", "Donny"], "canonical": "Don" },
     { "names": ["doodooheadjones", "ddhj", "Poopoofacejohnson", "The champ", "Sir doodoohead of jones", "poo", "HoopOnPoop", "Laura", "p00p", "42069", "DookiePants", "poolady", "laura d", "PooPooPants", "Poopypants"], "canonical": "doodooheadjones" },
@@ -67,7 +67,7 @@
     { "names": ["Jaq3", "Jaq"], "canonical": "Jaq3" },
     { "names": ["Jeremy Mulhaney", "jeremy"], "canonical": "Jeremy Mulhaney" },
     { "names": ["John Ryan", "john"], "canonical": "John Ryan" },
-    { "names": ["Josh Freeman", "Josh F", "podcastboy69", "Joshua Wade Freeman"], "canonical": "Josh Freeman", "id": "josh-1203-keg" },
+    { "names": ["Josh Freeman", "Josh F", "podcastboy69", "Joshua Wade Freeman", "Joshua F"], "canonical": "Josh Freeman", "id": "josh-1203-keg" },
     { "names": ["Josh k"], "canonical": "Josh k", "id": "josh-2019-league" },
     { "names": ["LongDickJohnson"], "canonical": "doodooheadjones" },
     { "names": ["Kasi White", "Kasi"], "canonical": "Kasi White" },
@@ -83,7 +83,10 @@
     { "names": ["Caden/Glass Window"], "canonical": "Glass Window" },
     { "names": ["Chacko", "Dexter Chacko"], "canonical": "Chacko" },
     { "names": ["dammitmalloy", "Malloy"], "canonical": "dammitmalloy" },
-    { "names": ["Lisa", "Lisa!"], "canonical": "Lisa" }
+    { "names": ["Lisa", "Lisa!"], "canonical": "Lisa" },
+    { "names": ["Jessie Kennedy", "J Kennedy"], "canonical": "Jessie Kennedy" },
+    { "names": ["Noah", "Noah S"], "canonical": "Noah" },
+    { "names": ["Andrew Griner", "Griner"], "canonical": "Andrew Griner" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -242,7 +245,7 @@
       "resolutions": [
         { "id": "joe-finale", "canonical": "Joe", "tournaments": ["https://challonge.com/j6j18cco"] },
         { "id": "joe-talon", "canonical": "Joe", "tournaments": ["https://challonge.com/7c065efq"] },
-        { "id": "joe-dbjax", "canonical": "Joe", "tournaments": ["https://challonge.com/yux670gx", "https://challonge.com/qpjkijqc"] },
+        { "id": "joe-dbjax", "canonical": "Joe", "tournaments": ["https://challonge.com/yux670gx", "https://challonge.com/qpjkijqc", "https://challonge.com/dbjax"] },
         { "id": "joe-youma", "canonical": "Joe", "tournaments": ["https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/events/deathball-1v1/brackets/2116019/3086684/overview"] }
       ]
     },
@@ -301,7 +304,7 @@
       "resolutions": [
         { "id": "jordan-freeplay", "canonical": "Jordan", "tournaments": ["https://fpaplayers.challonge.com/paiq649r", "https://fpaplayers.challonge.com/sjcdrupw", "https://fpaplayers.challonge.com/9pafceez"] },
         { "id": "jordan-dfw-2025", "canonical": "Jordan", "tournaments": ["https://challonge.com/hhs16meh", "https://challonge.com/napw4zzb", "https://challonge.com/w31sc2d1", "https://challonge.com/9yxjnhn"] },
-        { "id": "jordan-dbjax5", "canonical": "Jordan", "tournaments": ["https://challonge.com/9eis0ou0"] }
+        { "id": "jordan-dbjax5", "canonical": "Jordan", "tournaments": ["https://challonge.com/9eis0ou0", "https://challonge.com/dbjax"] }
       ]
     },
     {
@@ -351,7 +354,7 @@
       "name": "Matt",
       "resolutions": [
         { "id": "matt-battle-of-cq", "canonical": "Matt", "tournaments": ["https://challonge.com/dbcq1"] },
-        { "id": "matt-free-play", "canonical": "Matt", "tournaments": ["https://fpaplayers.challonge.com/l2xp49u5"] },
+        { "id": "matt-free-play", "canonical": "Matt", "tournaments": ["https://fpaplayers.challonge.com/l2xp49u5", "https://fpaplayers.challonge.com/cjyk76li"] },
         { "id": "matt-may-july-2019", "canonical": "Matthew", "tournaments": ["https://challonge.com/dbcha20190430", "https://challonge.com/dbcha20190514", "https://challonge.com/dbcha20190724"] },
         { "id": "matt-dbjax5", "canonical": "Matt", "tournaments": ["https://challonge.com/9eis0ou0"] }
       ]

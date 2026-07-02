@@ -118,6 +118,8 @@
     "https://challonge.com/9eis0ou0": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" },
     "https://challonge.com/dbgdc": { "city": "San Francisco", "state": "CA", "location": "GDC" },
     "https://challonge.com/CQHPD": { "city": "Columbus", "state": "OH", "location": "Close Quarters" },
-    "LINK": { "city": "CITY", "state": "STATE", "location": "LOCATION", "date": "YYYY-MM-DD" }
+    "LINK": { "city": "CITY", "state": "STATE", "location": "LOCATION", "date": "YYYY-MM-DD" },
+    "https://fpaplayers.challonge.com/cjyk76li": { "state": "TX", "location": "Free Play" },
+    "https://challonge.com/dbjax": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" }
   }
 }

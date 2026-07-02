@@ -107,3 +107,5 @@ https://challonge.com/qpjkijqc
 https://challonge.com/9eis0ou0
 https://challonge.com/dbgdc
 https://challonge.com/CQHPD
+https://fpaplayers.challonge.com/cjyk76li
+https://challonge.com/dbjax

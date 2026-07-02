@@ -1,0 +1,25 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Jerry,0,,,false,,Joshua F,1,,,false
+B,,Rachel,0,,,false,,Tony,1,,,false
+C,,Noah S,1,,,false,,Nathan N,0,,,false
+D,,Nick M,1,,,false,,Joe,0,,,false
+E,,Jordan,0,,,false,,Griner,1,,,false
+F,,Truett,0,,,false,,Joshua F,1,,,false
+G,,Tony,0,,,false,,Noah S,1,,,false
+H,,Alec R,0,,,false,,Nick M,1,,,false
+I,,Sid,0,,,false,,Griner,1,,,false
+J,,Joshua F,1,,,false,,Noah S,0,,,false
+K,,Nick M,0,,,false,,Griner,1,,,false
+L,,Joshua F,1,,,false,,Griner,0,,,false
+O,,Rachel,0,,,false,,Nathan N,1,,,false
+P,,Sid,1,,,false,,Jerry,0,,,false
+Q,,Alec R,0,,,false,,Nathan N,1,,,false
+R,,Tony,1,,,false,,Joe,0,,,false
+S,,Truett,1,,,false,,Jordan,0,,,false
+T,,Sid,1,,,false,,Nathan N,0,,,false
+U,,Tony,0,,,false,,Truett,1,,,false
+V,,Noah S,1,,,false,,Sid,0,,,false
+W,,Nick M,1,,,false,,Truett,0,,,false
+X,,Noah S,1,,,false,,Nick M,0,,,false
+Y,,Griner,0,,,false,,Noah S,1,,,false
+M,,Joshua F,1,,,false,,Noah S,0,,,false
