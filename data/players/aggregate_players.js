@@ -637,7 +637,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .prc-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; }
 .prc-top-left { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1; overflow: hidden; }
 .prc-rank { font-family: 'Orbitron', monospace; font-size: 1.2rem; color: #888; font-weight: 900; flex-shrink: 0; line-height: 1; }
-.prc-name { font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; color: #f0f0f0; overflow: hidden; text-overflow: clip; white-space: nowrap; min-width: 0; }
+.prc-name { font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; line-height: 18px; font-weight: 700; color: #f0f0f0; overflow: hidden; text-overflow: clip; white-space: nowrap; min-width: 0; position: relative; top: 1px; }
 .prc-flag { height: 1.15em; border-radius: 2px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
 .prc-stats { display: flex; align-items: baseline; gap: 2px; }
 .prc-loc-abbr { font-family: 'Rajdhani', sans-serif; font-size: 0.78rem; font-weight: 700; color: #777; letter-spacing: 0.04em; margin-left: auto; padding-left: 4px; flex-shrink: 0; }
