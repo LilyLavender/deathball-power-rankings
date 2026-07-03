@@ -40,6 +40,9 @@ const CITY_FLAGS = locationFlags.cityFlags;
 const US_STATE_FLAGS = locationFlags.usStateFlags;
 const CA_PROVINCE_FLAGS = locationFlags.caProvinceFlags;
 const COUNTRY_CODES = locationFlags.countryCodes;
+const STATE_ABBR_BY_NAME = Object.fromEntries(
+  Object.entries(STATE_NAMES).map(([abbr, name]) => [name, abbr])
+);
 
 // Flag image URL helpers
 const WIKIMEDIA_FLAG = (file) =>
@@ -94,7 +97,7 @@ function abbrevForInfo(info) {
     if (entry) return entry.abbr;
   }
 
-  if (info.state) return info.state;
+  if (info.state) return STATE_ABBR_BY_NAME[info.state] || info.state;
 
   const countryEntry = COUNTRY_CODES[country];
   if (countryEntry) return countryEntry.abbr;

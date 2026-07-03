@@ -19,30 +19,32 @@
   "cityFlags": {
     "Allen|TX":             { "file": "Flag_of_Allen,_Texas.svg", "abbr": "DFW" },
     "Austin|TX":            { "file": "Flag_of_Austin,_Texas.svg", "abbr": "ATX" },
-    "Brandon|MS":           { "url": "https://upload.wikimedia.org/wikipedia/commons/8/85/Flag_of_Brandon%2C_Mississippi.png", "abbr": "MS" },
+    "_Brandon|MS":           { "url": "https://upload.wikimedia.org/wikipedia/commons/8/85/Flag_of_Brandon%2C_Mississippi.png", "abbr": "MS" },
+    "Charlotte|NC":         { "file": "Flag_of_Charlotte,_North_Carolina.svg", "abbr": "CLT" },
     "Chattanooga|TN":       { "file": "Flag_of_Chattanooga,_Tennessee.svg", "abbr": "CHA" },
     "Chicago|IL":           { "file": "Flag_of_Chicago,_Illinois.svg", "abbr": "CHI" },
-    "Clawson|MI":           { "file": "Flag_of_Clawson,_Michigan.svg", "abbr": "MI" },
+    "_Clawson|MI":           { "file": "Flag_of_Clawson,_Michigan.svg", "abbr": "MI" },
     "Dallas/Fort Worth|TX": { "file": "Flag_of_Dallas.svg", "abbr": "DFW" },
     "Detroit|MI":           { "file": "Flag_of_Detroit.svg", "abbr": "DET" },
     "Fort Lauderdale|FL":   { "file": "Flag_of_Fort_Lauderdale,_Florida.svg", "abbr": "FTL" },
-    "Grand Island|NE":      { "url": "https://upload.wikimedia.org/wikipedia/en/2/2a/GrandIslandNEflag.gif", "abbr": "NE" },
-    "Grand Rapids|MI":      { "file": "Flag_of_Grand_Rapids,_Michigan.svg", "abbr": "MI" },
+    "_Grand Island|NE":      { "url": "https://upload.wikimedia.org/wikipedia/en/2/2a/GrandIslandNEflag.gif", "abbr": "NE" },
+    "_Grand Rapids|MI":      { "file": "Flag_of_Grand_Rapids,_Michigan.svg", "abbr": "MI" },
     "Houston|TX":           { "file": "Flag_of_Houston,_Texas.svg", "abbr": "HOU" },
     "Jacksonville|FL":      { "file": "Flag_of_Jacksonville,_Florida.svg", "abbr": "JAX" },
-    "Lansing|MI":           { "url": "https://upload.wikimedia.org/wikipedia/en/6/65/Flag_of_Lansing%2C_Michigan.svg", "abbr": "MI" },
-    "Lexington|KY":         { "url": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Flag_of_the_Lexington_Fayette_Urban_County_Government.png", "abbr": "KY" },
+    "_Lansing|MI":           { "url": "https://upload.wikimedia.org/wikipedia/en/6/65/Flag_of_Lansing%2C_Michigan.svg", "abbr": "MI" },
+    "_Lexington|KY":         { "url": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Flag_of_the_Lexington_Fayette_Urban_County_Government.png", "abbr": "KY" },
     "Madison|WI":           { "file": "Flag_of_Madison,_Wisconsin.svg", "abbr": "WI" },
-    "Maple Grove|MN":       { "file": "Flag_of_Maple_Grove,_Minnesota.svg", "abbr": "MN" },
+    "_Maple Grove|MN":       { "file": "Flag_of_Maple_Grove,_Minnesota.svg", "abbr": "MN" },
     "Milwaukee|WI":         { "file": "People's_Flag_of_Milwaukee.svg", "abbr": "MKE" },
     "Minneapolis|MN":       { "file": "Flag_of_Minneapolis.svg", "abbr": "MPLS" },
-    "Orange|CA":            { "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Flag_of_Orange%2C_California.gif", "abbr": "CA" },
+    "_Orange|CA":            { "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Flag_of_Orange%2C_California.gif", "abbr": "CA" },
+    "Phoenix|AZ":           { "file": "Flag_of_Phoenix,_Arizona.svg", "abbr": "PHX" },
     "Portland|OR":          { "file": "Flag_of_Portland,_Oregon.svg", "abbr": "PDX" },
-    "Richardson|TX":        { "file": "Flag_of_Richardson,_Texas.svg", "abbr": "TX" },
+    "_Richardson|TX":        { "file": "Flag_of_Richardson,_Texas.svg", "abbr": "TX" },
     "San Francisco|CA":     { "file": "Flag_of_San_Francisco.svg", "abbr": "SF" },
     "Seattle|WA":           { "url": "https://upload.wikimedia.org/wikipedia/en/6/6d/Flag_of_Seattle.svg", "abbr": "SEA" },
-    "Westminster|CO":       { "file": "Flag_of_Westminster,_Colorado.svg", "abbr": "CO" },
-    "Ypsilanti|MI":         { "url": "https://upload.wikimedia.org/wikipedia/en/7/75/Flag_of_Ypsilanti.svg", "abbr": "MI" }
+    "_Westminster|CO":       { "file": "Flag_of_Westminster,_Colorado.svg", "abbr": "CO" },
+    "_Ypsilanti|MI":         { "url": "https://upload.wikimedia.org/wikipedia/en/7/75/Flag_of_Ypsilanti.svg", "abbr": "MI" }
   },
   "usStateFlags": {
     "AL": "Flag_of_Alabama.svg",         "AK": "Flag_of_Alaska.svg",
@@ -91,7 +93,7 @@
   "countryCodes": {
     "United States": { "code": "us", "abbr": "USA" },
     "Canada":        { "code": "ca", "abbr": "CAN" },
-    "Germany":       { "code": "de", "abbr": "GER" },
+    "Germany":       { "code": "de", "abbr": "DEU" },
     "United Kingdom":{ "code": "gb", "abbr": "UK" }
   }
 }

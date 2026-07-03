@@ -2,7 +2,7 @@
   "_schema": "Resolves raw player names (as they appear in tournament data) to a canonical identity, before the existing case-insensitive merge runs. Unlisted names fall through to the default merge (case-insensitive exact match) unchanged. `id` fields throughout this file are backend-only keys — they are never shown to users. They exist so that two unrelated people can share the same displayed name (e.g. two different \"Alex\"s) without their stats merging.",
   "_aliases_example": "Use when multiple distinct names/usernames are the same person. All names in the list collapse to `canonical`. `id` is optional — defaults to `canonical` lowercased; only set it explicitly when you need an alias to merge into the same backend identity as a split resolution (see \"ChaseChase\" below). Example: { \"names\": [\"corlido bandido\", \"corley\"], \"canonical\": \"Corley\" }",
   "aliases": [
-    { "names": ["Alex", "Alex H"], "canonical": "Alex H", "id": "alex-cq" },
+    { "names": ["Alex", "Alex H", "Alex Hogan"], "canonical": "Alex Hogan", "id": "alex-cq" },
     { "names": ["Alex Zick", "Alex z"], "canonical": "Alex Zick" },
     { "names": ["Alexander", "Alexander Parrish"], "canonical": "Alexander Parrish" },
     { "names": ["Andrew Ortega", "Andrew", "Andrewwww", "Andenubs"], "canonical": "Andenubs" },
@@ -89,7 +89,13 @@
     { "names": ["Andrew Griner", "Griner"], "canonical": "Andrew Griner" },
     { "names": ["impossablank", "Impossiblank"], "canonical": "impossablank" },
     { "names": ["Leonrecon", "Leon"], "canonical": "Leonrecon" },
-    { "names": ["Rachel", "Rachel Maria"], "canonical": "Rachel Maria" }
+    { "names": ["Rachel", "Rachel Maria"], "canonical": "Rachel Maria" },
+    { "names": ["Vernon", "Vern"], "canonical": "Vernon" },
+    { "names": ["D.Owls", "D"], "canonical": "D.Owls" },
+    { "names": ["GARZON", "David Garzon"], "canonical": "David Garzon" },
+    { "names": ["Gex (Burton)", "Burton Flake"], "canonical": "Burton Flake" },
+    { "names": ["KristianAndrewson", "Kristian"], "canonical": "Kristian Andrewson" },
+    { "names": ["Steve Halili", "Steve"], "canonical": "Steve Halili" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -233,7 +239,7 @@
       "resolutions": [
         { "id": "dylan-campdb", "canonical": "Dylan", "tournaments": ["https://challonge.com/CampDB"] },
         { "id": "dylan-wwfg", "canonical": "Dylan", "tournaments": ["https://fpaplayers.challonge.com/paiq649r"] },
-        { "id": "dylan-gdc", "canonical": "Dylan", "tournaments": ["https://challonge.com/dbgdc"] }
+        { "id": "dylan-gdc", "canonical": "Dylan Lee", "tournaments": ["https://challonge.com/dbgdc"] }
       ]
     },
     {
