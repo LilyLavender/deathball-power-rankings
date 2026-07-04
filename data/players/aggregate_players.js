@@ -116,6 +116,21 @@ function readJson(filePath, fallback) {
 const identities = readJson(path.join(DATA_ROOT, 'player-identities.json'), { aliases: [], splits: [], hidden: [] });
 const hiddenNames = new Set((identities.hidden || []).map((n) => n.trim().toLowerCase()));
 const playerInfo = readJson(path.join(DATA_ROOT, 'player-info.json'), { players: {} }).players || {};
+// A player with no split/alias resolves to whatever casing was literally
+// typed into that specific tournament's bracket (e.g. "spoom" vs. "Spoom"),
+// which can differ across tournaments for the same real person — but
+// player-info.json is keyed by a single canonical casing. An exact-case
+// lookup then only succeeds for tournaments that happened to use that exact
+// casing, silently dropping location/flag data everywhere else. Fall back to
+// a case-insensitive index so lookup doesn't depend on which casing a given
+// tournament host happened to type.
+const playerInfoByLowerKey = new Map(Object.keys(playerInfo).map((k) => [k.toLowerCase(), playerInfo[k]]));
+function lookupPlayerInfo(id, name) {
+  return playerInfo[id] || playerInfo[name]
+    || playerInfoByLowerKey.get((id || '').toLowerCase())
+    || playerInfoByLowerKey.get((name || '').toLowerCase())
+    || {};
+}
 const tournamentLocations = readJson(path.join(DATA_ROOT, 'tournament-locations.json'), { locations: {} }).locations || {};
 
 function normName(name) {
@@ -155,7 +170,7 @@ function cardAccent(id, colorOverride) {
 // tournament pages — standings, crosstable, round list, bracket viewer.
 function resolveDisplayName(rawName, tournamentUrl) {
   const identity = resolveIdentity(rawName, tournamentUrl);
-  const info = playerInfo[identity.id] || playerInfo[identity.name] || {};
+  const info = lookupPlayerInfo(identity.id, identity.name);
   return { name: identity.name, flag: flagForInfo(info) };
 }
 
@@ -929,7 +944,7 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
   return [...players.entries()]
     .map(([id, p]) => {
       const name = displayName(p);
-      const info = playerInfo[id] || playerInfo[name] || {};
+      const info = lookupPlayerInfo(id, name);
       return {
         name,
         wins: p.wins,
@@ -959,7 +974,7 @@ function buildRankingRows(players, glicko) {
   return [...players.entries()]
     .map(([id, p]) => {
       const name = displayName(p);
-      const info = playerInfo[id] || playerInfo[name] || {};
+      const info = lookupPlayerInfo(id, name);
       const g = glicko.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
       return {
         id,
@@ -2001,6 +2016,33 @@ function nameHtml(rawName, tournamentUrl) {
   return `${flagImg}${escapeHtml(name)}`;
 }
 
+// Standings/crosstable already canonicalize names (aliases/splits resolved)
+// before this point, so by the time we'd call nameHtml the original raw
+// in-tournament spelling is gone — re-resolving the *canonical* name against
+// this tournament's URL is unreliable whenever it happens to case-
+// insensitively collide with an unrelated split entry keyed for other
+// tournaments (observed: "Kevan S" colliding with the "Kevan s" split, which
+// only resolves for two other tournaments, silently losing the flag that the
+// correct raw name "Kevan" would have resolved). Map back to a raw name that
+// actually canonicalizes to the given name in this tournament before
+// resolving, so flag lookup runs against the same raw name the bracket
+// viewer already resolves successfully.
+const canonicalToRawCache = new WeakMap();
+function rawNameForCanonical(t, canonicalName) {
+  let map = canonicalToRawCache.get(t);
+  if (!map) {
+    map = new Map();
+    const consider = (raw) => {
+      if (!raw || map.has(resolveIdentity(raw, t.url).name)) return;
+      map.set(resolveIdentity(raw, t.url).name, raw);
+    };
+    for (const p of t.participantList) consider(p.name);
+    for (const m of t.matches) { consider(m.winnerName); consider(m.loserName); }
+    canonicalToRawCache.set(t, map);
+  }
+  return map.get(canonicalName) || canonicalName;
+}
+
 function writeTournamentPages(allTournaments) {
   const dir = path.join(REPO_ROOT, 'tournaments');
   fs.mkdirSync(dir, { recursive: true });
@@ -2010,7 +2052,7 @@ function writeTournamentPages(allTournaments) {
 
     const standingsHtml = standings.length
       ? `<ol class="standings-list">
-${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${nameHtml(s.name, t.url)}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
+${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${nameHtml(rawNameForCanonical(t, s.name), t.url)}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
     </ol>`
       : '<p>No standings available.</p>';
 
@@ -2042,9 +2084,9 @@ ${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span clas
         const { names, cell } = buildCrosstable(st, stageStandings);
         return `${heading}<div class="crosstable-wrap">
   <table class="crosstable">
-    <thead><tr><th></th>${names.map((n) => `<th>${nameHtml(n, t.url)}</th>`).join('')}</tr></thead>
+    <thead><tr><th></th>${names.map((n) => `<th>${nameHtml(rawNameForCanonical(t, n), t.url)}</th>`).join('')}</tr></thead>
     <tbody>
-${names.map((rowName) => `      <tr><th class="row-name">${nameHtml(rowName, t.url)}</th>${names.map((colName) => {
+${names.map((rowName) => `      <tr><th class="row-name">${nameHtml(rawNameForCanonical(t, rowName), t.url)}</th>${names.map((colName) => {
           const c = cell(rowName, colName);
           if (c === null) return '<td class="cell-diag">&mdash;</td>';
           if (c.empty) return '<td class="cell-empty">&middot;</td>';

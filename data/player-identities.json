@@ -29,6 +29,7 @@
     { "names": ["Mosspassion", "nickyD"], "canonical": "Mosspassion" },
     { "names": ["Scott Wilkewitz", "Scott W."], "canonical": "Scott Wilkewitz" },
     { "names": ["SliceFury", "NotNormalProductions"], "canonical": "SliceFury" },
+    { "names": ["spoom", "Spoom"], "canonical": "Spoom" },
     { "names": ["tcarsonj", "TJ Carson"], "canonical": "tcarsonj" },
     { "names": ["andrewrobk", "Turbo"], "canonical": "andrewrobk" },
     { "names": ["Nonkillerkeen"], "canonical": "Bree", "id": "bree-bumblebash" },
@@ -166,7 +167,7 @@
       "name": "Brian",
       "resolutions": [
         { "id": "brian-free-play", "canonical": "Brian", "tournaments": ["https://fpaplayers.challonge.com/pdfudix1"] },
-        { "id": "brian-preseason-may-league-2019", "canonical": "Brian", "tournaments": ["https://challonge.com/db20190406", "https://challonge.com/dbcha20190430", "https://challonge.com/dbcha20190602"] },
+        { "id": "brian-preseason-may-league-2019", "canonical": "Brian", "tournaments": ["https://challonge.com/db20190406", "https://challonge.com/dbcha20190430", "https://challonge.com/dbcha20190602", "https://challonge.com/dbcha20190507", "https://challonge.com/dbcha20190514"] },
         { "id": "brian-dbjax", "canonical": "Brian", "tournaments": ["https://challonge.com/9eis0ou0"] },
         { "id": "brian-gdc", "canonical": "Brian", "tournaments": ["https://challonge.com/dbgdc"] }
       ]
@@ -205,6 +206,14 @@
         { "id": "chase-freeplay-dbc9", "canonical": "Chase", "tournaments": ["https://fpaplayers.challonge.com/pdfudix1", "https://challonge.com/a2ai2n6q"] }
       ],
       "default": { "id": "chase-wwfg", "canonical": "Chase" }
+    },
+    {
+      "name": "Chris",
+      "resolutions": [
+        { "id": "chris-dbjax-league", "canonical": "Chris", "tournaments": ["https://challonge.com/8uvx0hf6", "https://challonge.com/qvpui3oy", "https://challonge.com/yux670gx"] },
+        { "id": "chris-freeplay", "canonical": "Chris", "tournaments": ["https://fpaplayers.challonge.com/pdfudix1", "https://fpaplayers.challonge.com/sjcdrupw", "https://fpaplayers.challonge.com/ru8o951i"] },
+        { "id": "chris-shad", "canonical": "Chris", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview", "https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v1-bracket/brackets/2228855/3234121/overview"] }
+      ]
     },
     {
       "name": "Dan",
