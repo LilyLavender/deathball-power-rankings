@@ -64,3 +64,35 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .prc-sep { font-size: 0.75rem; color: #333; font-family: 'Rajdhani', sans-serif; font-weight: 600; margin: 0 1px; }
 @media (max-width: 1100px) { .pr-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 600px) { .pr-grid { grid-template-columns: repeat(2, 1fr); } body { padding: 1rem; } }
+.back-link { display: inline-block; color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+.back-link:hover { color: #3eff8b; }
+.tourney-meta { color: #888; font-size: 0.95rem; margin: -1rem 0 1.5rem; }
+.tourney-meta a { margin-left: 0.75rem; }
+.ext-link { font-size: 0.8rem; margin-left: 0.4rem; opacity: 0.7; }
+.tourney-section { margin-bottom: 2rem; }
+.tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
+.round-group { margin-bottom: 1.25rem; }
+.round-group h3 { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin: 0 0 0.4rem; }
+.match-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid #161616; font-size: 0.95rem; }
+.match-winner { font-weight: 700; color: #f0f0f0; }
+.match-loser { color: #888; }
+.match-score { font-variant-numeric: tabular-nums; color: #3eff8b; font-weight: 700; margin-left: auto; }
+.match-dq { color: #ff5e5e; font-size: 0.8rem; }
+.standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; max-width: 25%; }
+.standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; }
+.standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; }
+.standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+.stage-label { font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #3eff8b; margin: 1.5rem 0 0.75rem; }
+.stage-label:first-child { margin-top: 0; }
+.bracket-incomplete-note { color: #ffb74d; font-size: 0.9rem; background: rgba(255,183,77,0.08); border: 1px solid rgba(255,183,77,0.3); border-radius: 3px; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
+.crosstable-wrap { overflow-x: auto; }
+.crosstable { border-collapse: collapse; font-size: 0.85rem; }
+.crosstable th, .crosstable td { border: 1px solid #1a1a1a; padding: 0.4rem 0.6rem; text-align: center; white-space: nowrap; }
+.crosstable th { background: #111; color: #888; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
+.crosstable th.row-name { text-align: left; color: #f0f0f0; }
+.crosstable td.cell-diag { background: #0a0a0a; }
+.crosstable td.cell-empty { color: #333; }
+.crosstable td.cell-win { color: #3eff8b; font-weight: 700; }
+.crosstable td.cell-loss { color: #ff5e5e; }
+.crosstable td.cell-draw { color: #ccc; }

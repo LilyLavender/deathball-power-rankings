@@ -89,21 +89,23 @@ const EVENT_META_QUERY = `query EventMeta($slug: String!) {
 
 const EVENT_PAGE_QUERY = `query EventPage($eventId: ID!, $entrantPage: Int!, $setPage: Int!) {
   event(id: $eventId) {
-    entrants(query: { page: $entrantPage, perPage: 100 }) {
+    entrants(query: { page: $entrantPage, perPage: 40 }) {
       pageInfo { totalPages }
       nodes {
         id
         name
         participants { id gamerTag prefix }
+        seeds { seedNum phaseGroup { id } }
       }
     }
-    sets(page: $setPage, perPage: 50, sortType: STANDARD) {
+    sets(page: $setPage, perPage: 25, sortType: STANDARD) {
       pageInfo { totalPages }
       nodes {
         id
         identifier
         round
         winnerId
+        phaseGroup { id displayIdentifier bracketType phase { id name } }
         slots {
           entrant { id }
           standing { stats { score { value } } }

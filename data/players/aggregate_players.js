@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const glicko2 = require('./glicko2');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
+const { buildBracketData } = require('./build_bracket');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -138,6 +139,15 @@ function resolveIdentity(rawName, tournamentUrl) {
   return { id: lower, name: trimmed };
 }
 
+// Resolves a raw in-tournament name to its canonical display name plus a
+// flag image (if the player has location info on file), for display on
+// tournament pages — standings, crosstable, round list, bracket viewer.
+function resolveDisplayName(rawName, tournamentUrl) {
+  const identity = resolveIdentity(rawName, tournamentUrl);
+  const info = playerInfo[identity.id] || playerInfo[identity.name] || {};
+  return { name: identity.name, flag: flagForInfo(info) };
+}
+
 // Stats-only pass (no Glicko) — used by add_tournaments.js to build a
 // registry of known players for dedup matching against newly fetched names.
 function buildPlayerStats(allTournaments) {
@@ -243,10 +253,39 @@ function collectChallonge() {
     const t = rec.tournament;
     const label = t.name.trim();
     const nameById = new Map(t.participants.map((p) => [p.participant.id, resolveParticipantName(p.participant)]));
+    // Group-stage matches (round-robin pools ahead of a playoff bracket)
+    // reference a separate per-group participant id, mapped back to the
+    // main participant via `group_player_ids` — without this, group-stage
+    // matches can't be resolved to player names at all.
+    for (const p of t.participants) {
+      for (const gpid of p.participant.group_player_ids || []) {
+        nameById.set(gpid, resolveParticipantName(p.participant));
+      }
+    }
 
     const matches = [];
+    // Matches Challonge already knows the pairing for but hasn't been played
+    // yet (state "open" = both sides known and ready, "pending" = waiting on
+    // a not-yet-played prerequisite, sometimes with one side already known)
+    // — kept separate from `matches` (which stays real-results-only for
+    // standings/crosstable/etc.) so build_bracket.js can render the exact
+    // upcoming bracket slots instead of guessing them from the last known
+    // round's winners.
+    const pendingMatches = [];
     for (const m of t.matches) {
       const mm = m.match;
+      if (mm.winner_id && mm.loser_id) {
+        // handled below as a real match
+      } else if (mm.group_id == null && mm.round != null && mm.round !== 0
+        && (mm.state === 'open' || mm.state === 'pending')
+        && (mm.player1_id || mm.player2_id)) {
+        pendingMatches.push({
+          round: mm.round,
+          order: mm.suggested_play_order != null ? mm.suggested_play_order : mm.id,
+          player1Name: mm.player1_id ? (nameById.get(mm.player1_id) || null) : null,
+          player2Name: mm.player2_id ? (nameById.get(mm.player2_id) || null) : null,
+        });
+      }
       if (!mm.winner_id || !mm.loser_id) continue;
       const winnerName = nameById.get(mm.winner_id);
       const loserName = nameById.get(mm.loser_id);
@@ -276,8 +315,21 @@ function collectChallonge() {
         }
       }
 
-      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ, identifier: String(mm.identifier || mm.id || '') });
+      matches.push({
+        winnerName, loserName, winnerSets, loserSets, games: null, isDQ,
+        identifier: String(mm.identifier || mm.id || ''),
+        round: mm.round != null ? mm.round : null,
+        order: mm.suggested_play_order != null ? mm.suggested_play_order : mm.id,
+        groupId: mm.group_id != null ? mm.group_id : null,
+        stageKind: mm.group_id != null ? 'pool' : 'bracket',
+      });
     }
+
+    const participantList = t.participants.map((p) => ({
+      name: resolveParticipantName(p.participant),
+      seed: p.participant.seed != null ? p.participant.seed : null,
+      finalRank: p.participant.final_rank != null ? p.participant.final_rank : null,
+    }));
 
     result.push({
       url,
@@ -287,7 +339,10 @@ function collectChallonge() {
       participants: t.participants.length,
       matchCount: matches.length,
       source: 'Challonge',
+      tournamentType: t.tournament_type || null,
+      participantList,
       matches,
+      pendingMatches,
     });
   }
 
@@ -306,7 +361,24 @@ function collectStartgg() {
     const nameByEntrantId = new Map(rec.entrants.map((e) => [e.id, e.participants[0]?.gamerTag || e.name || undefined]));
 
     const matches = [];
+    // Sets start.gg has already paired up (both slots resolved, or one slot
+    // resolved and waiting on a prerequisite) but hasn't been played yet —
+    // see the matching Challonge collection above for why this is kept
+    // separate from `matches`.
+    const pendingMatches = [];
     for (const s of rec.sets) {
+      const setBracketType = s.phaseGroup?.bracketType;
+      if (!s.winnerId && s.slots.length === 2 && s.round != null
+        && setBracketType !== 'ROUND_ROBIN' && setBracketType !== 'SWISS'
+        && s.slots.some((sl) => sl.entrant)) {
+        const [slot1, slot2] = s.slots;
+        pendingMatches.push({
+          round: s.round,
+          order: s.id,
+          player1Name: slot1?.entrant ? (nameByEntrantId.get(slot1.entrant.id) || null) : null,
+          player2Name: slot2?.entrant ? (nameByEntrantId.get(slot2.entrant.id) || null) : null,
+        });
+      }
       if (!s.winnerId || s.slots.length !== 2 || !s.slots.every((sl) => sl.entrant)) continue;
       const loserSlot = s.slots.find((sl) => sl.entrant.id !== s.winnerId);
       if (!loserSlot) continue;
@@ -322,8 +394,22 @@ function collectStartgg() {
       const winnerSets = !isDQ && winnerRaw != null && winnerRaw >= 0 ? winnerRaw : null;
       const loserSets = !isDQ && loserRaw != null && loserRaw >= 0 ? loserRaw : null;
 
-      matches.push({ winnerName, loserName, winnerSets, loserSets, games: null, isDQ, identifier: s.identifier || String(s.id || '') });
+      const bracketType = s.phaseGroup?.bracketType;
+      matches.push({
+        winnerName, loserName, winnerSets, loserSets, games: null, isDQ,
+        identifier: s.identifier || String(s.id || ''),
+        round: s.round != null ? s.round : null,
+        order: s.id,
+        groupId: s.phaseGroup?.id != null ? s.phaseGroup.id : null,
+        stageKind: bracketType === 'ROUND_ROBIN' || bracketType === 'SWISS' ? 'pool' : 'bracket',
+      });
     }
+
+    const participantList = rec.entrants.map((e) => ({
+      name: e.participants[0]?.gamerTag || e.name || undefined,
+      seed: e.seeds?.[0]?.seedNum != null ? e.seeds[0].seedNum : null,
+      finalRank: null,
+    })).filter((p) => p.name);
 
     result.push({
       url,
@@ -333,11 +419,333 @@ function collectStartgg() {
       participants: rec.entrants.length,
       matchCount: matches.length,
       source: 'start.gg',
+      tournamentType: null,
+      participantList,
       matches,
+      pendingMatches,
     });
   }
 
   return result;
+}
+
+function slugify(s) {
+  return (s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// Assigns a unique, filesystem-safe slug to each tournament (name + date),
+// used for its standalone bracket page filename.
+function assignSlugs(allTournaments) {
+  const used = new Set();
+  for (const t of allTournaments) {
+    const base = `${slugify(t.label)}-${t.date || 'unknown'}`;
+    let slug = base;
+    let n = 1;
+    while (used.has(slug)) slug = `${base}-${++n}`;
+    used.add(slug);
+    t.slug = slug;
+  }
+}
+
+// Splits a tournament into its constituent stages (e.g. round-robin group
+// pools followed by a single/double-elimination playoff bracket), based on
+// each match's `groupId` (Challonge's match.group_id, or start.gg's
+// phaseGroup id). Tournaments with only one distinct groupId (the vast
+// majority) come back as a single unlabeled stage — identical to the
+// pre-split behaviour. Each stage is a shallow clone of `t` scoped to that
+// stage's matches/participants, so existing per-tournament builders
+// (buildStandings, buildRoundGroups, buildCrosstable, buildBracketData) work
+// on it unmodified.
+function splitStages(t) {
+  const groupIds = [...new Set(t.matches.map((m) => (m.groupId != null ? m.groupId : null)))];
+  if (groupIds.length <= 1) return [{ label: null, tLike: t }];
+
+  // Pool groups (round-robin/swiss) first, in first-seen order; the
+  // playoff/bracket group (Challonge: groupId null) last.
+  const poolIds = groupIds.filter((id) => id != null).sort((a, b) => {
+    const orderOf = (id) => Math.min(...t.matches.filter((m) => m.groupId === id).map((m) => m.order != null ? m.order : 0));
+    return orderOf(a) - orderOf(b);
+  });
+  const hasBracketGroup = groupIds.includes(null);
+  const orderedIds = hasBracketGroup ? [...poolIds, null] : poolIds;
+
+  return orderedIds.map((groupId, i) => {
+    const stageMatches = t.matches.filter((m) => (m.groupId != null ? m.groupId : null) === groupId);
+    const isBracketStage = groupId === null || stageMatches.every((m) => m.stageKind === 'bracket');
+    const stageNames = new Set(stageMatches.flatMap((m) => [m.winnerName, m.loserName]).filter(Boolean));
+    const stageParticipantList = t.participantList.filter((p) => stageNames.has(p.name));
+    return {
+      label: isBracketStage && hasBracketGroup ? 'Playoff Bracket' : poolIds.length > 1 ? `Group ${i + 1}` : 'Group Stage',
+      tLike: {
+        ...t,
+        tournamentType: isBracketStage ? t.tournamentType : 'round robin',
+        matches: stageMatches,
+        participantList: stageParticipantList,
+      },
+    };
+  });
+}
+
+// Standings for a tournament: prefer Challonge's own final_rank when most
+// participants have one, otherwise derive placement from elimination order
+// (each player's rank is driven by the `order` of the last match they lost —
+// later elimination = better placement — with the winner of the
+// highest-`order` match as champion). This avoids needing to model
+// winners/losers bracket topology explicitly.
+// Derives standings from a successfully-reconstructed bracket (see
+// build_bracket.js) instead of raw match-order heuristics — the source
+// platforms' `id`/order fields aren't reliably chronological (start.gg in
+// particular assigns set ids in bracket-creation order, not play order), but
+// our reconstruction's own group/round structure is correct by construction,
+// since every one of its matches was validated against real results.
+function deriveStandingsFromBracket(bracketData) {
+  const nameById = new Map(bracketData.participants.map((p) => [p.id, p.name]));
+  const sorted = [...bracketData.matches].sort((a, b) => a.group_id - b.group_id || a.round_id - b.round_id || a.number - b.number);
+
+  // Bracket placement is a per-round notion: everyone knocked out in the
+  // same round shares a placement (tied 5th, tied 7th — and tied 3rd in
+  // single elim, where the semifinal losers never play each other). So
+  // placements are computed from a dense per-round index in progression
+  // order, not a per-match sequence number (which made every elimination
+  // artificially unique and produced no ties at all).
+  const roundIdx = new Map();
+  for (const m of sorted) {
+    const key = m.group_id + ':' + m.round_id;
+    if (!roundIdx.has(key)) roundIdx.set(key, roundIdx.size);
+  }
+
+  // lastLoss: the round a player was last defeated in. lastSeen: the round
+  // they last appeared in at all, *including* pending (not-yet-played)
+  // matches — so in an unfinished bracket, a player awaiting their next
+  // match counts as still alive rather than eliminated where they last
+  // lost, and an undefeated player stuck mid-bracket isn't dumped to the
+  // bottom for having no loss to sort by.
+  const lastLoss = new Map();
+  const lastSeen = new Map();
+  for (const m of sorted) {
+    const idx = roundIdx.get(m.group_id + ':' + m.round_id);
+    for (const o of [m.opponent1, m.opponent2]) {
+      if (o && o.id != null) lastSeen.set(o.id, Math.max(lastSeen.get(o.id) ?? -1, idx));
+    }
+    if (!m.opponent1 || !m.opponent2 || m.opponent1.id == null || m.opponent2.id == null) continue;
+    if (m.opponent1.result !== 'win' && m.opponent2.result !== 'win') continue; // pending
+    const loserId = m.opponent1.result === 'win' ? m.opponent2.id : m.opponent1.id;
+    lastLoss.set(loserId, Math.max(lastLoss.get(loserId) ?? -1, idx));
+  }
+
+  // Placement score, higher = better. Eliminated players score the round
+  // that eliminated them (their *last* loss — a winners-bracket loss
+  // doesn't eliminate in double elim, and the losers-bracket loss that
+  // does comes later in progression order). Anyone alive past round k —
+  // a completed bracket's champion included, being "alive" past the final
+  // — outranks everyone eliminated in round k via the +0.5.
+  const score = (id) => {
+    const seen = lastSeen.get(id) ?? -1;
+    const loss = lastLoss.get(id) ?? -1;
+    return loss >= seen ? loss : seen + 0.5;
+  };
+
+  const ordered = [...bracketData.participants].sort((a, b) => score(b.id) - score(a.id));
+  const rows = [];
+  for (let i = 0; i < ordered.length; i++) {
+    const rank = i > 0 && score(ordered[i].id) === score(ordered[i - 1].id) ? rows[i - 1].rank : i + 1;
+    rows.push({ name: nameById.get(ordered[i].id), rank });
+  }
+  return rows;
+}
+
+// Ranks by elimination order: each player's rank is driven by the `order` of
+// the last match they lost — later elimination = better placement — with
+// the winner of the highest-`order` match as champion. Used as a fallback
+// when there's no successfully-reconstructed bracket to derive order from.
+function rankByEliminationOrder(matches, names) {
+  const lastLossOrder = new Map();
+  let maxOrder = -Infinity;
+  let champion = null;
+  for (const m of matches) {
+    if (m.order == null) continue;
+    if (m.loserName) lastLossOrder.set(m.loserName, Math.max(lastLossOrder.get(m.loserName) != null ? lastLossOrder.get(m.loserName) : -Infinity, m.order));
+    if (m.winnerName && m.order > maxOrder) { maxOrder = m.order; champion = m.winnerName; }
+  }
+  const rest = names.filter((n) => n !== champion);
+  rest.sort((a, b) => {
+    const oa = lastLossOrder.has(a) ? lastLossOrder.get(a) : -Infinity;
+    const ob = lastLossOrder.has(b) ? lastLossOrder.get(b) : -Infinity;
+    return ob - oa;
+  });
+  const ordered = champion ? [champion, ...rest] : rest;
+  return ordered.map((name, i) => ({ name, rank: i + 1 }));
+}
+
+// Ranks names that never reached the final stage by combined pool-stage
+// win rate (across every pool group they played in), best first.
+function rankByPoolRecord(poolMatches, names) {
+  const stats = new Map(names.map((n) => [n, { w: 0, l: 0 }]));
+  for (const m of poolMatches) {
+    if (stats.has(m.winnerName)) stats.get(m.winnerName).w++;
+    if (stats.has(m.loserName)) stats.get(m.loserName).l++;
+  }
+  return [...names].sort((a, b) => {
+    const sa = stats.get(a);
+    const sb = stats.get(b);
+    const wpA = sa.w + sa.l > 0 ? sa.w / (sa.w + sa.l) : 0;
+    const wpB = sb.w + sb.l > 0 ? sb.w / (sb.w + sb.l) : 0;
+    if (wpB !== wpA) return wpB - wpA;
+    return sb.w - sa.w;
+  });
+}
+
+// Standings for a tournament: prefer Challonge's own final_rank when most
+// participants have one; otherwise derive placement ourselves. The same
+// real person can appear under more than one raw name within a single
+// tournament (e.g. Challonge auto-suffixes a second registration — "Wes" /
+// "Wes2" — when someone plays an extra/makeup round), so identities are
+// canonicalized (via the same alias/split resolution used for global player
+// stats) before ranking, merging their combined record into one slot.
+//
+// For tournaments with a group/pool stage feeding into a playoff bracket,
+// reaching the bracket outranks any amount of pool-stage success — those
+// participants are ranked first (by bracket placement), everyone eliminated
+// in pools ranked after (by combined pool win rate).
+function buildStandings(t) {
+  const named = t.participantList.filter((p) => p.name);
+  const canon = (rawName) => resolveIdentity(rawName, t.url).name;
+  const canonicalMatches = t.matches.map((m) => ({
+    ...m,
+    winnerName: m.winnerName ? canon(m.winnerName) : m.winnerName,
+    loserName: m.loserName ? canon(m.loserName) : m.loserName,
+  }));
+
+  // Overall W-L record (across every stage of the tournament), attached to
+  // every standings row regardless of which ranking method produced it.
+  const wlRecord = new Map();
+  for (const m of canonicalMatches) {
+    if (!m.winnerName || !m.loserName) continue;
+    if (!wlRecord.has(m.winnerName)) wlRecord.set(m.winnerName, { wins: 0, losses: 0 });
+    if (!wlRecord.has(m.loserName)) wlRecord.set(m.loserName, { wins: 0, losses: 0 });
+    wlRecord.get(m.winnerName).wins++;
+    wlRecord.get(m.loserName).losses++;
+  }
+  const withRecord = (rows) => rows.map((r) => ({
+    ...r,
+    wins: wlRecord.get(r.name)?.wins || 0,
+    losses: wlRecord.get(r.name)?.losses || 0,
+  }));
+
+  const hasOfficialRanks = t.source === 'Challonge' &&
+    named.filter((p) => p.finalRank != null).length >= named.length * 0.8;
+
+  if (hasOfficialRanks) {
+    const byCanonical = new Map();
+    for (const p of named) {
+      const name = canon(p.name);
+      const existing = byCanonical.get(name);
+      if (!existing || (p.finalRank != null && (existing.finalRank == null || p.finalRank < existing.finalRank))) {
+        byCanonical.set(name, { name, finalRank: p.finalRank != null ? p.finalRank : existing?.finalRank ?? null, seed: p.seed });
+      }
+    }
+    return withRecord([...byCanonical.values()]
+      .sort((a, b) => {
+        const ar = a.finalRank != null ? a.finalRank : Infinity;
+        const br = b.finalRank != null ? b.finalRank : Infinity;
+        if (ar !== br) return ar - br;
+        return (a.seed != null ? a.seed : Infinity) - (b.seed != null ? b.seed : Infinity);
+      })
+      .map((p) => ({ name: p.name, rank: p.finalRank })));
+  }
+
+  const canonicalNames = [...new Set(named.map((p) => canon(p.name)))];
+
+  const finalStage = t.stages && t.stages.length > 1 ? t.stages[t.stages.length - 1] : null;
+  const finalStageIsBracket = finalStage && finalStage.tLike.matches.length > 0 && finalStage.tLike.matches.every((m) => m.stageKind === 'bracket');
+
+  if (finalStageIsBracket) {
+    const finalNames = new Set(finalStage.tLike.participantList.map((p) => canon(p.name)));
+    const finalRanked = finalStage.bracketData
+      ? deriveStandingsFromBracket(finalStage.bracketData)
+      : rankByEliminationOrder(canonicalMatches.filter((m) => m.stageKind === 'bracket'), [...finalNames]);
+
+    const poolNames = canonicalNames.filter((n) => !finalNames.has(n));
+    const poolMatches = canonicalMatches.filter((m) => m.stageKind === 'pool');
+    const poolRanked = rankByPoolRecord(poolMatches, poolNames);
+
+    return withRecord([
+      // Bracket placements come through as-is (they can contain ties); pool
+      // eliminees rank after every bracket participant, so their numbering
+      // starts at the bracket's participant *count* + 1 regardless of ties.
+      ...finalRanked.map((r) => ({ name: r.name, rank: r.rank })),
+      ...poolRanked.map((name, i) => ({ name, rank: finalRanked.length + i + 1 })),
+    ]);
+  }
+
+  if (t.stages && t.stages.length === 1 && t.stages[0].bracketData) {
+    return withRecord(deriveStandingsFromBracket(t.stages[0].bracketData));
+  }
+
+  return withRecord(rankByEliminationOrder(canonicalMatches, canonicalNames));
+}
+
+// Groups a tournament's matches by round for bracket display, ordered
+// Winners Round 1..N then Losers Round 1..N (negative round = losers side).
+function buildRoundGroups(t) {
+  const hasLosers = t.matches.some((m) => m.round != null && m.round < 0);
+  const groups = new Map();
+  for (const m of t.matches) {
+    const key = m.round != null ? m.round : 'other';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m);
+  }
+  const keys = [...groups.keys()].sort((a, b) => {
+    if (a === 'other') return 1;
+    if (b === 'other') return -1;
+    const aLoser = a < 0 ? 1 : 0;
+    const bLoser = b < 0 ? 1 : 0;
+    if (aLoser !== bLoser) return aLoser - bLoser;
+    return Math.abs(a) - Math.abs(b);
+  });
+  return keys.map((key) => {
+    const label = key === 'other' ? 'Other Matches' : key < 0 ? `Losers Round ${Math.abs(key)}` : hasLosers ? `Winners Round ${key}` : `Round ${key}`;
+    const matches = [...groups.get(key)].sort((a, b) => (a.order != null ? a.order : 0) - (b.order != null ? b.order : 0));
+    return { label, matches };
+  });
+}
+
+// Builds a head-to-head results grid for round-robin/swiss tournaments:
+// one row+column per player (ordered by standings), each cell showing the
+// result of that pairing (W/L, or D on a split double-round-robin).
+function buildCrosstable(t, standings) {
+  // `standings` names are canonicalized (aliases/splits resolved) — a
+  // player's raw matches must be canonicalized the same way, or a player
+  // with an alias (e.g. someone who played an extra group-stage round under
+  // a second Challonge registration) would have their real matches silently
+  // fail to look up against their canonical row/column header.
+  const canon = (rawName) => resolveIdentity(rawName, t.url).name;
+  const names = standings.length ? standings.map((s) => s.name) : [...new Set(t.matches.flatMap((m) => [m.winnerName, m.loserName]).filter(Boolean).map(canon))];
+
+  const pairKey = (a, b) => [a, b].sort().join(' ');
+  const byPair = new Map();
+  for (const m of t.matches) {
+    if (!m.winnerName || !m.loserName) continue;
+    const key = pairKey(canon(m.winnerName), canon(m.loserName));
+    if (!byPair.has(key)) byPair.set(key, []);
+    byPair.get(key).push(m);
+  }
+
+  function cell(a, b) {
+    if (a === b) return null;
+    const matches = byPair.get(pairKey(a, b));
+    if (!matches || matches.length === 0) return { empty: true };
+    let winsA = 0;
+    let winsB = 0;
+    for (const m of matches) {
+      if (canon(m.winnerName) === a) winsA++;
+      else if (canon(m.winnerName) === b) winsB++;
+    }
+    const label = winsA > winsB ? 'W' : winsA < winsB ? 'L' : 'D';
+    return { label, title: `${winsA}-${winsB}` };
+  }
+
+  return { names, cell };
 }
 
 // Converts a raw manual-matches.json entry into a normalised match object.
@@ -500,7 +908,7 @@ function processChronologically(allTournaments, players, glicko) {
 
 // --- Output builders ---
 
-function buildPlayerRows(players, tournamentLocationByUrl) {
+function buildPlayerRows(players, tournamentMetaByUrl) {
   return [...players.entries()]
     .map(([id, p]) => {
       const name = displayName(p);
@@ -522,7 +930,8 @@ function buildPlayerRows(players, tournamentLocationByUrl) {
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
           label,
-          location: tournamentLocationByUrl.get(url) || '',
+          location: (tournamentMetaByUrl.get(url) || {}).location || '',
+          slug: (tournamentMetaByUrl.get(url) || {}).slug || '',
         })),
       };
     })
@@ -649,6 +1058,38 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .prc-sep { font-size: 0.75rem; color: #333; font-family: 'Rajdhani', sans-serif; font-weight: 600; margin: 0 1px; }
 @media (max-width: 1100px) { .pr-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 600px) { .pr-grid { grid-template-columns: repeat(2, 1fr); } body { padding: 1rem; } }
+.back-link { display: inline-block; color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+.back-link:hover { color: #3eff8b; }
+.tourney-meta { color: #888; font-size: 0.95rem; margin: -1rem 0 1.5rem; }
+.tourney-meta a { margin-left: 0.75rem; }
+.ext-link { font-size: 0.8rem; margin-left: 0.4rem; opacity: 0.7; }
+.tourney-section { margin-bottom: 2rem; }
+.tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
+.round-group { margin-bottom: 1.25rem; }
+.round-group h3 { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin: 0 0 0.4rem; }
+.match-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid #161616; font-size: 0.95rem; }
+.match-winner { font-weight: 700; color: #f0f0f0; }
+.match-loser { color: #888; }
+.match-score { font-variant-numeric: tabular-nums; color: #3eff8b; font-weight: 700; margin-left: auto; }
+.match-dq { color: #ff5e5e; font-size: 0.8rem; }
+.standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; max-width: 25%; }
+.standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; }
+.standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; }
+.standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+.stage-label { font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #3eff8b; margin: 1.5rem 0 0.75rem; }
+.stage-label:first-child { margin-top: 0; }
+.bracket-incomplete-note { color: #ffb74d; font-size: 0.9rem; background: rgba(255,183,77,0.08); border: 1px solid rgba(255,183,77,0.3); border-radius: 3px; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
+.crosstable-wrap { overflow-x: auto; }
+.crosstable { border-collapse: collapse; font-size: 0.85rem; }
+.crosstable th, .crosstable td { border: 1px solid #1a1a1a; padding: 0.4rem 0.6rem; text-align: center; white-space: nowrap; }
+.crosstable th { background: #111; color: #888; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
+.crosstable th.row-name { text-align: left; color: #f0f0f0; }
+.crosstable td.cell-diag { background: #0a0a0a; }
+.crosstable td.cell-empty { color: #333; }
+.crosstable td.cell-win { color: #3eff8b; font-weight: 700; }
+.crosstable td.cell-loss { color: #ff5e5e; }
+.crosstable td.cell-draw { color: #ccc; }
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
 }
@@ -893,7 +1334,7 @@ function writeJs() {
 function writeHtml(playerRows, allTournaments, rankingRows) {
   const playerTableRows = playerRows.map((p) => {
     const tournamentLinks = p.tournaments
-      .map((t) => `<a href="${escapeHtml(t.url)}" target="_blank" rel="noopener"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
+      .map((t) => `<a href="tournaments/${escapeHtml(t.slug)}.html"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
       .join(', ');
     return `<tr${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
       <td>${escapeHtml(p.name)}</td>
@@ -910,7 +1351,7 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
   const tournamentTableRows = [...allTournaments]
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .map((t) => `<tr>
-      <td><a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.label)}</a></td>
+      <td><a href="tournaments/${escapeHtml(t.slug)}.html">${escapeHtml(t.label)}</a><a class="ext-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener" title="View original">&#8599;</a></td>
       <td data-sort="${t.date}">${escapeHtml(t.date)}</td>
       <td>${escapeHtml(t.location)}</td>
       <td>${escapeHtml(t.source)}</td>
@@ -1075,38 +1516,488 @@ ${rankingTableRows}
   fs.writeFileSync(path.join(REPO_ROOT, 'index.html'), html);
 }
 
-function main() {
+function matchScoreLabel(m) {
+  if (m.isDQ) return 'DQ';
+  if (m.games) {
+    const w = m.games.filter((g) => g.winnerGoals > g.loserGoals).length;
+    const l = m.games.length - w;
+    return `${w}-${l}`;
+  }
+  if (m.winnerSets != null && m.loserSets != null) return `${m.winnerSets}-${m.loserSets}`;
+  return '';
+}
+
+const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
+<script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
+<style>
+  .brackets-viewer {
+    --primary-background: #0f0f0f;
+    --secondary-background: #181818;
+    --font-color: #f0f0f0;
+    --border-color: #333;
+    --border-hover-color: #3eff8b;
+    --border-selected-color: #3eff8b;
+    --connector-color: #444;
+    --label-color: #888;
+    --hint-color: #666;
+    --win-color: #079b45;
+    --loss-color: #af0505;
+  }
+  /* A bye never really happened as a match — remove the box from layout
+     entirely. layoutBrackets() below re-lays the bracket out from actual
+     feeder relationships, so no invisible placeholder is needed to keep
+     sibling spacing intact (keeping one is what used to leave big empty
+     gaps in bye-heavy brackets). */
+  .brackets-viewer .match.bye-hidden { display: none; }
+  /* The library draws connectors with border ::before/::after pseudo-
+     elements whose elbow direction comes from :nth-of-type parity — wrong
+     as soon as byes/irregular rounds break the textbook shape, and full of
+     gaps at 3-way junctions. layoutBrackets() draws real SVG connectors
+     instead, so the library's are disabled wholesale. */
+  .brackets-viewer .match.connect-next::after,
+  .brackets-viewer .opponents.connect-previous::before { content: none !important; }
+  .brackets-viewer svg.bracket-connectors path {
+    fill: none;
+    stroke: var(--connector-color);
+    stroke-width: 2px;
+  }
+  /* Ease the hover highlight in/out instead of snapping the instant the
+     cursor crosses a box (the small delay also keeps a sweep of the mouse
+     across the bracket from strobing every box it passes). The library
+     applies hover as a full border shorthand with identical width/style,
+     so transitioning just border-color covers it. */
+  .brackets-viewer .opponents { transition: border-color 0.25s ease 0.08s; }
+  /* The library's own .name>img rule force-crops images square (1em x 1em,
+     object-fit cover) for avatars; flags are wider than tall, so let them
+     keep their aspect ratio and match the standings list's styling. */
+  .brackets-viewer .participant .name > img.loc-flag {
+    width: auto;
+    height: 1em;
+    object-fit: contain;
+    border-radius: 1px;
+    margin-right: 5px;
+  }
+  /* A "pending"/not-yet-played match (status 0-3; 4 is completed, 5 is
+     archived) — same warning color and background as the incomplete-bracket
+     note above it. Overriding the library's own --border-color/
+     --match-background variables (rather than drawing a border directly on
+     .match) means the color reaches the .opponents/.participant boxes that
+     actually paint it, replacing their default grey outline instead of
+     layering a second box around it. (Positioning/sizing is fully handled
+     by layoutBrackets() — an earlier align-self:flex-start hack here to
+     stop a lone pending final stretching to fill its column also pinned it
+     to the top, which then dragged the whole winners-bracket spine up with
+     it.) */
+  .brackets-viewer .match[data-match-status="0"],
+  .brackets-viewer .match[data-match-status="1"],
+  .brackets-viewer .match[data-match-status="2"],
+  .brackets-viewer .match[data-match-status="3"] {
+    --border-color: rgba(255,183,77,0.6);
+    --match-background: rgba(255,183,77,0.08);
+    /* Hover/selection stays in the pending palette — the green used for
+       completed matches would read as a result where there isn't one. */
+    --border-hover-color: rgba(255,183,77,0.95);
+    --border-selected-color: rgba(255,183,77,0.95);
+  }
+  /* No score to show for a match that hasn't happened yet — blank the
+     library's own "-" placeholder in favor of a single warning icon (added
+     by markPendingMatches() below), sitting inside the card's own border
+     rather than overlapping its edge. */
+  .brackets-viewer .match[data-match-status="0"] .result,
+  .brackets-viewer .match[data-match-status="1"] .result,
+  .brackets-viewer .match[data-match-status="2"] .result,
+  .brackets-viewer .match[data-match-status="3"] .result {
+    visibility: hidden;
+  }
+  /* Increase font size of results */
+  .brackets-viewer .participant .result {
+    font-size: 13px;
+    line-height: 12px;
+    align-content: center;
+  }
+  /* .brackets-viewer .opponents>span / >span:nth-of-type(1) are the
+     library's own rules for its seed-label spans (top:-10px, left:3px) —
+     since our icon is also a bare <span> under .opponents (and the only
+     one, making it nth-of-type(1) too), it inherits both. Both include a
+     "span" type selector our class-only selector above lacked, which out-
+     specifies it despite matching the same number of classes — hence
+     !important here to guarantee our positioning wins regardless of the
+     library's own selectors (which we don't control and could change). */
+  .brackets-viewer .opponents .match-pending-icon {
+    position: absolute;
+    top: 3px !important;
+    left: auto !important;
+    right: 1px !important;
+    font-size: 1.1em;
+    line-height: 1;
+    color: #ffb74d;
+    background-color: transparent;
+  }
+</style>
+<script>
+  // brackets-viewer positions matches with equal-height flex columns
+  // (every match flex:1, byes included) and draws connectors from round
+  // parity — both assume a textbook bracket where each round has exactly
+  // half the previous round's matches. Real brackets here (bye-padded,
+  // sometimes abandoned mid-event) don't obey that, and an earlier
+  // approach of patching the library's guesses match-by-match (hiding bye
+  // boxes but keeping their space, translateY-shifting lone feeders toward
+  // whatever position their target happened to land on) compounded errors
+  // instead of fixing them. So after render we discard the library's
+  // positioning and connectors entirely and re-derive the layout from the
+  // actual feeder relationships in the DOM:
+  //   - bye matches are dropped from layout completely (no empty slots);
+  //   - a match nothing real feeds into takes the next compact vertical
+  //     slot; a match with one real feeder sits level with it (straight
+  //     connector); one with two sits at their midpoint — so finals land
+  //     mid-bracket instead of wherever flex put them;
+  //   - connectors are drawn as SVG paths between the real boxes, giving
+  //     gap-free 3-point junctions.
+  // Safe to re-run (fonts.ready below re-invokes it once metrics settle).
+  function layoutBrackets() {
+    for (const rounds of document.querySelectorAll('.brackets-viewer .bracket .rounds')) layoutRounds(rounds);
+  }
+
+  function layoutRounds(container) {
+    const rounds = [...container.querySelectorAll(':scope > .round')];
+    if (!rounds.length) return;
+
+    // Per-round lookup of who won what. Byes are hidden and never laid
+    // out, but a player can sit out a round (bye) between two real
+    // matches, so feeder lookups scan back past the immediately-previous
+    // round until they find the player's last real win.
+    const roundInfos = rounds.map((round) => {
+      const real = [];
+      const winners = new Map();
+      for (const el of round.querySelectorAll(':scope > .match')) {
+        if (el.querySelector('.name.bye')) { el.classList.add('bye-hidden'); continue; }
+        const m = { el, y: null, children: [] };
+        real.push(m);
+        const win = el.querySelector('.participant.win');
+        if (win && win.dataset.participantId) winners.set(win.dataset.participantId, m);
+      }
+      return { round, real, winners };
+    });
+
+    // Link each match to the matches that feed it: for each opponent,
+    // their nearest earlier real win in this bracket section. No hit means
+    // they arrived from outside the section (a winners-bracket dropper
+    // entering the losers bracket) — no connector. Earlier rounds claim
+    // first (ascending order), so e.g. a grand final claims the WB final
+    // before a bracket-reset match can reach past it; the claimed set
+    // guarantees each match feeds at most one later match.
+    const claimed = new Set();
+    for (let i = 1; i < roundInfos.length; i++) {
+      for (const m of roundInfos[i].real) {
+        for (const p of m.el.querySelectorAll(':scope > .opponents > .participant')) {
+          const id = p.dataset.participantId;
+          if (!id) continue; // TBD slot of a pending match
+          for (let j = i - 1; j >= 0; j--) {
+            const feeder = roundInfos[j].winners.get(id);
+            if (feeder) {
+              if (!claimed.has(feeder)) { m.children.push(feeder); claimed.add(feeder); }
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Assign vertical slots: DFS from each root (any match nothing later
+    // claimed), leaves take successive compact slots, parents center on
+    // their children. Later-round roots go first so the main bracket tree
+    // lays out top-anchored and any stray unfinished subtrees stack below.
+    let nextLeaf = 0;
+    const assign = (m) => {
+      if (m.y != null) return m.y;
+      if (!m.children.length) return (m.y = nextLeaf++);
+      return (m.y = m.children.map(assign).reduce((a, b) => a + b, 0) / m.children.length);
+    };
+    for (let i = roundInfos.length - 1; i >= 0; i--) {
+      for (const m of roundInfos[i].real) if (!claimed.has(m)) assign(m);
+    }
+
+    const allReal = roundInfos.flatMap((info) => info.real);
+    if (!allReal.length) return;
+    const boxH = allReal[0].el.querySelector(':scope > .opponents').getBoundingClientRect().height;
+    const gap = 20; // matches the library's own 10px top+bottom match margin
+    const pitch = boxH + gap;
+
+    for (const { round, real } of roundInfos) {
+      const h3 = round.querySelector(':scope > h3');
+      const base = (h3 ? h3.offsetHeight : 0) + gap;
+      round.style.position = 'relative';
+      round.style.height = (base + nextLeaf * pitch - gap) + 'px';
+      for (const m of real) {
+        m.el.style.position = 'absolute';
+        m.el.style.margin = '0';
+        m.el.style.transform = 'none';
+        m.el.style.height = boxH + 'px';
+        m.el.style.top = (base + m.y * pitch) + 'px';
+      }
+    }
+
+    // Connectors, drawn from the now-final geometry. A feeder level with
+    // its target gets a plain straight line; otherwise elbow horizontally
+    // to just before the target column, then vertically to its center —
+    // two feeders of one match share that junction point, forming a clean
+    // T with no gaps.
+    const old = container.querySelector(':scope > svg.bracket-connectors');
+    if (old) old.remove();
+    const cRect = container.getBoundingClientRect();
+    let paths = '';
+    for (const m of allReal) {
+      if (!m.children.length) continue;
+      const t = m.el.getBoundingClientRect();
+      const tx = t.left - cRect.left;
+      const ty = t.top + t.height / 2 - cRect.top;
+      for (const c of m.children) {
+        const f = c.el.getBoundingClientRect();
+        const fx = f.right - cRect.left;
+        const fy = f.top + f.height / 2 - cRect.top;
+        paths += Math.abs(fy - ty) < 1
+          ? '<path d="M ' + fx + ' ' + fy + ' H ' + tx + '" />'
+          : '<path d="M ' + fx + ' ' + fy + ' H ' + (tx - 20) + ' V ' + ty + ' H ' + tx + '" />';
+      }
+    }
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'bracket-connectors');
+    svg.setAttribute('width', container.scrollWidth);
+    svg.setAttribute('height', container.scrollHeight);
+    svg.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;';
+    svg.innerHTML = paths;
+    container.style.position = 'relative';
+    container.insertBefore(svg, container.firstChild);
+  }
+
+  // Box heights can shift once webfonts finish loading; re-run the layout
+  // with settled metrics (layoutRounds fully re-derives, so this is safe).
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
+
+  // Prepends each participant's location flag (same imagery as the
+  // standings list) to their name in every bracket box. Flags are keyed by
+  // participant id rather than name so split identities sharing a display
+  // name stay distinct. Safe to call once per stage: already-flagged rows
+  // are skipped.
+  function addBracketFlags(selector, flags) {
+    for (const p of document.querySelectorAll(selector + ' .participant[data-participant-id]')) {
+      const f = flags[p.dataset.participantId];
+      if (!f) continue;
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.querySelector('img.loc-flag')) continue;
+      const img = document.createElement('img');
+      img.className = 'loc-flag';
+      img.src = f.src;
+      img.title = f.title;
+      img.alt = f.title;
+      nameEl.insertBefore(img, nameEl.firstChild);
+    }
+  }
+
+  // Marks every not-yet-played match (status 0-3) with the same warning
+  // icon used in the incomplete-bracket note above, instead of the "-" the
+  // library prints per opponent when there's no score yet (that CSS-hides
+  // the "-" — see .result above — this just adds the one icon per card).
+  function markPendingMatches() {
+    for (const m of document.querySelectorAll('.brackets-viewer .match[data-match-status]')) {
+      if (m.dataset.matchStatus === '4' || m.dataset.matchStatus === '5') continue;
+      const opponents = m.querySelector('.opponents');
+      if (!opponents || opponents.querySelector('.match-pending-icon')) continue;
+      const icon = document.createElement('span');
+      icon.className = 'match-pending-icon';
+      // U+FE0E forces the monochrome text glyph. Without it this renders as
+      // a color emoji here (unlike the identical ⚠ in the plain-text note
+      // above) because .brackets-viewer's own font-family list includes
+      // color-emoji fonts ("Segoe UI Emoji" etc.) as fallbacks, which
+      // Chromium's shaper can pick for a lone symbol character even though
+      // ⚠ defaults to text presentation.
+      icon.textContent = '⚠︎ ';
+      opponents.appendChild(icon);
+    }
+  }
+</script>`;
+
+// Renders a raw in-tournament name as canonical-name-plus-flag markup.
+function nameHtml(rawName, tournamentUrl) {
+  if (!rawName) return escapeHtml('?');
+  const { name, flag } = resolveDisplayName(rawName, tournamentUrl);
+  const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
+  return `${flagImg}${escapeHtml(name)}`;
+}
+
+function writeTournamentPages(allTournaments) {
+  const dir = path.join(REPO_ROOT, 'tournaments');
+  fs.mkdirSync(dir, { recursive: true });
+
+  for (const t of allTournaments) {
+    const standings = buildStandings(t);
+
+    const standingsHtml = standings.length
+      ? `<ol class="standings-list">
+${standings.map((s) => `      <li><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${nameHtml(s.name, t.url)}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
+    </ol>`
+      : '<p>No standings available.</p>';
+
+    let extraHead = '';
+    const stageSections = t.stages.map((stage) => {
+      const heading = stage.label ? `<h3 class="stage-label">${escapeHtml(stage.label)}</h3>\n` : '';
+      const st = stage.tLike;
+
+      if (stage.bracketData) {
+        extraHead = BRACKETS_VIEWER_HEAD;
+        const containerId = `bv-${stage.label ? slugify(stage.label) : 'main'}`;
+        const { incomplete, participants, ...rest } = stage.bracketData;
+        const renderData = { ...rest, participants: participants.map(({ flag, ...p }) => p) };
+        const flagById = {};
+        for (const p of participants) if (p.flag) flagById[p.id] = { src: p.flag.src, title: p.flag.title };
+        const note = incomplete ? '<p class="bracket-incomplete-note">&#9888; This bracket was not finished — some matches are missing from the source data, so results past that point aren\'t shown.</p>' : '';
+        return `${heading}${note}<div class="brackets-viewer" id="${containerId}"></div>
+<script>
+  window.bracketsViewer.render(${JSON.stringify(renderData)}, { selector: '#${containerId}' });
+  addBracketFlags('#${containerId}', ${JSON.stringify(flagById)});
+  layoutBrackets();
+  markPendingMatches();
+</script>`;
+      }
+
+      if (st.tournamentType === 'round robin' || st.tournamentType === 'swiss') {
+        const stageStandings = stage.label ? buildStandings(st) : standings;
+        const { names, cell } = buildCrosstable(st, stageStandings);
+        return `${heading}<div class="crosstable-wrap">
+  <table class="crosstable">
+    <thead><tr><th></th>${names.map((n) => `<th>${nameHtml(n, t.url)}</th>`).join('')}</tr></thead>
+    <tbody>
+${names.map((rowName) => `      <tr><th class="row-name">${nameHtml(rowName, t.url)}</th>${names.map((colName) => {
+          const c = cell(rowName, colName);
+          if (c === null) return '<td class="cell-diag">&mdash;</td>';
+          if (c.empty) return '<td class="cell-empty">&middot;</td>';
+          const cls = c.label === 'W' ? 'cell-win' : c.label === 'L' ? 'cell-loss' : 'cell-draw';
+          return `<td class="${cls}" title="${escapeHtml(c.title)}">${c.label}</td>`;
+        }).join('')}</tr>`).join('\n')}
+    </tbody>
+  </table>
+</div>`;
+      }
+
+      const roundGroups = buildRoundGroups(st);
+      return `${heading}${roundGroups.map((g) => `<div class="round-group">
+      <h3>${escapeHtml(g.label)}</h3>
+${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">${nameHtml(m.winnerName, t.url)}</span><span> def. </span><span class="match-loser">${nameHtml(m.loserName, t.url)}</span>${m.isDQ ? '<span class="match-dq">(DQ)</span>' : ''}<span class="match-score">${escapeHtml(matchScoreLabel(m))}</span></div>`).join('\n')}
+    </div>`).join('\n')}`;
+    }).join('\n');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(t.label)} — DeathBall Power Rankings</title>
+<link rel="stylesheet" href="../index.css">
+${extraHead}
+</head>
+<body>
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
+<h1>${escapeHtml(t.label)}</h1>
+<div class="tourney-meta">${escapeHtml(t.date)}${t.location ? ` &bull; ${escapeHtml(t.location)}` : ''} &bull; ${escapeHtml(t.source)}
+  <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">View original on ${escapeHtml(t.source)} &#8599;</a>
+</div>
+
+<div class="tourney-section">
+  <h2>Standings</h2>
+  ${standingsHtml}
+</div>
+
+<div class="tourney-section">
+  <h2>Matches</h2>
+  ${stageSections}
+</div>
+</body>
+</html>
+`;
+
+    fs.writeFileSync(path.join(dir, `${t.slug}.html`), html);
+  }
+}
+
+async function main() {
   const challongeTournaments = collectChallonge();
   const startggTournaments = collectStartgg();
   const allTournaments = [...challongeTournaments, ...startggTournaments];
 
   allTournaments.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  assignSlugs(allTournaments);
 
   const knownUrls = new Set(allTournaments.map((t) => t.url));
   const manualByUrl = loadManualMatches(knownUrls);
   for (const t of allTournaments) {
     const manual = manualByUrl.get(t.url) || [];
     if (manual.length === 0) continue;
-    // Manual entries with a match_index replace the scraped match for that slot
+    // Manual entries with a match_index replace the scraped match for that
+    // slot — inherit its structural fields (round/order/groupId/stageKind)
+    // so the replacement stays correctly positioned in the bracket; only the
+    // recorded result (winner/scores/games) comes from the manual entry.
+    // Without this, a corrected match would lose its round/order entirely,
+    // which splitStages would then see as a whole separate (metadata-less)
+    // stage, silently carving it out of the bracket and leaving a gap that
+    // cascaded into spurious extra byes everywhere downstream of it.
+    const byIdentifier = new Map(t.matches.map((m) => [m.identifier, m]));
+    const merged = manual.map((m) => {
+      if (!m.matchIndex) return m;
+      const original = byIdentifier.get(m.matchIndex);
+      return original
+        ? { ...m, round: original.round, order: original.order, groupId: original.groupId, stageKind: original.stageKind }
+        : m;
+    });
     const overrideIds = new Set(manual.map((m) => m.matchIndex).filter(Boolean));
     if (overrideIds.size > 0) {
       t.matches = t.matches.filter((m) => !overrideIds.has(m.identifier));
     }
-    t.matches.push(...manual);
+    t.matches.push(...merged);
+  }
+
+  // Hidden identities (byes, walkovers, placeholder entrants like "D1"/
+  // "nobody") never happened as far as display is concerned — drop any
+  // match involving one, and drop them from the participant roster so they
+  // never show up in standings or the round-robin crosstable either.
+  for (const t of allTournaments) {
+    t.matches = t.matches.filter((m) =>
+      !hiddenNames.has(normName(m.winnerName).toLowerCase()) &&
+      !hiddenNames.has(normName(m.loserName).toLowerCase()));
+    t.participantList = t.participantList.filter((p) => !hiddenNames.has(normName(p.name).toLowerCase()));
+  }
+
+  for (const t of allTournaments) {
+    t.stages = splitStages(t);
+    for (const stage of t.stages) {
+      stage.bracketData = await buildBracketData(stage.tLike);
+      if (stage.bracketData) {
+        // Resolve while the raw in-tournament name is still available —
+        // alias/split resolution keys off raw names, so it can't reliably
+        // be re-run later against the canonical name this replaces it with.
+        // The flag rides along for the bracket page to render next to the
+        // name; it's stripped back out of the payload handed to
+        // brackets-viewer (see writeTournamentPages).
+        for (const p of stage.bracketData.participants) {
+          const resolved = resolveDisplayName(p.name, t.url);
+          p.name = resolved.name;
+          p.flag = resolved.flag || null;
+        }
+      }
+    }
   }
 
   const players = new Map();
   const glicko = new Map();
   processChronologically(allTournaments, players, glicko);
 
-  const tournamentLocationByUrl = new Map(allTournaments.map((t) => [t.url, t.location]));
-  const playerRows = buildPlayerRows(players, tournamentLocationByUrl);
+  const tournamentMetaByUrl = new Map(allTournaments.map((t) => [t.url, { location: t.location, slug: t.slug }]));
+  const playerRows = buildPlayerRows(players, tournamentMetaByUrl);
   const rankingRows = buildRankingRows(players, glicko);
 
   writeCsv(playerRows);
   writeCss();
   writeJs();
   writeHtml(playerRows, allTournaments, rankingRows);
+  writeTournamentPages(allTournaments);
 
   console.log(`Unique players: ${playerRows.length}`);
   console.log(`Tournaments:    ${allTournaments.length}`);
@@ -1115,7 +2006,7 @@ function main() {
   console.log(`Output: ${path.join(REPO_ROOT, 'index.html')}`);
 }
 
-if (require.main === module) main();
+if (require.main === module) main().catch((err) => { console.error(err); process.exit(1); });
 
 module.exports = {
   DATA_ROOT,

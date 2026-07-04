@@ -118,13 +118,13 @@
     "https://challonge.com/9eis0ou0": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" },
     "https://challonge.com/dbgdc": { "city": "San Francisco", "state": "CA", "location": "GDC" },
     "https://challonge.com/CQHPD": { "city": "Columbus", "state": "OH", "location": "Close Quarters" },
-    "LINK": { "city": "CITY", "state": "STATE", "location": "LOCATION", "date": "YYYY-MM-DD" },
     "https://fpaplayers.challonge.com/cjyk76li": { "state": "TX", "location": "Free Play" },
     "https://challonge.com/dbjax": { "city": "Jacksonville", "state": "FL", "location": "Keg and Coin" },
     "https://challonge.com/iyejfqft": { "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
     "https://challonge.com/yfp3t2ck": { "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
     "https://challonge.com/xxjsm86b": { "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
     "https://challonge.com/y8tnqlcs": { "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
-    "https://challonge.com/nd1zz0xn": { "city": "Minneapolis", "state": "MN", "location": "SGDQ" }
+    "https://challonge.com/nd1zz0xn": { "city": "Minneapolis", "state": "MN", "location": "SGDQ", "date": "2024-07-07" },
+    "LINK": { "city": "CITY", "state": "STATE", "location": "LOCATION", "date": "YYYY-MM-DD" }
   }
 }

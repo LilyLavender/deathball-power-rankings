@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DeathBall @ Free Play — DeathBall Power Rankings</title>
+<link rel="stylesheet" href="../index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
+<script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
+<style>
+  .brackets-viewer {
+    --primary-background: #0f0f0f;
+    --secondary-background: #181818;
+    --font-color: #f0f0f0;
+    --border-color: #333;
+    --border-hover-color: #3eff8b;
+    --border-selected-color: #3eff8b;
+    --connector-color: #444;
+    --label-color: #888;
+    --hint-color: #666;
+    --win-color: #079b45;
+    --loss-color: #af0505;
+  }
+  /* A bye never really happened as a match — remove the box from layout
+     entirely. layoutBrackets() below re-lays the bracket out from actual
+     feeder relationships, so no invisible placeholder is needed to keep
+     sibling spacing intact (keeping one is what used to leave big empty
+     gaps in bye-heavy brackets). */
+  .brackets-viewer .match.bye-hidden { display: none; }
+  /* The library draws connectors with border ::before/::after pseudo-
+     elements whose elbow direction comes from :nth-of-type parity — wrong
+     as soon as byes/irregular rounds break the textbook shape, and full of
+     gaps at 3-way junctions. layoutBrackets() draws real SVG connectors
+     instead, so the library's are disabled wholesale. */
+  .brackets-viewer .match.connect-next::after,
+  .brackets-viewer .opponents.connect-previous::before { content: none !important; }
+  .brackets-viewer svg.bracket-connectors path {
+    fill: none;
+    stroke: var(--connector-color);
+    stroke-width: 2px;
+  }
+  /* Ease the hover highlight in/out instead of snapping the instant the
+     cursor crosses a box (the small delay also keeps a sweep of the mouse
+     across the bracket from strobing every box it passes). The library
+     applies hover as a full border shorthand with identical width/style,
+     so transitioning just border-color covers it. */
+  .brackets-viewer .opponents { transition: border-color 0.25s ease 0.08s; }
+  /* The library's own .name>img rule force-crops images square (1em x 1em,
+     object-fit cover) for avatars; flags are wider than tall, so let them
+     keep their aspect ratio and match the standings list's styling. */
+  .brackets-viewer .participant .name > img.loc-flag {
+    width: auto;
+    height: 1em;
+    object-fit: contain;
+    border-radius: 1px;
+    margin-right: 5px;
+  }
+  /* A "pending"/not-yet-played match (status 0-3; 4 is completed, 5 is
+     archived) — same warning color and background as the incomplete-bracket
+     note above it. Overriding the library's own --border-color/
+     --match-background variables (rather than drawing a border directly on
+     .match) means the color reaches the .opponents/.participant boxes that
+     actually paint it, replacing their default grey outline instead of
+     layering a second box around it. (Positioning/sizing is fully handled
+     by layoutBrackets() — an earlier align-self:flex-start hack here to
+     stop a lone pending final stretching to fill its column also pinned it
+     to the top, which then dragged the whole winners-bracket spine up with
+     it.) */
+  .brackets-viewer .match[data-match-status="0"],
+  .brackets-viewer .match[data-match-status="1"],
+  .brackets-viewer .match[data-match-status="2"],
+  .brackets-viewer .match[data-match-status="3"] {
+    --border-color: rgba(255,183,77,0.6);
+    --match-background: rgba(255,183,77,0.08);
+    /* Hover/selection stays in the pending palette — the green used for
+       completed matches would read as a result where there isn't one. */
+    --border-hover-color: rgba(255,183,77,0.95);
+    --border-selected-color: rgba(255,183,77,0.95);
+  }
+  /* No score to show for a match that hasn't happened yet — blank the
+     library's own "-" placeholder in favor of a single warning icon (added
+     by markPendingMatches() below), sitting inside the card's own border
+     rather than overlapping its edge. */
+  .brackets-viewer .match[data-match-status="0"] .result,
+  .brackets-viewer .match[data-match-status="1"] .result,
+  .brackets-viewer .match[data-match-status="2"] .result,
+  .brackets-viewer .match[data-match-status="3"] .result {
+    visibility: hidden;
+  }
+  /* Increase font size of results */
+  .brackets-viewer .participant .result {
+    font-size: 13px;
+    line-height: 12px;
+    align-content: center;
+  }
+  /* .brackets-viewer .opponents>span / >span:nth-of-type(1) are the
+     library's own rules for its seed-label spans (top:-10px, left:3px) —
+     since our icon is also a bare <span> under .opponents (and the only
+     one, making it nth-of-type(1) too), it inherits both. Both include a
+     "span" type selector our class-only selector above lacked, which out-
+     specifies it despite matching the same number of classes — hence
+     !important here to guarantee our positioning wins regardless of the
+     library's own selectors (which we don't control and could change). */
+  .brackets-viewer .opponents .match-pending-icon {
+    position: absolute;
+    top: 3px !important;
+    left: auto !important;
+    right: 1px !important;
+    font-size: 1.1em;
+    line-height: 1;
+    color: #ffb74d;
+    background-color: transparent;
+  }
+</style>
+<script>
+  // brackets-viewer positions matches with equal-height flex columns
+  // (every match flex:1, byes included) and draws connectors from round
+  // parity — both assume a textbook bracket where each round has exactly
+  // half the previous round's matches. Real brackets here (bye-padded,
+  // sometimes abandoned mid-event) don't obey that, and an earlier
+  // approach of patching the library's guesses match-by-match (hiding bye
+  // boxes but keeping their space, translateY-shifting lone feeders toward
+  // whatever position their target happened to land on) compounded errors
+  // instead of fixing them. So after render we discard the library's
+  // positioning and connectors entirely and re-derive the layout from the
+  // actual feeder relationships in the DOM:
+  //   - bye matches are dropped from layout completely (no empty slots);
+  //   - a match nothing real feeds into takes the next compact vertical
+  //     slot; a match with one real feeder sits level with it (straight
+  //     connector); one with two sits at their midpoint — so finals land
+  //     mid-bracket instead of wherever flex put them;
+  //   - connectors are drawn as SVG paths between the real boxes, giving
+  //     gap-free 3-point junctions.
+  // Safe to re-run (fonts.ready below re-invokes it once metrics settle).
+  function layoutBrackets() {
+    for (const rounds of document.querySelectorAll('.brackets-viewer .bracket .rounds')) layoutRounds(rounds);
+  }
+
+  function layoutRounds(container) {
+    const rounds = [...container.querySelectorAll(':scope > .round')];
+    if (!rounds.length) return;
+
+    // Per-round lookup of who won what. Byes are hidden and never laid
+    // out, but a player can sit out a round (bye) between two real
+    // matches, so feeder lookups scan back past the immediately-previous
+    // round until they find the player's last real win.
+    const roundInfos = rounds.map((round) => {
+      const real = [];
+      const winners = new Map();
+      for (const el of round.querySelectorAll(':scope > .match')) {
+        if (el.querySelector('.name.bye')) { el.classList.add('bye-hidden'); continue; }
+        const m = { el, y: null, children: [] };
+        real.push(m);
+        const win = el.querySelector('.participant.win');
+        if (win && win.dataset.participantId) winners.set(win.dataset.participantId, m);
+      }
+      return { round, real, winners };
+    });
+
+    // Link each match to the matches that feed it: for each opponent,
+    // their nearest earlier real win in this bracket section. No hit means
+    // they arrived from outside the section (a winners-bracket dropper
+    // entering the losers bracket) — no connector. Earlier rounds claim
+    // first (ascending order), so e.g. a grand final claims the WB final
+    // before a bracket-reset match can reach past it; the claimed set
+    // guarantees each match feeds at most one later match.
+    const claimed = new Set();
+    for (let i = 1; i < roundInfos.length; i++) {
+      for (const m of roundInfos[i].real) {
+        for (const p of m.el.querySelectorAll(':scope > .opponents > .participant')) {
+          const id = p.dataset.participantId;
+          if (!id) continue; // TBD slot of a pending match
+          for (let j = i - 1; j >= 0; j--) {
+            const feeder = roundInfos[j].winners.get(id);
+            if (feeder) {
+              if (!claimed.has(feeder)) { m.children.push(feeder); claimed.add(feeder); }
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Assign vertical slots: DFS from each root (any match nothing later
+    // claimed), leaves take successive compact slots, parents center on
+    // their children. Later-round roots go first so the main bracket tree
+    // lays out top-anchored and any stray unfinished subtrees stack below.
+    let nextLeaf = 0;
+    const assign = (m) => {
+      if (m.y != null) return m.y;
+      if (!m.children.length) return (m.y = nextLeaf++);
+      return (m.y = m.children.map(assign).reduce((a, b) => a + b, 0) / m.children.length);
+    };
+    for (let i = roundInfos.length - 1; i >= 0; i--) {
+      for (const m of roundInfos[i].real) if (!claimed.has(m)) assign(m);
+    }
+
+    const allReal = roundInfos.flatMap((info) => info.real);
+    if (!allReal.length) return;
+    const boxH = allReal[0].el.querySelector(':scope > .opponents').getBoundingClientRect().height;
+    const gap = 20; // matches the library's own 10px top+bottom match margin
+    const pitch = boxH + gap;
+
+    for (const { round, real } of roundInfos) {
+      const h3 = round.querySelector(':scope > h3');
+      const base = (h3 ? h3.offsetHeight : 0) + gap;
+      round.style.position = 'relative';
+      round.style.height = (base + nextLeaf * pitch - gap) + 'px';
+      for (const m of real) {
+        m.el.style.position = 'absolute';
+        m.el.style.margin = '0';
+        m.el.style.transform = 'none';
+        m.el.style.height = boxH + 'px';
+        m.el.style.top = (base + m.y * pitch) + 'px';
+      }
+    }
+
+    // Connectors, drawn from the now-final geometry. A feeder level with
+    // its target gets a plain straight line; otherwise elbow horizontally
+    // to just before the target column, then vertically to its center —
+    // two feeders of one match share that junction point, forming a clean
+    // T with no gaps.
+    const old = container.querySelector(':scope > svg.bracket-connectors');
+    if (old) old.remove();
+    const cRect = container.getBoundingClientRect();
+    let paths = '';
+    for (const m of allReal) {
+      if (!m.children.length) continue;
+      const t = m.el.getBoundingClientRect();
+      const tx = t.left - cRect.left;
+      const ty = t.top + t.height / 2 - cRect.top;
+      for (const c of m.children) {
+        const f = c.el.getBoundingClientRect();
+        const fx = f.right - cRect.left;
+        const fy = f.top + f.height / 2 - cRect.top;
+        paths += Math.abs(fy - ty) < 1
+          ? '<path d="M ' + fx + ' ' + fy + ' H ' + tx + '" />'
+          : '<path d="M ' + fx + ' ' + fy + ' H ' + (tx - 20) + ' V ' + ty + ' H ' + tx + '" />';
+      }
+    }
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'bracket-connectors');
+    svg.setAttribute('width', container.scrollWidth);
+    svg.setAttribute('height', container.scrollHeight);
+    svg.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;';
+    svg.innerHTML = paths;
+    container.style.position = 'relative';
+    container.insertBefore(svg, container.firstChild);
+  }
+
+  // Box heights can shift once webfonts finish loading; re-run the layout
+  // with settled metrics (layoutRounds fully re-derives, so this is safe).
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
+
+  // Prepends each participant's location flag (same imagery as the
+  // standings list) to their name in every bracket box. Flags are keyed by
+  // participant id rather than name so split identities sharing a display
+  // name stay distinct. Safe to call once per stage: already-flagged rows
+  // are skipped.
+  function addBracketFlags(selector, flags) {
+    for (const p of document.querySelectorAll(selector + ' .participant[data-participant-id]')) {
+      const f = flags[p.dataset.participantId];
+      if (!f) continue;
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.querySelector('img.loc-flag')) continue;
+      const img = document.createElement('img');
+      img.className = 'loc-flag';
+      img.src = f.src;
+      img.title = f.title;
+      img.alt = f.title;
+      nameEl.insertBefore(img, nameEl.firstChild);
+    }
+  }
+
+  // Marks every not-yet-played match (status 0-3) with the same warning
+  // icon used in the incomplete-bracket note above, instead of the "-" the
+  // library prints per opponent when there's no score yet (that CSS-hides
+  // the "-" — see .result above — this just adds the one icon per card).
+  function markPendingMatches() {
+    for (const m of document.querySelectorAll('.brackets-viewer .match[data-match-status]')) {
+      if (m.dataset.matchStatus === '4' || m.dataset.matchStatus === '5') continue;
+      const opponents = m.querySelector('.opponents');
+      if (!opponents || opponents.querySelector('.match-pending-icon')) continue;
+      const icon = document.createElement('span');
+      icon.className = 'match-pending-icon';
+      // U+FE0E forces the monochrome text glyph. Without it this renders as
+      // a color emoji here (unlike the identical ⚠ in the plain-text note
+      // above) because .brackets-viewer's own font-family list includes
+      // color-emoji fonts ("Segoe UI Emoji" etc.) as fallbacks, which
+      // Chromium's shaper can pick for a lone symbol character even though
+      // ⚠ defaults to text presentation.
+      icon.textContent = '⚠︎ ';
+      opponents.appendChild(icon);
+    }
+  }
+</script>
+</head>
+<body>
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
+<h1>DeathBall @ Free Play</h1>
+<div class="tourney-meta">2021-03-24 &bull; Free Play, TX &bull; Challonge
+  <a href="https://fpaplayers.challonge.com/l2xp49u5" target="_blank" rel="noopener">View original on Challonge &#8599;</a>
+</div>
+
+<div class="tourney-section">
+  <h2>Standings</h2>
+  <ol class="standings-list">
+      <li><span class="standings-rank">1</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Mickey</span><span class="standings-record">3-0</span></li>
+      <li><span class="standings-rank">2</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Jerry Garcia</span><span class="standings-record">2-1</span></li>
+      <li><span class="standings-rank">3</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Matt</span><span class="standings-record">2-1</span></li>
+      <li><span class="standings-rank">4</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Jarrett</span><span class="standings-record">1-2</span></li>
+      <li><span class="standings-rank">5</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Kevin</span><span class="standings-record">0-1</span></li>
+      <li><span class="standings-rank">5</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Sunny</span><span class="standings-record">0-1</span></li>
+      <li><span class="standings-rank">5</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Charli</span><span class="standings-record">0-1</span></li>
+      <li><span class="standings-rank">5</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Liz</span><span class="standings-record">0-1</span></li>
+    </ol>
+</div>
+
+<div class="tourney-section">
+  <h2>Matches</h2>
+  <div class="brackets-viewer" id="bv-main"></div>
+<script>
+  window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"DeathBall @ Free Play","type":"single_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":1,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":2,"score":1,"result":"win"},"opponent2":{"id":3,"score":0,"result":"loss"}},{"id":2,"stage_id":0,"group_id":0,"round_id":0,"number":3,"child_count":0,"status":4,"opponent1":{"id":5,"score":0,"result":"loss"},"opponent2":{"id":4,"score":1,"result":"win"}},{"id":3,"stage_id":0,"group_id":0,"round_id":0,"number":4,"child_count":0,"status":4,"opponent1":{"id":6,"score":1,"result":"win"},"opponent2":{"id":7,"score":0,"result":"loss"}},{"id":4,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}},{"id":5,"stage_id":0,"group_id":0,"round_id":1,"number":2,"child_count":0,"status":4,"opponent1":{"id":6,"score":0,"result":"loss"},"opponent2":{"id":4,"score":1,"result":"win"}},{"id":6,"stage_id":0,"group_id":0,"round_id":2,"number":1,"child_count":0,"status":4,"opponent1":{"id":4,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"Mickey"},{"id":1,"tournament_id":0,"name":"Charli"},{"id":2,"tournament_id":0,"name":"Jarrett"},{"id":3,"tournament_id":0,"name":"Kevin"},{"id":4,"tournament_id":0,"name":"Jerry Garcia"},{"id":5,"tournament_id":0,"name":"Liz"},{"id":6,"tournament_id":0,"name":"Matt"},{"id":7,"tournament_id":0,"name":"Sunny"}]}, { selector: '#bv-main' });
+  addBracketFlags('#bv-main', {"0":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"},"1":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"},"2":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"},"3":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"},"4":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"},"5":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"},"6":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"},"7":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Dallas.svg","title":"Dallas/Fort Worth"}});
+  layoutBrackets();
+  markPendingMatches();
+</script>
+</div>
+</body>
+</html>
