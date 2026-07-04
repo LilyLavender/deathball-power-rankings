@@ -8,8 +8,13 @@
 <script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
 <style>
   .brackets-viewer {
-    --primary-background: #0f0f0f;
-    --secondary-background: #181818;
+    /* Matches the page's own body background (#050505 in the main CSS)
+       instead of the library's default off-black panel look, so the
+       bracket reads as part of the page rather than a card sitting on it —
+       same treatment the standings list already gets for free by not
+       setting a background of its own. */
+    --primary-background: #050505;
+    --secondary-background: #111;
     --font-color: #f0f0f0;
     --border-color: #333;
     --border-hover-color: #3eff8b;
@@ -19,7 +24,17 @@
     --hint-color: #666;
     --win-color: #079b45;
     --loss-color: #af0505;
+    /* The library pads itself 10px 50px by default (room for its own
+       stage-name h1 and bracket titles); zeroed out so the bracket sits
+       flush like every other section on the page instead of floating in
+       its own inset box. */
+    padding: 0;
   }
+  /* The stage name the library prints as its own <h1> above the bracket
+     duplicates the page's actual title (already shown once, larger, at the
+     very top of the page) — hide the library's copy rather than carry a
+     second heading with the same text. */
+  .brackets-viewer h1 { display: none; }
   /* A bye never really happened as a match — remove the box from layout
      entirely. layoutBrackets() below re-lays the bracket out from actual
      feeder relationships, so no invisible placeholder is needed to keep
@@ -110,6 +125,20 @@
     color: #ffb74d;
     background-color: transparent;
   }
+  /* Synced with the standings list (see .standings-list li.player-active
+     and setupBracketInteractivity below): hovering or clicking a player
+     anywhere highlights every match they appear in across the whole
+     bracket, plus their standings row. */
+  .brackets-viewer .participant { cursor: pointer; }
+  .brackets-viewer .participant.player-active { background-color: rgba(62,255,139,0.18); }
+  .brackets-viewer .match.match-player-active .opponents { border-color: rgba(62,255,139,0.7); }
+  /* Click-and-drag panning, and the arrow-key scroll from keydown below —
+     both need the container to actually be scrollable (it already is,
+     horizontally, via the library's own overflow:auto) and focusable
+     (tabindex is set in JS since it's an attribute, not a style). */
+  .brackets-viewer { cursor: grab; }
+  .brackets-viewer.dragging { cursor: grabbing; }
+  .brackets-viewer:focus { outline: none; }
 </style>
 <script>
   // brackets-viewer positions matches with equal-height flex columns
@@ -247,6 +276,16 @@
     container.insertBefore(svg, container.firstChild);
   }
 
+  // The library's built-in group titles are singular ("Winner Bracket",
+  // "Loser Bracket") with no locale/config hook to change them — swap in
+  // the plural form we actually want by exact text match.
+  function pluralizeBracketNames() {
+    for (const h2 of document.querySelectorAll('.brackets-viewer .bracket h2')) {
+      if (h2.textContent === 'Winner Bracket') h2.textContent = 'Winners Bracket';
+      else if (h2.textContent === 'Loser Bracket') h2.textContent = 'Losers Bracket';
+    }
+  }
+
   // Box heights can shift once webfonts finish loading; re-run the layout
   // with settled metrics (layoutRounds fully re-derives, so this is safe).
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
@@ -292,50 +331,152 @@
       opponents.appendChild(icon);
     }
   }
+
+  // Highlights one player everywhere they appear on the page — every
+  // bracket match they're in (across every stage/container, in case a
+  // tournament has more than one) and their standings row — or clears the
+  // highlight when called with null. Matched by canonical display name
+  // (the same string both the standings list and every bracket participant
+  // were rendered with), since bracket participant ids are only unique
+  // within their own stage's render, not across the whole page.
+  function setActivePlayer(name) {
+    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
+    for (const el of document.querySelectorAll('.match-player-active')) el.classList.remove('match-player-active');
+    if (!name) return;
+    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
+    if (li) li.classList.add('player-active');
+    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.textContent.trim() !== name) continue;
+      p.classList.add('player-active');
+      const match = p.closest('.match');
+      if (match) match.classList.add('match-player-active');
+    }
+  }
+
+  // Wires up: (1) hover/click sync between the standings list and every
+  // bracket on the page via setActivePlayer, with click "pinning" the
+  // highlight so it survives the mouse moving away — otherwise there'd be
+  // no way to highlight a run and then actually look at it; (2) click-and-
+  // drag panning and left/right-arrow scrolling for each bracket container,
+  // since a wide bracket only exposes a horizontal scrollbar that's easy to
+  // miss. Called once per page, after every stage has rendered.
+  function setupBracketInteractivity() {
+    let pinned = null;
+    let dragMoved = false; // suppresses the click a drag-release generates
+
+    function playerNameAt(el) {
+      const li = el.closest('.standings-list li[data-player]');
+      if (li) return li.dataset.player;
+      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
+      if (!p) return null;
+      const nameEl = p.querySelector('.name');
+      return nameEl ? nameEl.textContent.trim() : null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      if (pinned) return;
+      const name = playerNameAt(e.target);
+      if (name) setActivePlayer(name);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (pinned) return;
+      if (!playerNameAt(e.target)) return;
+      // Moving between child elements of the same row shouldn't flicker
+      // the highlight off and back on.
+      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
+      setActivePlayer(null);
+    });
+    document.addEventListener('click', (e) => {
+      if (dragMoved) { dragMoved = false; return; }
+      const name = playerNameAt(e.target);
+      if (!name) {
+        if (pinned) { pinned = null; setActivePlayer(null); }
+        return;
+      }
+      if (pinned === name) { pinned = null; setActivePlayer(null); }
+      else { pinned = name; setActivePlayer(name); }
+    });
+
+    for (const bv of document.querySelectorAll('.brackets-viewer')) {
+      bv.setAttribute('tabindex', '0');
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+      bv.addEventListener('mousedown', (e) => {
+        dragging = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = bv.scrollLeft;
+        bv.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 4) dragMoved = true;
+        bv.scrollLeft = startScroll - dx;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        bv.classList.remove('dragging');
+      });
+      bv.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
+      });
+    }
+  }
 </script>
 </head>
 <body>
-<a class="back-link" href="../index.html">&larr; Back to rankings</a>
 <h1>Deathball GDC 1</h1>
-<div class="tourney-meta">2018-03-24 &bull; GDC, San Francisco, CA &bull; Challonge
+<div class="tourney-meta">
+  <span>March 24, 2018</span>
+  <span>GDC, San Francisco, CA</span>
   <a href="https://challonge.com/deathballgdc1" target="_blank" rel="noopener">View original on Challonge &#8599;</a>
 </div>
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
 
-<div class="tourney-section">
-  <h2>Standings</h2>
-  <ol class="standings-list">
-      <li><span class="standings-rank">1</span><span>Colby Price</span><span class="standings-record">5-0</span></li>
-      <li><span class="standings-rank">2</span><span>Felix Yuan</span><span class="standings-record">5-2</span></li>
-      <li><span class="standings-rank">3</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_San_Francisco.svg" title="San Francisco" alt="San Francisco">Scott Wilkewitz</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">4</span><span>Dan Recht</span><span class="standings-record">5-2</span></li>
-      <li><span class="standings-rank">5</span><span>Alex Jaspersen</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">5</span><span>Ed Gotthardt</span><span class="standings-record">4-2</span></li>
-      <li><span class="standings-rank">7</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Kansas.svg" title="Kansas" alt="Kansas">Hugo Meneses</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">7</span><span>Reed</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">9</span><span>Samantha Weddle</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">9</span><span>Mark Nelson</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">9</span><span>Brett</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">9</span><span>heather davis</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">13</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Steve Halili</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">13</span><span>Josh B</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">13</span><span>Alyssa DeMoss</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">13</span><span>Tiana Tan</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">17</span><span>Aaron Tran</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">17</span><span>ANDREW WILKENING</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">17</span><span>Flo</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">17</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Minnesota.svg" title="Minnesota" alt="Minnesota">Kasi White</span><span class="standings-record">0-2</span></li>
+<div class="tourney-columns">
+  <div class="tourney-section tourney-standings">
+    <h2>Standings</h2>
+    <ol class="standings-list">
+      <li data-player="Colby Price"><span class="standings-rank">1</span><span>Colby Price</span><span class="standings-record">5-0</span></li>
+      <li data-player="Felix Yuan"><span class="standings-rank">2</span><span>Felix Yuan</span><span class="standings-record">5-2</span></li>
+      <li data-player="Scott Wilkewitz"><span class="standings-rank">3</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_San_Francisco.svg" title="San Francisco" alt="San Francisco">Scott Wilkewitz</span><span class="standings-record">3-2</span></li>
+      <li data-player="Dan Recht"><span class="standings-rank">4</span><span>Dan Recht</span><span class="standings-record">5-2</span></li>
+      <li data-player="Alex Jaspersen"><span class="standings-rank">5</span><span>Alex Jaspersen</span><span class="standings-record">2-2</span></li>
+      <li data-player="Ed Gotthardt"><span class="standings-rank">5</span><span>Ed Gotthardt</span><span class="standings-record">4-2</span></li>
+      <li data-player="Hugo Meneses"><span class="standings-rank">7</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Kansas.svg" title="Kansas" alt="Kansas">Hugo Meneses</span><span class="standings-record">2-2</span></li>
+      <li data-player="Reed"><span class="standings-rank">7</span><span>Reed</span><span class="standings-record">2-2</span></li>
+      <li data-player="Samantha Weddle"><span class="standings-rank">9</span><span>Samantha Weddle</span><span class="standings-record">1-2</span></li>
+      <li data-player="Mark Nelson"><span class="standings-rank">9</span><span>Mark Nelson</span><span class="standings-record">2-2</span></li>
+      <li data-player="Brett"><span class="standings-rank">9</span><span>Brett</span><span class="standings-record">2-2</span></li>
+      <li data-player="heather davis"><span class="standings-rank">9</span><span>heather davis</span><span class="standings-record">2-2</span></li>
+      <li data-player="Steve Halili"><span class="standings-rank">13</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Steve Halili</span><span class="standings-record">0-2</span></li>
+      <li data-player="Josh B"><span class="standings-rank">13</span><span>Josh B</span><span class="standings-record">1-2</span></li>
+      <li data-player="Alyssa DeMoss"><span class="standings-rank">13</span><span>Alyssa DeMoss</span><span class="standings-record">1-2</span></li>
+      <li data-player="Tiana Tan"><span class="standings-rank">13</span><span>Tiana Tan</span><span class="standings-record">1-2</span></li>
+      <li data-player="Aaron Tran"><span class="standings-rank">17</span><span>Aaron Tran</span><span class="standings-record">0-2</span></li>
+      <li data-player="ANDREW WILKENING"><span class="standings-rank">17</span><span>ANDREW WILKENING</span><span class="standings-record">0-2</span></li>
+      <li data-player="Flo"><span class="standings-rank">17</span><span>Flo</span><span class="standings-record">0-2</span></li>
+      <li data-player="Kasi White"><span class="standings-rank">17</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Minnesota.svg" title="Minnesota" alt="Minnesota">Kasi White</span><span class="standings-record">0-2</span></li>
     </ol>
-</div>
+  </div>
 
-<div class="tourney-section">
-  <h2>Matches</h2>
-  <div class="brackets-viewer" id="bv-main"></div>
+  <div class="tourney-section tourney-matches">
+    <h2>Matches</h2>
+    <div class="brackets-viewer" id="bv-main"></div>
 <script>
   window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"Deathball GDC 1","type":"double_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"result":"win"},"opponent2":null},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":2,"score":1,"result":"loss"},"opponent2":{"id":1,"score":2,"result":"win"}},{"id":2,"stage_id":0,"group_id":0,"round_id":0,"number":3,"child_count":0,"status":4,"opponent1":{"id":3,"result":"win"},"opponent2":null},{"id":3,"stage_id":0,"group_id":0,"round_id":0,"number":4,"child_count":0,"status":4,"opponent1":{"id":4,"result":"win"},"opponent2":null},{"id":4,"stage_id":0,"group_id":0,"round_id":0,"number":5,"child_count":0,"status":4,"opponent1":{"id":5,"result":"win"},"opponent2":null},{"id":5,"stage_id":0,"group_id":0,"round_id":0,"number":6,"child_count":0,"status":4,"opponent1":{"id":6,"result":"win"},"opponent2":null},{"id":6,"stage_id":0,"group_id":0,"round_id":0,"number":7,"child_count":0,"status":4,"opponent1":{"id":7,"score":2,"result":"win"},"opponent2":{"id":8,"score":1,"result":"loss"}},{"id":7,"stage_id":0,"group_id":0,"round_id":0,"number":8,"child_count":0,"status":4,"opponent1":{"id":9,"result":"win"},"opponent2":null},{"id":8,"stage_id":0,"group_id":0,"round_id":0,"number":9,"child_count":0,"status":4,"opponent1":{"id":10,"result":"win"},"opponent2":null},{"id":9,"stage_id":0,"group_id":0,"round_id":0,"number":10,"child_count":0,"status":4,"opponent1":{"id":11,"result":"win"},"opponent2":null},{"id":10,"stage_id":0,"group_id":0,"round_id":0,"number":11,"child_count":0,"status":4,"opponent1":{"id":13,"score":1,"result":"loss"},"opponent2":{"id":12,"score":2,"result":"win"}},{"id":11,"stage_id":0,"group_id":0,"round_id":0,"number":12,"child_count":0,"status":4,"opponent1":{"id":14,"result":"win"},"opponent2":null},{"id":12,"stage_id":0,"group_id":0,"round_id":0,"number":13,"child_count":0,"status":4,"opponent1":{"id":15,"result":"win"},"opponent2":null},{"id":13,"stage_id":0,"group_id":0,"round_id":0,"number":14,"child_count":0,"status":4,"opponent1":{"id":16,"result":"win"},"opponent2":null},{"id":14,"stage_id":0,"group_id":0,"round_id":0,"number":15,"child_count":0,"status":4,"opponent1":{"id":18,"score":1,"result":"loss"},"opponent2":{"id":17,"score":2,"result":"win"}},{"id":15,"stage_id":0,"group_id":0,"round_id":0,"number":16,"child_count":0,"status":4,"opponent1":{"id":19,"result":"win"},"opponent2":null},{"id":16,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":2,"result":"win"},"opponent2":{"id":1,"score":1,"result":"loss"}},{"id":17,"stage_id":0,"group_id":0,"round_id":1,"number":2,"child_count":0,"status":4,"opponent1":{"id":3,"score":2,"result":"win"},"opponent2":{"id":4,"score":1,"result":"loss"}},{"id":18,"stage_id":0,"group_id":0,"round_id":1,"number":3,"child_count":0,"status":4,"opponent1":{"id":6,"score":1,"result":"loss"},"opponent2":{"id":5,"score":2,"result":"win"}},{"id":19,"stage_id":0,"group_id":0,"round_id":1,"number":4,"child_count":0,"status":4,"opponent1":{"id":9,"score":0,"result":"loss"},"opponent2":{"id":7,"score":2,"result":"win"}},{"id":20,"stage_id":0,"group_id":0,"round_id":1,"number":5,"child_count":0,"status":4,"opponent1":{"id":10,"score":2,"result":"win"},"opponent2":{"id":11,"score":1,"result":"loss"}},{"id":21,"stage_id":0,"group_id":0,"round_id":1,"number":6,"child_count":0,"status":4,"opponent1":{"id":12,"score":2,"result":"win"},"opponent2":{"id":14,"score":0,"result":"loss"}},{"id":22,"stage_id":0,"group_id":0,"round_id":1,"number":7,"child_count":0,"status":4,"opponent1":{"id":15,"score":2,"result":"win"},"opponent2":{"id":16,"score":0,"result":"loss"}},{"id":23,"stage_id":0,"group_id":0,"round_id":1,"number":8,"child_count":0,"status":4,"opponent1":{"id":17,"score":2,"result":"win"},"opponent2":{"id":19,"score":0,"result":"loss"}},{"id":24,"stage_id":0,"group_id":0,"round_id":2,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}},{"id":25,"stage_id":0,"group_id":0,"round_id":2,"number":2,"child_count":0,"status":4,"opponent1":{"id":7,"score":0,"result":"loss"},"opponent2":{"id":5,"score":2,"result":"win"}},{"id":26,"stage_id":0,"group_id":0,"round_id":2,"number":3,"child_count":0,"status":4,"opponent1":{"id":12,"score":0,"result":"loss"},"opponent2":{"id":10,"score":2,"result":"win"}},{"id":27,"stage_id":0,"group_id":0,"round_id":2,"number":4,"child_count":0,"status":4,"opponent1":{"id":15,"score":2,"result":"win"},"opponent2":{"id":17,"score":0,"result":"loss"}},{"id":28,"stage_id":0,"group_id":0,"round_id":3,"number":1,"child_count":0,"status":4,"opponent1":{"id":5,"score":0,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}},{"id":29,"stage_id":0,"group_id":0,"round_id":3,"number":2,"child_count":0,"status":4,"opponent1":{"id":10,"score":2,"result":"win"},"opponent2":{"id":15,"score":1,"result":"loss"}},{"id":30,"stage_id":0,"group_id":0,"round_id":4,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":2,"result":"win"},"opponent2":{"id":10,"score":0,"result":"loss"}},{"id":31,"stage_id":0,"group_id":1,"round_id":5,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":1,"result":"win"},"opponent2":{"id":16,"score":0,"result":"loss"}},{"id":32,"stage_id":0,"group_id":1,"round_id":5,"number":2,"child_count":0,"status":4,"opponent1":{"id":8,"score":1,"result":"win"},"opponent2":{"id":11,"score":0,"result":"loss"}},{"id":33,"stage_id":0,"group_id":1,"round_id":5,"number":3,"child_count":0,"status":4,"opponent1":{"id":4,"score":0,"result":"loss"},"opponent2":{"id":18,"score":1,"result":"win"}},{"id":34,"stage_id":0,"group_id":1,"round_id":5,"number":4,"child_count":0,"status":4,"opponent1":{"id":6,"score":1,"result":"win"},"opponent2":{"id":13,"score":0,"result":"loss"}},{"id":35,"stage_id":0,"group_id":1,"round_id":6,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":1,"result":"win"},"opponent2":{"id":19,"score":0,"result":"loss"}},{"id":36,"stage_id":0,"group_id":1,"round_id":6,"number":2,"child_count":0,"status":4,"opponent1":{"id":8,"score":0,"result":"loss"},"opponent2":{"id":14,"score":1,"result":"win"}},{"id":37,"stage_id":0,"group_id":1,"round_id":6,"number":3,"child_count":0,"status":4,"opponent1":{"id":18,"score":1,"result":"win"},"opponent2":{"id":1,"score":0,"result":"loss"}},{"id":38,"stage_id":0,"group_id":1,"round_id":6,"number":4,"child_count":0,"status":4,"opponent1":{"id":9,"score":1,"result":"win"},"opponent2":{"id":6,"score":0,"result":"loss"}},{"id":39,"stage_id":0,"group_id":1,"round_id":7,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":1,"result":"win"},"opponent2":{"id":7,"score":0,"result":"loss"}},{"id":40,"stage_id":0,"group_id":1,"round_id":7,"number":2,"child_count":0,"status":4,"opponent1":{"id":14,"score":1,"result":"win"},"opponent2":{"id":3,"score":0,"result":"loss"}},{"id":41,"stage_id":0,"group_id":1,"round_id":7,"number":3,"child_count":0,"status":4,"opponent1":{"id":12,"score":1,"result":"win"},"opponent2":{"id":18,"score":0,"result":"loss"}},{"id":42,"stage_id":0,"group_id":1,"round_id":7,"number":4,"child_count":0,"status":4,"opponent1":{"id":17,"score":0,"result":"loss"},"opponent2":{"id":9,"score":1,"result":"win"}},{"id":43,"stage_id":0,"group_id":1,"round_id":8,"number":1,"child_count":0,"status":4,"opponent1":{"id":14,"score":0,"result":"loss"},"opponent2":{"id":2,"score":1,"result":"win"}},{"id":44,"stage_id":0,"group_id":1,"round_id":8,"number":2,"child_count":0,"status":4,"opponent1":{"id":9,"score":0,"result":"loss"},"opponent2":{"id":12,"score":1,"result":"win"}},{"id":45,"stage_id":0,"group_id":1,"round_id":9,"number":1,"child_count":0,"status":4,"opponent1":{"id":15,"score":1,"result":"win"},"opponent2":{"id":2,"score":0,"result":"loss"}},{"id":46,"stage_id":0,"group_id":1,"round_id":9,"number":2,"child_count":0,"status":4,"opponent1":{"id":5,"score":0,"result":"loss"},"opponent2":{"id":12,"score":1,"result":"win"}},{"id":47,"stage_id":0,"group_id":1,"round_id":10,"number":1,"child_count":0,"status":4,"opponent1":{"id":12,"score":0,"result":"loss"},"opponent2":{"id":15,"score":1,"result":"win"}},{"id":48,"stage_id":0,"group_id":1,"round_id":11,"number":1,"child_count":0,"status":4,"opponent1":{"id":15,"score":1,"result":"win"},"opponent2":{"id":10,"score":0,"result":"loss"}},{"id":49,"stage_id":0,"group_id":2,"round_id":12,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":2,"result":"win"},"opponent2":{"id":15,"score":1,"result":"loss"}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"Colby Price"},{"id":1,"tournament_id":0,"name":"Alyssa DeMoss"},{"id":2,"tournament_id":0,"name":"Ed Gotthardt"},{"id":3,"tournament_id":0,"name":"Samantha Weddle"},{"id":4,"tournament_id":0,"name":"Aaron Tran"},{"id":5,"tournament_id":0,"name":"Alex Jaspersen"},{"id":6,"tournament_id":0,"name":"Josh B"},{"id":7,"tournament_id":0,"name":"Brett"},{"id":8,"tournament_id":0,"name":"Tiana Tan"},{"id":9,"tournament_id":0,"name":"Reed"},{"id":10,"tournament_id":0,"name":"Scott Wilkewitz"},{"id":11,"tournament_id":0,"name":"ANDREW WILKENING"},{"id":12,"tournament_id":0,"name":"Dan Recht"},{"id":13,"tournament_id":0,"name":"Kasi White"},{"id":14,"tournament_id":0,"name":"Hugo Meneses"},{"id":15,"tournament_id":0,"name":"Felix Yuan"},{"id":16,"tournament_id":0,"name":"Flo"},{"id":17,"tournament_id":0,"name":"Mark Nelson"},{"id":18,"tournament_id":0,"name":"heather davis"},{"id":19,"tournament_id":0,"name":"Steve Halili"}]}, { selector: '#bv-main' });
   addBracketFlags('#bv-main', {"10":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_San_Francisco.svg","title":"San Francisco"},"13":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Minnesota.svg","title":"Minnesota"},"14":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Kansas.svg","title":"Kansas"},"19":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Portland%2C_Oregon.svg","title":"Portland"}});
+  pluralizeBracketNames();
   layoutBrackets();
   markPendingMatches();
 </script>
+    <script>setupBracketInteractivity();</script>
+  </div>
 </div>
 </body>
 </html>

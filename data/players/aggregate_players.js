@@ -139,6 +139,17 @@ function resolveIdentity(rawName, tournamentUrl) {
   return { id: lower, name: trimmed };
 }
 
+// The same green/purple accent used for a player's power-ranking card —
+// an explicit color on file wins; otherwise a deterministic hash of their
+// identity id keeps an unset player's accent stable across regenerations
+// without us having to assign one.
+function cardAccent(id, colorOverride) {
+  if (colorOverride === 'green' || colorOverride === 'purple') return `card-${colorOverride}`;
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
+  return (h & 1) ? 'card-purple' : 'card-green';
+}
+
 // Resolves a raw in-tournament name to its canonical display name plus a
 // flag image (if the player has location info on file), for display on
 // tournament pages — standings, crosstable, round list, bracket viewer.
@@ -775,8 +786,14 @@ function resolveManualMatch(m) {
     return {
       winnerName: p1IsWinner ? m.p1 : m.p2,
       loserName: p1IsWinner ? m.p2 : m.p1,
-      winnerSets: null,
-      loserSets: null,
+      // The games-won tally (e.g. 2-1), not a goal score — this is what
+      // every other match on the page shows as its "score", and what
+      // build_bracket.js displays on the bracket card. It duplicates what
+      // matchScoreLabel() derives from `games` for the round-list view, but
+      // that function can't help build_bracket.js, which only ever reads
+      // winnerSets/loserSets and otherwise silently defaults to 1-0.
+      winnerSets: p1IsWinner ? p1Wins : p2Wins,
+      loserSets: p1IsWinner ? p2Wins : p1Wins,
       games,
       isDQ: false,
     };
@@ -977,6 +994,22 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Formats a stored YYYY-MM-DD date as "Month D, YYYY" for display (the raw
+// ISO form stays in use everywhere else — sorting, slugs, lastActiveDate
+// comparisons — since it's lexicographically sortable and unambiguous).
+// Built from the string's own digits rather than `new Date(iso)` +
+// toLocaleDateString, which parses a bare date as UTC midnight and can
+// print the previous day once shifted to a negative-UTC-offset local time
+// zone (every US zone).
+function formatDateHuman(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return iso || '';
+  const [, y, mo, d] = m;
+  return `${MONTH_NAMES[parseInt(mo, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
+}
+
 function writeCsv(rows) {
   const header = ['Player', 'Wins', 'Losses', 'Games Played', 'Win %', 'Location', 'Tournament Count', 'Tournaments'];
   const csvRows = rows.map((p) => [
@@ -997,7 +1030,7 @@ function writeCss() {
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { font-family: 'Rajdhani', system-ui, sans-serif; margin: 0; padding: 1.5rem 2rem; background: #050505; color: #f0f0f0; font-size: 1rem; }
-h1 { font-family: 'Press Start 2P', monospace; font-size: 1.1rem; letter-spacing: 0.05em; margin: 0 0 1.5rem; color: #fff; }
+h1 { font-family: 'Press Start 2P', monospace; font-size: 1.6rem; letter-spacing: 0.05em; margin: 0 0 1.5rem; color: #fff; }
 a { color: #3eff8b; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #222; }
@@ -1060,11 +1093,22 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 @media (max-width: 600px) { .pr-grid { grid-template-columns: repeat(2, 1fr); } body { padding: 1rem; } }
 .back-link { display: inline-block; color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
 .back-link:hover { color: #3eff8b; }
-.tourney-meta { color: #888; font-size: 0.95rem; margin: -1rem 0 1.5rem; }
-.tourney-meta a { margin-left: 0.75rem; }
+.tourney-meta { display: flex; align-items: center; gap: 1.25rem; color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
+.tourney-meta a { margin: 0; }
 .ext-link { font-size: 0.8rem; margin-left: 0.4rem; opacity: 0.7; }
 .tourney-section { margin-bottom: 2rem; }
 .tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
+/* Standings and the bracket/round list side by side — a narrow standings
+   list otherwise leaves most of the page empty next to it. The bracket
+   column has no fixed width (min-width:0 lets it shrink below its content's
+   natural size); brackets-viewer already scrolls itself horizontally (see
+   its own overflow:auto), so a wide bracket scrolls in place instead of
+   forcing the columns apart. flex-wrap alone (no media query needed) drops
+   the bracket to its own full-width row below standings once the viewport
+   is too narrow for both to fit at a reasonable size. */
+.tourney-columns { display: flex; align-items: flex-start; gap: 2.5rem; flex-wrap: wrap; }
+.tourney-standings { flex: 0 0 240px; }
+.tourney-matches { flex: 1 1 520px; min-width: 0; }
 .round-group { margin-bottom: 1.25rem; }
 .round-group h3 { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin: 0 0 0.4rem; }
 .match-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid #161616; font-size: 0.95rem; }
@@ -1072,11 +1116,15 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .match-loser { color: #888; }
 .match-score { font-variant-numeric: tabular-nums; color: #3eff8b; font-weight: 700; margin-left: auto; }
 .match-dq { color: #ff5e5e; font-size: 0.8rem; }
-.standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; max-width: 25%; }
-.standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; }
+.standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; }
+.standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; cursor: pointer; transition: background-color 150ms ease; }
 .standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; }
 .standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+/* Synced with the bracket: hovering or clicking a player in either place
+   highlights them in both (see setupBracketInteractivity in the bracket
+   head script). */
+.standings-list li.player-active { background-color: rgba(62,255,139,0.12); }
 .stage-label { font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #3eff8b; margin: 1.5rem 0 0.75rem; }
 .stage-label:first-child { margin-top: 0; }
 .bracket-incomplete-note { color: #ffb74d; font-size: 0.9rem; background: rgba(255,183,77,0.08); border: 1px solid rgba(255,183,77,0.3); border-radius: 3px; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
@@ -1373,13 +1421,6 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
     </tr>`;
   }).join('\n');
 
-  function cardAccent(name, colorOverride) {
-    if (colorOverride === 'green' || colorOverride === 'purple') return `card-${colorOverride}`;
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (Math.imul(h, 31) + name.charCodeAt(i)) | 0;
-    return (h & 1) ? 'card-purple' : 'card-green';
-  }
-
   const rankingCardItems = rankingRows.map((p, i) => {
     const flagImg = p.flag ? `<img class="prc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : '';
     const abbrSpan = p.locAbbr ? `<span class="prc-loc-abbr" title="${escapeHtml(p.location)}">${escapeHtml(p.locAbbr)}</span>` : '';
@@ -1531,8 +1572,13 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
 <script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
 <style>
   .brackets-viewer {
-    --primary-background: #0f0f0f;
-    --secondary-background: #181818;
+    /* Matches the page's own body background (#050505 in the main CSS)
+       instead of the library's default off-black panel look, so the
+       bracket reads as part of the page rather than a card sitting on it —
+       same treatment the standings list already gets for free by not
+       setting a background of its own. */
+    --primary-background: #050505;
+    --secondary-background: #111;
     --font-color: #f0f0f0;
     --border-color: #333;
     --border-hover-color: #3eff8b;
@@ -1542,7 +1588,17 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
     --hint-color: #666;
     --win-color: #079b45;
     --loss-color: #af0505;
+    /* The library pads itself 10px 50px by default (room for its own
+       stage-name h1 and bracket titles); zeroed out so the bracket sits
+       flush like every other section on the page instead of floating in
+       its own inset box. */
+    padding: 0;
   }
+  /* The stage name the library prints as its own <h1> above the bracket
+     duplicates the page's actual title (already shown once, larger, at the
+     very top of the page) — hide the library's copy rather than carry a
+     second heading with the same text. */
+  .brackets-viewer h1 { display: none; }
   /* A bye never really happened as a match — remove the box from layout
      entirely. layoutBrackets() below re-lays the bracket out from actual
      feeder relationships, so no invisible placeholder is needed to keep
@@ -1633,6 +1689,20 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
     color: #ffb74d;
     background-color: transparent;
   }
+  /* Synced with the standings list (see .standings-list li.player-active
+     and setupBracketInteractivity below): hovering or clicking a player
+     anywhere highlights every match they appear in across the whole
+     bracket, plus their standings row. */
+  .brackets-viewer .participant { cursor: pointer; }
+  .brackets-viewer .participant.player-active { background-color: rgba(62,255,139,0.18); }
+  .brackets-viewer .match.match-player-active .opponents { border-color: rgba(62,255,139,0.7); }
+  /* Click-and-drag panning, and the arrow-key scroll from keydown below —
+     both need the container to actually be scrollable (it already is,
+     horizontally, via the library's own overflow:auto) and focusable
+     (tabindex is set in JS since it's an attribute, not a style). */
+  .brackets-viewer { cursor: grab; }
+  .brackets-viewer.dragging { cursor: grabbing; }
+  .brackets-viewer:focus { outline: none; }
 </style>
 <script>
   // brackets-viewer positions matches with equal-height flex columns
@@ -1770,6 +1840,16 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
     container.insertBefore(svg, container.firstChild);
   }
 
+  // The library's built-in group titles are singular ("Winner Bracket",
+  // "Loser Bracket") with no locale/config hook to change them — swap in
+  // the plural form we actually want by exact text match.
+  function pluralizeBracketNames() {
+    for (const h2 of document.querySelectorAll('.brackets-viewer .bracket h2')) {
+      if (h2.textContent === 'Winner Bracket') h2.textContent = 'Winners Bracket';
+      else if (h2.textContent === 'Loser Bracket') h2.textContent = 'Losers Bracket';
+    }
+  }
+
   // Box heights can shift once webfonts finish loading; re-run the layout
   // with settled metrics (layoutRounds fully re-derives, so this is safe).
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
@@ -1815,6 +1895,102 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
       opponents.appendChild(icon);
     }
   }
+
+  // Highlights one player everywhere they appear on the page — every
+  // bracket match they're in (across every stage/container, in case a
+  // tournament has more than one) and their standings row — or clears the
+  // highlight when called with null. Matched by canonical display name
+  // (the same string both the standings list and every bracket participant
+  // were rendered with), since bracket participant ids are only unique
+  // within their own stage's render, not across the whole page.
+  function setActivePlayer(name) {
+    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
+    for (const el of document.querySelectorAll('.match-player-active')) el.classList.remove('match-player-active');
+    if (!name) return;
+    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
+    if (li) li.classList.add('player-active');
+    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.textContent.trim() !== name) continue;
+      p.classList.add('player-active');
+      const match = p.closest('.match');
+      if (match) match.classList.add('match-player-active');
+    }
+  }
+
+  // Wires up: (1) hover/click sync between the standings list and every
+  // bracket on the page via setActivePlayer, with click "pinning" the
+  // highlight so it survives the mouse moving away — otherwise there'd be
+  // no way to highlight a run and then actually look at it; (2) click-and-
+  // drag panning and left/right-arrow scrolling for each bracket container,
+  // since a wide bracket only exposes a horizontal scrollbar that's easy to
+  // miss. Called once per page, after every stage has rendered.
+  function setupBracketInteractivity() {
+    let pinned = null;
+    let dragMoved = false; // suppresses the click a drag-release generates
+
+    function playerNameAt(el) {
+      const li = el.closest('.standings-list li[data-player]');
+      if (li) return li.dataset.player;
+      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
+      if (!p) return null;
+      const nameEl = p.querySelector('.name');
+      return nameEl ? nameEl.textContent.trim() : null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      if (pinned) return;
+      const name = playerNameAt(e.target);
+      if (name) setActivePlayer(name);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (pinned) return;
+      if (!playerNameAt(e.target)) return;
+      // Moving between child elements of the same row shouldn't flicker
+      // the highlight off and back on.
+      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
+      setActivePlayer(null);
+    });
+    document.addEventListener('click', (e) => {
+      if (dragMoved) { dragMoved = false; return; }
+      const name = playerNameAt(e.target);
+      if (!name) {
+        if (pinned) { pinned = null; setActivePlayer(null); }
+        return;
+      }
+      if (pinned === name) { pinned = null; setActivePlayer(null); }
+      else { pinned = name; setActivePlayer(name); }
+    });
+
+    for (const bv of document.querySelectorAll('.brackets-viewer')) {
+      bv.setAttribute('tabindex', '0');
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+      bv.addEventListener('mousedown', (e) => {
+        dragging = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = bv.scrollLeft;
+        bv.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 4) dragMoved = true;
+        bv.scrollLeft = startScroll - dx;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        bv.classList.remove('dragging');
+      });
+      bv.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
+      });
+    }
+  }
 </script>`;
 
 // Renders a raw in-tournament name as canonical-name-plus-flag markup.
@@ -1834,7 +2010,7 @@ function writeTournamentPages(allTournaments) {
 
     const standingsHtml = standings.length
       ? `<ol class="standings-list">
-${standings.map((s) => `      <li><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${nameHtml(s.name, t.url)}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
+${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${nameHtml(s.name, t.url)}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
     </ol>`
       : '<p>No standings available.</p>';
 
@@ -1855,6 +2031,7 @@ ${standings.map((s) => `      <li><span class="standings-rank">${s.rank != null 
 <script>
   window.bracketsViewer.render(${JSON.stringify(renderData)}, { selector: '#${containerId}' });
   addBracketFlags('#${containerId}', ${JSON.stringify(flagById)});
+  pluralizeBracketNames();
   layoutBrackets();
   markPendingMatches();
 </script>`;
@@ -1895,20 +2072,25 @@ ${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">
 ${extraHead}
 </head>
 <body>
-<a class="back-link" href="../index.html">&larr; Back to rankings</a>
 <h1>${escapeHtml(t.label)}</h1>
-<div class="tourney-meta">${escapeHtml(t.date)}${t.location ? ` &bull; ${escapeHtml(t.location)}` : ''} &bull; ${escapeHtml(t.source)}
+<div class="tourney-meta">
+  <span>${escapeHtml(formatDateHuman(t.date))}</span>
+  ${t.location ? `<span>${escapeHtml(t.location)}</span>` : ''}
   <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">View original on ${escapeHtml(t.source)} &#8599;</a>
 </div>
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
 
-<div class="tourney-section">
-  <h2>Standings</h2>
-  ${standingsHtml}
-</div>
+<div class="tourney-columns">
+  <div class="tourney-section tourney-standings">
+    <h2>Standings</h2>
+    ${standingsHtml}
+  </div>
 
-<div class="tourney-section">
-  <h2>Matches</h2>
-  ${stageSections}
+  <div class="tourney-section tourney-matches">
+    <h2>Matches</h2>
+    ${stageSections}
+    ${extraHead ? '<script>setupBracketInteractivity();</script>' : ''}
+  </div>
 </div>
 </body>
 </html>

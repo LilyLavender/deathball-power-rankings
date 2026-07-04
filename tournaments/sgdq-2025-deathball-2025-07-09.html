@@ -8,8 +8,13 @@
 <script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
 <style>
   .brackets-viewer {
-    --primary-background: #0f0f0f;
-    --secondary-background: #181818;
+    /* Matches the page's own body background (#050505 in the main CSS)
+       instead of the library's default off-black panel look, so the
+       bracket reads as part of the page rather than a card sitting on it —
+       same treatment the standings list already gets for free by not
+       setting a background of its own. */
+    --primary-background: #050505;
+    --secondary-background: #111;
     --font-color: #f0f0f0;
     --border-color: #333;
     --border-hover-color: #3eff8b;
@@ -19,7 +24,17 @@
     --hint-color: #666;
     --win-color: #079b45;
     --loss-color: #af0505;
+    /* The library pads itself 10px 50px by default (room for its own
+       stage-name h1 and bracket titles); zeroed out so the bracket sits
+       flush like every other section on the page instead of floating in
+       its own inset box. */
+    padding: 0;
   }
+  /* The stage name the library prints as its own <h1> above the bracket
+     duplicates the page's actual title (already shown once, larger, at the
+     very top of the page) — hide the library's copy rather than carry a
+     second heading with the same text. */
+  .brackets-viewer h1 { display: none; }
   /* A bye never really happened as a match — remove the box from layout
      entirely. layoutBrackets() below re-lays the bracket out from actual
      feeder relationships, so no invisible placeholder is needed to keep
@@ -110,6 +125,20 @@
     color: #ffb74d;
     background-color: transparent;
   }
+  /* Synced with the standings list (see .standings-list li.player-active
+     and setupBracketInteractivity below): hovering or clicking a player
+     anywhere highlights every match they appear in across the whole
+     bracket, plus their standings row. */
+  .brackets-viewer .participant { cursor: pointer; }
+  .brackets-viewer .participant.player-active { background-color: rgba(62,255,139,0.18); }
+  .brackets-viewer .match.match-player-active .opponents { border-color: rgba(62,255,139,0.7); }
+  /* Click-and-drag panning, and the arrow-key scroll from keydown below —
+     both need the container to actually be scrollable (it already is,
+     horizontally, via the library's own overflow:auto) and focusable
+     (tabindex is set in JS since it's an attribute, not a style). */
+  .brackets-viewer { cursor: grab; }
+  .brackets-viewer.dragging { cursor: grabbing; }
+  .brackets-viewer:focus { outline: none; }
 </style>
 <script>
   // brackets-viewer positions matches with equal-height flex columns
@@ -247,6 +276,16 @@
     container.insertBefore(svg, container.firstChild);
   }
 
+  // The library's built-in group titles are singular ("Winner Bracket",
+  // "Loser Bracket") with no locale/config hook to change them — swap in
+  // the plural form we actually want by exact text match.
+  function pluralizeBracketNames() {
+    for (const h2 of document.querySelectorAll('.brackets-viewer .bracket h2')) {
+      if (h2.textContent === 'Winner Bracket') h2.textContent = 'Winners Bracket';
+      else if (h2.textContent === 'Loser Bracket') h2.textContent = 'Losers Bracket';
+    }
+  }
+
   // Box heights can shift once webfonts finish loading; re-run the layout
   // with settled metrics (layoutRounds fully re-derives, so this is safe).
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
@@ -292,88 +331,190 @@
       opponents.appendChild(icon);
     }
   }
+
+  // Highlights one player everywhere they appear on the page — every
+  // bracket match they're in (across every stage/container, in case a
+  // tournament has more than one) and their standings row — or clears the
+  // highlight when called with null. Matched by canonical display name
+  // (the same string both the standings list and every bracket participant
+  // were rendered with), since bracket participant ids are only unique
+  // within their own stage's render, not across the whole page.
+  function setActivePlayer(name) {
+    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
+    for (const el of document.querySelectorAll('.match-player-active')) el.classList.remove('match-player-active');
+    if (!name) return;
+    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
+    if (li) li.classList.add('player-active');
+    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.textContent.trim() !== name) continue;
+      p.classList.add('player-active');
+      const match = p.closest('.match');
+      if (match) match.classList.add('match-player-active');
+    }
+  }
+
+  // Wires up: (1) hover/click sync between the standings list and every
+  // bracket on the page via setActivePlayer, with click "pinning" the
+  // highlight so it survives the mouse moving away — otherwise there'd be
+  // no way to highlight a run and then actually look at it; (2) click-and-
+  // drag panning and left/right-arrow scrolling for each bracket container,
+  // since a wide bracket only exposes a horizontal scrollbar that's easy to
+  // miss. Called once per page, after every stage has rendered.
+  function setupBracketInteractivity() {
+    let pinned = null;
+    let dragMoved = false; // suppresses the click a drag-release generates
+
+    function playerNameAt(el) {
+      const li = el.closest('.standings-list li[data-player]');
+      if (li) return li.dataset.player;
+      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
+      if (!p) return null;
+      const nameEl = p.querySelector('.name');
+      return nameEl ? nameEl.textContent.trim() : null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      if (pinned) return;
+      const name = playerNameAt(e.target);
+      if (name) setActivePlayer(name);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (pinned) return;
+      if (!playerNameAt(e.target)) return;
+      // Moving between child elements of the same row shouldn't flicker
+      // the highlight off and back on.
+      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
+      setActivePlayer(null);
+    });
+    document.addEventListener('click', (e) => {
+      if (dragMoved) { dragMoved = false; return; }
+      const name = playerNameAt(e.target);
+      if (!name) {
+        if (pinned) { pinned = null; setActivePlayer(null); }
+        return;
+      }
+      if (pinned === name) { pinned = null; setActivePlayer(null); }
+      else { pinned = name; setActivePlayer(name); }
+    });
+
+    for (const bv of document.querySelectorAll('.brackets-viewer')) {
+      bv.setAttribute('tabindex', '0');
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+      bv.addEventListener('mousedown', (e) => {
+        dragging = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = bv.scrollLeft;
+        bv.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 4) dragMoved = true;
+        bv.scrollLeft = startScroll - dx;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        bv.classList.remove('dragging');
+      });
+      bv.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
+      });
+    }
+  }
 </script>
 </head>
 <body>
-<a class="back-link" href="../index.html">&larr; Back to rankings</a>
 <h1>SGDQ 2025 - DeathBall</h1>
-<div class="tourney-meta">2025-07-09 &bull; SGDQ, Minneapolis, MN &bull; Challonge
+<div class="tourney-meta">
+  <span>July 9, 2025</span>
+  <span>SGDQ, Minneapolis, MN</span>
   <a href="https://challonge.com/sgdq2025_deathball" target="_blank" rel="noopener">View original on Challonge &#8599;</a>
 </div>
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
 
-<div class="tourney-section">
-  <h2>Standings</h2>
-  <ol class="standings-list">
-      <li><span class="standings-rank">1</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">mrlink2k</span><span class="standings-record">7-0</span></li>
-      <li><span class="standings-rank">2</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">keucher</span><span class="standings-record">6-2</span></li>
-      <li><span class="standings-rank">3</span><span>Hackakat</span><span class="standings-record">8-2</span></li>
-      <li><span class="standings-rank">4</span><span>Jaq</span><span class="standings-record">8-2</span></li>
-      <li><span class="standings-rank">5</span><span>Suigi</span><span class="standings-record">4-2</span></li>
-      <li><span class="standings-rank">5</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Chicago%2C_Illinois.svg" title="Chicago" alt="Chicago">RheaStarGirl</span><span class="standings-record">4-2</span></li>
-      <li><span class="standings-rank">7</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/gb.svg" title="United Kingdom" alt="United Kingdom">LotsaTella</span><span class="standings-record">6-2</span></li>
-      <li><span class="standings-rank">7</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Connecticut.svg" title="Connecticut" alt="Connecticut">impossablank</span><span class="standings-record">4-2</span></li>
-      <li><span class="standings-rank">9</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">Badroenis</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">9</span><span>Dorkus64</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">9</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">willyjwillyj</span><span class="standings-record">5-2</span></li>
-      <li><span class="standings-rank">9</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Queen_Magnolia</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">13</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">30Aces</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">13</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg" title="Illinois" alt="Illinois">SoaringSloth</span><span class="standings-record">4-2</span></li>
-      <li><span class="standings-rank">13</span><span>Dotmaster</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">13</span><span>Gemneant</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">17</span><span>raxdflipnote</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">17</span><span>jade</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">17</span><span>alrightness</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">17</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">LunaticJ</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">17</span><span>OopsItsANerd</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">17</span><span>dreaded_</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">17</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg" title="Illinois" alt="Illinois">GTAce</span><span class="standings-record">3-2</span></li>
-      <li><span class="standings-rank">17</span><span>Snowcat11</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">25</span><span>j0tt</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">25</span><span>Epiccrossover</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">25</span><span>Notolectq</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">25</span><span>MetaSR</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">25</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">XanderIsALoser</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">25</span><span>didquartz</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">25</span><span>something dumber</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">25</span><span>typedef_sorbet</span><span class="standings-record">2-2</span></li>
-      <li><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/de.svg" title="Germany" alt="Germany">CrayFray</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/de.svg" title="Germany" alt="Germany">Zweek</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">33</span><span>Star Anise</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Washington.svg" title="Washington" alt="Washington">ShyguyVai</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">nardy20</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span>Ivey</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span>KyoshiCadre</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Wisconsin.svg" title="Wisconsin" alt="Wisconsin">azuraeth</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span>Prisma_Goat</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg" title="Illinois" alt="Illinois">HeartOfOak</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span>lilywhitesail</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">33</span><span>Storster</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Washington.svg" title="Washington" alt="Washington">MellowMikal</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span>Greggles90</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span>elise224</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">33</span><span>Leonrecon</span><span class="standings-record">1-2</span></li>
-      <li><span class="standings-rank">49</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Ontario.svg" title="Ontario" alt="Ontario">Cloverbugged</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_California.svg" title="California" alt="California">catangelthing</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span>bombbeard</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_North_Carolina.svg" title="North Carolina" alt="North Carolina">wooffledee</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span>shovelclaws</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span>EpicCrossover</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_California.svg" title="California" alt="California">AstrasEvolution</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span>Catpogers</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/en/6/6d/Flag_of_Seattle.svg" title="Seattle" alt="Seattle">Samkee00</span><span class="standings-record">0-2</span></li>
-      <li><span class="standings-rank">49</span><span>Gorillawarfare</span><span class="standings-record">0-2</span></li>
+<div class="tourney-columns">
+  <div class="tourney-section tourney-standings">
+    <h2>Standings</h2>
+    <ol class="standings-list">
+      <li data-player="mrlink2k"><span class="standings-rank">1</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">mrlink2k</span><span class="standings-record">7-0</span></li>
+      <li data-player="keucher"><span class="standings-rank">2</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">keucher</span><span class="standings-record">6-2</span></li>
+      <li data-player="Hackakat"><span class="standings-rank">3</span><span>Hackakat</span><span class="standings-record">8-2</span></li>
+      <li data-player="Jaq"><span class="standings-rank">4</span><span>Jaq</span><span class="standings-record">8-2</span></li>
+      <li data-player="Suigi"><span class="standings-rank">5</span><span>Suigi</span><span class="standings-record">4-2</span></li>
+      <li data-player="RheaStarGirl"><span class="standings-rank">5</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Chicago%2C_Illinois.svg" title="Chicago" alt="Chicago">RheaStarGirl</span><span class="standings-record">4-2</span></li>
+      <li data-player="LotsaTella"><span class="standings-rank">7</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/gb.svg" title="United Kingdom" alt="United Kingdom">LotsaTella</span><span class="standings-record">6-2</span></li>
+      <li data-player="impossablank"><span class="standings-rank">7</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Connecticut.svg" title="Connecticut" alt="Connecticut">impossablank</span><span class="standings-record">4-2</span></li>
+      <li data-player="Badroenis"><span class="standings-rank">9</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">Badroenis</span><span class="standings-record">2-2</span></li>
+      <li data-player="Dorkus64"><span class="standings-rank">9</span><span>Dorkus64</span><span class="standings-record">3-2</span></li>
+      <li data-player="willyjwillyj"><span class="standings-rank">9</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">willyjwillyj</span><span class="standings-record">5-2</span></li>
+      <li data-player="Queen_Magnolia"><span class="standings-rank">9</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Queen_Magnolia</span><span class="standings-record">3-2</span></li>
+      <li data-player="30Aces"><span class="standings-rank">13</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">30Aces</span><span class="standings-record">3-2</span></li>
+      <li data-player="SoaringSloth"><span class="standings-rank">13</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg" title="Illinois" alt="Illinois">SoaringSloth</span><span class="standings-record">4-2</span></li>
+      <li data-player="Dotmaster"><span class="standings-rank">13</span><span>Dotmaster</span><span class="standings-record">3-2</span></li>
+      <li data-player="Gemneant"><span class="standings-rank">13</span><span>Gemneant</span><span class="standings-record">3-2</span></li>
+      <li data-player="raxdflipnote"><span class="standings-rank">17</span><span>raxdflipnote</span><span class="standings-record">1-2</span></li>
+      <li data-player="jade"><span class="standings-rank">17</span><span>jade</span><span class="standings-record">2-2</span></li>
+      <li data-player="alrightness"><span class="standings-rank">17</span><span>alrightness</span><span class="standings-record">2-2</span></li>
+      <li data-player="LunaticJ"><span class="standings-rank">17</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">LunaticJ</span><span class="standings-record">3-2</span></li>
+      <li data-player="OopsItsANerd"><span class="standings-rank">17</span><span>OopsItsANerd</span><span class="standings-record">2-2</span></li>
+      <li data-player="dreaded_"><span class="standings-rank">17</span><span>dreaded_</span><span class="standings-record">2-2</span></li>
+      <li data-player="GTAce"><span class="standings-rank">17</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg" title="Illinois" alt="Illinois">GTAce</span><span class="standings-record">3-2</span></li>
+      <li data-player="Snowcat11"><span class="standings-rank">17</span><span>Snowcat11</span><span class="standings-record">2-2</span></li>
+      <li data-player="j0tt"><span class="standings-rank">25</span><span>j0tt</span><span class="standings-record">2-2</span></li>
+      <li data-player="Epiccrossover"><span class="standings-rank">25</span><span>Epiccrossover</span><span class="standings-record">1-2</span></li>
+      <li data-player="Notolectq"><span class="standings-rank">25</span><span>Notolectq</span><span class="standings-record">1-2</span></li>
+      <li data-player="MetaSR"><span class="standings-rank">25</span><span>MetaSR</span><span class="standings-record">2-2</span></li>
+      <li data-player="XanderIsALoser"><span class="standings-rank">25</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">XanderIsALoser</span><span class="standings-record">2-2</span></li>
+      <li data-player="didquartz"><span class="standings-rank">25</span><span>didquartz</span><span class="standings-record">2-2</span></li>
+      <li data-player="something dumber"><span class="standings-rank">25</span><span>something dumber</span><span class="standings-record">2-2</span></li>
+      <li data-player="typedef_sorbet"><span class="standings-rank">25</span><span>typedef_sorbet</span><span class="standings-record">2-2</span></li>
+      <li data-player="CrayFray"><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/de.svg" title="Germany" alt="Germany">CrayFray</span><span class="standings-record">0-2</span></li>
+      <li data-player="Zweek"><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/de.svg" title="Germany" alt="Germany">Zweek</span><span class="standings-record">0-2</span></li>
+      <li data-player="Star Anise"><span class="standings-rank">33</span><span>Star Anise</span><span class="standings-record">0-2</span></li>
+      <li data-player="ShyguyVai"><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Washington.svg" title="Washington" alt="Washington">ShyguyVai</span><span class="standings-record">1-2</span></li>
+      <li data-player="nardy20"><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">nardy20</span><span class="standings-record">1-2</span></li>
+      <li data-player="Ivey"><span class="standings-rank">33</span><span>Ivey</span><span class="standings-record">1-2</span></li>
+      <li data-player="KyoshiCadre"><span class="standings-rank">33</span><span>KyoshiCadre</span><span class="standings-record">1-2</span></li>
+      <li data-player="azuraeth"><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Wisconsin.svg" title="Wisconsin" alt="Wisconsin">azuraeth</span><span class="standings-record">1-2</span></li>
+      <li data-player="Prisma_Goat"><span class="standings-rank">33</span><span>Prisma_Goat</span><span class="standings-record">0-2</span></li>
+      <li data-player="HeartOfOak"><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg" title="Illinois" alt="Illinois">HeartOfOak</span><span class="standings-record">1-2</span></li>
+      <li data-player="lilywhitesail"><span class="standings-rank">33</span><span>lilywhitesail</span><span class="standings-record">0-2</span></li>
+      <li data-player="Storster"><span class="standings-rank">33</span><span>Storster</span><span class="standings-record">0-2</span></li>
+      <li data-player="MellowMikal"><span class="standings-rank">33</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Washington.svg" title="Washington" alt="Washington">MellowMikal</span><span class="standings-record">1-2</span></li>
+      <li data-player="Greggles90"><span class="standings-rank">33</span><span>Greggles90</span><span class="standings-record">1-2</span></li>
+      <li data-player="elise224"><span class="standings-rank">33</span><span>elise224</span><span class="standings-record">1-2</span></li>
+      <li data-player="Leonrecon"><span class="standings-rank">33</span><span>Leonrecon</span><span class="standings-record">1-2</span></li>
+      <li data-player="Cloverbugged"><span class="standings-rank">49</span><span><img class="loc-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Ontario.svg" title="Ontario" alt="Ontario">Cloverbugged</span><span class="standings-record">0-2</span></li>
+      <li data-player="catangelthing"><span class="standings-rank">49</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_California.svg" title="California" alt="California">catangelthing</span><span class="standings-record">0-2</span></li>
+      <li data-player="bombbeard"><span class="standings-rank">49</span><span>bombbeard</span><span class="standings-record">0-2</span></li>
+      <li data-player="wooffledee"><span class="standings-rank">49</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_North_Carolina.svg" title="North Carolina" alt="North Carolina">wooffledee</span><span class="standings-record">0-2</span></li>
+      <li data-player="shovelclaws"><span class="standings-rank">49</span><span>shovelclaws</span><span class="standings-record">0-2</span></li>
+      <li data-player="EpicCrossover"><span class="standings-rank">49</span><span>EpicCrossover</span><span class="standings-record">0-2</span></li>
+      <li data-player="AstrasEvolution"><span class="standings-rank">49</span><span><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_California.svg" title="California" alt="California">AstrasEvolution</span><span class="standings-record">0-2</span></li>
+      <li data-player="Catpogers"><span class="standings-rank">49</span><span>Catpogers</span><span class="standings-record">0-2</span></li>
+      <li data-player="Samkee00"><span class="standings-rank">49</span><span><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/en/6/6d/Flag_of_Seattle.svg" title="Seattle" alt="Seattle">Samkee00</span><span class="standings-record">0-2</span></li>
+      <li data-player="Gorillawarfare"><span class="standings-rank">49</span><span>Gorillawarfare</span><span class="standings-record">0-2</span></li>
     </ol>
-</div>
+  </div>
 
-<div class="tourney-section">
-  <h2>Matches</h2>
-  <div class="brackets-viewer" id="bv-main"></div>
+  <div class="tourney-section tourney-matches">
+    <h2>Matches</h2>
+    <div class="brackets-viewer" id="bv-main"></div>
 <script>
   window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"SGDQ 2025 - DeathBall","type":"double_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":1,"result":"win"},"opponent2":{"id":1,"score":0,"result":"loss"}},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":2,"result":"win"},"opponent2":null},{"id":2,"stage_id":0,"group_id":0,"round_id":0,"number":3,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"win"},"opponent2":{"id":4,"score":0,"result":"loss"}},{"id":3,"stage_id":0,"group_id":0,"round_id":0,"number":4,"child_count":0,"status":4,"opponent1":{"id":6,"score":0,"result":"loss"},"opponent2":{"id":5,"score":1,"result":"win"}},{"id":4,"stage_id":0,"group_id":0,"round_id":0,"number":5,"child_count":0,"status":4,"opponent1":{"id":7,"result":"win"},"opponent2":null},{"id":5,"stage_id":0,"group_id":0,"round_id":0,"number":6,"child_count":0,"status":4,"opponent1":{"id":8,"score":1,"result":"win"},"opponent2":{"id":9,"score":0,"result":"loss"}},{"id":6,"stage_id":0,"group_id":0,"round_id":0,"number":7,"child_count":0,"status":4,"opponent1":{"id":10,"score":1,"result":"win"},"opponent2":{"id":11,"score":0,"result":"loss"}},{"id":7,"stage_id":0,"group_id":0,"round_id":0,"number":8,"child_count":0,"status":4,"opponent1":{"id":13,"score":0,"result":"loss"},"opponent2":{"id":12,"score":1,"result":"win"}},{"id":8,"stage_id":0,"group_id":0,"round_id":0,"number":9,"child_count":0,"status":4,"opponent1":{"id":15,"score":0,"result":"loss"},"opponent2":{"id":14,"score":1,"result":"win"}},{"id":9,"stage_id":0,"group_id":0,"round_id":0,"number":10,"child_count":0,"status":4,"opponent1":{"id":17,"score":0,"result":"loss"},"opponent2":{"id":16,"score":1,"result":"win"}},{"id":10,"stage_id":0,"group_id":0,"round_id":0,"number":11,"child_count":0,"status":4,"opponent1":{"id":19,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":18,"score":1,"result":"win"}},{"id":11,"stage_id":0,"group_id":0,"round_id":0,"number":12,"child_count":0,"status":4,"opponent1":{"id":21,"score":0,"result":"loss"},"opponent2":{"id":20,"score":1,"result":"win"}},{"id":12,"stage_id":0,"group_id":0,"round_id":0,"number":13,"child_count":0,"status":4,"opponent1":{"id":23,"score":0,"result":"loss"},"opponent2":{"id":22,"score":1,"result":"win"}},{"id":13,"stage_id":0,"group_id":0,"round_id":0,"number":14,"child_count":0,"status":4,"opponent1":{"id":24,"result":"win"},"opponent2":null},{"id":14,"stage_id":0,"group_id":0,"round_id":0,"number":15,"child_count":0,"status":4,"opponent1":{"id":25,"score":1,"result":"win"},"opponent2":{"id":26,"score":0,"result":"loss"}},{"id":15,"stage_id":0,"group_id":0,"round_id":0,"number":16,"child_count":0,"status":4,"opponent1":{"id":27,"score":1,"result":"win"},"opponent2":{"id":28,"score":0,"result":"loss"}},{"id":16,"stage_id":0,"group_id":0,"round_id":0,"number":17,"child_count":0,"status":4,"opponent1":{"id":30,"score":0,"result":"loss"},"opponent2":{"id":29,"score":1,"result":"win"}},{"id":17,"stage_id":0,"group_id":0,"round_id":0,"number":18,"child_count":0,"status":4,"opponent1":{"id":32,"score":0,"result":"loss"},"opponent2":{"id":31,"score":1,"result":"win"}},{"id":18,"stage_id":0,"group_id":0,"round_id":0,"number":19,"child_count":0,"status":4,"opponent1":{"id":33,"score":1,"result":"win"},"opponent2":{"id":34,"score":0,"result":"loss"}},{"id":19,"stage_id":0,"group_id":0,"round_id":0,"number":20,"child_count":0,"status":4,"opponent1":{"id":35,"result":"win"},"opponent2":null},{"id":20,"stage_id":0,"group_id":0,"round_id":0,"number":21,"child_count":0,"status":4,"opponent1":{"id":36,"score":1,"result":"win"},"opponent2":{"id":37,"score":0,"result":"loss"}},{"id":21,"stage_id":0,"group_id":0,"round_id":0,"number":22,"child_count":0,"status":4,"opponent1":{"id":38,"score":1,"result":"win"},"opponent2":{"id":39,"score":0,"result":"loss"}},{"id":22,"stage_id":0,"group_id":0,"round_id":0,"number":23,"child_count":0,"status":4,"opponent1":{"id":40,"result":"win"},"opponent2":null},{"id":23,"stage_id":0,"group_id":0,"round_id":0,"number":24,"child_count":0,"status":4,"opponent1":{"id":42,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":41,"score":1,"result":"win"}},{"id":24,"stage_id":0,"group_id":0,"round_id":0,"number":25,"child_count":0,"status":4,"opponent1":{"id":44,"score":0,"result":"loss"},"opponent2":{"id":43,"score":1,"result":"win"}},{"id":25,"stage_id":0,"group_id":0,"round_id":0,"number":26,"child_count":0,"status":4,"opponent1":{"id":45,"score":1,"result":"win"},"opponent2":{"id":46,"score":0,"result":"loss"}},{"id":26,"stage_id":0,"group_id":0,"round_id":0,"number":27,"child_count":0,"status":4,"opponent1":{"id":47,"score":1,"result":"win"},"opponent2":{"id":39,"score":0,"result":"loss"}},{"id":27,"stage_id":0,"group_id":0,"round_id":0,"number":28,"child_count":0,"status":4,"opponent1":{"id":48,"result":"win"},"opponent2":null},{"id":28,"stage_id":0,"group_id":0,"round_id":0,"number":29,"child_count":0,"status":4,"opponent1":{"id":50,"score":0,"result":"loss"},"opponent2":{"id":49,"score":1,"result":"win"}},{"id":29,"stage_id":0,"group_id":0,"round_id":0,"number":30,"child_count":0,"status":4,"opponent1":{"id":51,"score":1,"result":"win"},"opponent2":{"id":52,"score":0,"result":"loss"}},{"id":30,"stage_id":0,"group_id":0,"round_id":0,"number":31,"child_count":0,"status":4,"opponent1":{"id":53,"score":1,"result":"win"},"opponent2":{"id":54,"score":0,"result":"loss"}},{"id":31,"stage_id":0,"group_id":0,"round_id":0,"number":32,"child_count":0,"status":4,"opponent1":{"id":56,"score":0,"result":"loss"},"opponent2":{"id":55,"score":1,"result":"win"}},{"id":32,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":1,"result":"win"},"opponent2":{"id":2,"score":0,"result":"loss"}},{"id":33,"stage_id":0,"group_id":0,"round_id":1,"number":2,"child_count":0,"status":4,"opponent1":{"id":5,"score":0,"result":"loss"},"opponent2":{"id":3,"score":1,"result":"win"}},{"id":34,"stage_id":0,"group_id":0,"round_id":1,"number":3,"child_count":0,"status":4,"opponent1":{"id":8,"score":0,"result":"loss"},"opponent2":{"id":7,"score":1,"result":"win"}},{"id":35,"stage_id":0,"group_id":0,"round_id":1,"number":4,"child_count":0,"status":4,"opponent1":{"id":12,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":10,"score":1,"result":"win"}},{"id":36,"stage_id":0,"group_id":0,"round_id":1,"number":5,"child_count":0,"status":4,"opponent1":{"id":16,"score":0,"result":"loss"},"opponent2":{"id":14,"score":1,"result":"win"}},{"id":37,"stage_id":0,"group_id":0,"round_id":1,"number":6,"child_count":0,"status":4,"opponent1":{"id":20,"score":0,"result":"loss"},"opponent2":{"id":18,"score":1,"result":"win"}},{"id":38,"stage_id":0,"group_id":0,"round_id":1,"number":7,"child_count":0,"status":4,"opponent1":{"id":24,"score":0,"result":"loss"},"opponent2":{"id":22,"score":1,"result":"win"}},{"id":39,"stage_id":0,"group_id":0,"round_id":1,"number":8,"child_count":0,"status":4,"opponent1":{"id":25,"score":1,"result":"win"},"opponent2":{"id":27,"score":0,"result":"loss"}},{"id":40,"stage_id":0,"group_id":0,"round_id":1,"number":9,"child_count":0,"status":4,"opponent1":{"id":29,"score":1,"result":"win"},"opponent2":{"id":31,"score":0,"result":"loss"}},{"id":41,"stage_id":0,"group_id":0,"round_id":1,"number":10,"child_count":0,"status":4,"opponent1":{"id":35,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":33,"score":1,"result":"win"}},{"id":42,"stage_id":0,"group_id":0,"round_id":1,"number":11,"child_count":0,"status":4,"opponent1":{"id":38,"score":0,"result":"loss"},"opponent2":{"id":36,"score":1,"result":"win"}},{"id":43,"stage_id":0,"group_id":0,"round_id":1,"number":12,"child_count":0,"status":4,"opponent1":{"id":40,"score":1,"result":"win"},"opponent2":{"id":41,"score":0,"result":"loss"}},{"id":44,"stage_id":0,"group_id":0,"round_id":1,"number":13,"child_count":0,"status":4,"opponent1":{"id":43,"score":1,"result":"win"},"opponent2":{"id":45,"score":0,"result":"loss"}},{"id":45,"stage_id":0,"group_id":0,"round_id":1,"number":14,"child_count":0,"status":4,"opponent1":{"id":48,"score":0,"result":"loss"},"opponent2":{"id":47,"score":1,"result":"win"}},{"id":46,"stage_id":0,"group_id":0,"round_id":1,"number":15,"child_count":0,"status":4,"opponent1":{"id":51,"score":0,"result":"loss"},"opponent2":{"id":49,"score":1,"result":"win"}},{"id":47,"stage_id":0,"group_id":0,"round_id":1,"number":16,"child_count":0,"status":4,"opponent1":{"id":55,"score":0,"result":"loss"},"opponent2":{"id":53,"score":1,"result":"win"}},{"id":48,"stage_id":0,"group_id":0,"round_id":2,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}},{"id":49,"stage_id":0,"group_id":0,"round_id":2,"number":2,"child_count":0,"status":4,"opponent1":{"id":10,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":7,"score":1,"result":"win"}},{"id":50,"stage_id":0,"group_id":0,"round_id":2,"number":3,"child_count":0,"status":4,"opponent1":{"id":14,"score":1,"result":"win"},"opponent2":{"id":18,"score":0,"result":"loss"}},{"id":51,"stage_id":0,"group_id":0,"round_id":2,"number":4,"child_count":0,"status":4,"opponent1":{"id":25,"score":0,"result":"loss"},"opponent2":{"id":22,"score":1,"result":"win"}},{"id":52,"stage_id":0,"group_id":0,"round_id":2,"number":5,"child_count":0,"status":4,"opponent1":{"id":33,"score":0,"result":"loss"},"opponent2":{"id":29,"score":1,"result":"win"}},{"id":53,"stage_id":0,"group_id":0,"round_id":2,"number":6,"child_count":0,"status":4,"opponent1":{"id":36,"score":1,"result":"win"},"opponent2":{"id":40,"score":0,"result":"loss"}},{"id":54,"stage_id":0,"group_id":0,"round_id":2,"number":7,"child_count":0,"status":4,"opponent1":{"id":47,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":43,"score":1,"result":"win"}},{"id":55,"stage_id":0,"group_id":0,"round_id":2,"number":8,"child_count":0,"status":4,"opponent1":{"id":49,"score":1,"result":"win"},"opponent2":{"id":53,"score":0,"result":"loss"}},{"id":56,"stage_id":0,"group_id":0,"round_id":3,"number":1,"child_count":0,"status":4,"opponent1":{"id":7,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}},{"id":57,"stage_id":0,"group_id":0,"round_id":3,"number":2,"child_count":0,"status":4,"opponent1":{"id":22,"score":0,"result":"loss"},"opponent2":{"id":14,"score":1,"result":"win"}},{"id":58,"stage_id":0,"group_id":0,"round_id":3,"number":3,"child_count":0,"status":4,"opponent1":{"id":29,"score":1,"result":"win"},"opponent2":{"id":36,"score":0,"result":"loss"}},{"id":59,"stage_id":0,"group_id":0,"round_id":3,"number":4,"child_count":0,"status":4,"opponent1":{"id":43,"score":1,"result":"win"},"opponent2":{"id":49,"score":0,"result":"loss"}},{"id":60,"stage_id":0,"group_id":0,"round_id":4,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":1,"result":"win"},"opponent2":{"id":14,"score":0,"result":"loss"}},{"id":61,"stage_id":0,"group_id":0,"round_id":4,"number":2,"child_count":0,"status":4,"opponent1":{"id":29,"score":1,"result":"win"},"opponent2":{"id":43,"score":0,"result":"loss"}},{"id":62,"stage_id":0,"group_id":0,"round_id":5,"number":1,"child_count":0,"status":4,"opponent1":{"id":29,"score":1,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}},{"id":63,"stage_id":0,"group_id":1,"round_id":6,"number":1,"child_count":0,"status":4,"opponent1":{"id":19,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":21,"score":1,"result":"win"}},{"id":64,"stage_id":0,"group_id":1,"round_id":6,"number":2,"child_count":0,"status":4,"opponent1":{"id":17,"score":0,"result":"loss"},"opponent2":{"id":15,"score":1,"result":"win"}},{"id":65,"stage_id":0,"group_id":1,"round_id":6,"number":3,"child_count":0,"status":4,"opponent1":{"id":28,"score":1,"result":"win"},"opponent2":{"id":26,"score":0,"result":"loss","forfeit":true}},{"id":66,"stage_id":0,"group_id":1,"round_id":6,"number":4,"child_count":0,"status":4,"opponent1":{"id":6,"score":1,"result":"win"},"opponent2":{"id":4,"score":0,"result":"loss"}},{"id":67,"stage_id":0,"group_id":1,"round_id":6,"number":5,"child_count":0,"status":4,"opponent1":{"id":11,"score":1,"result":"win"},"opponent2":{"id":13,"score":0,"result":"loss"}},{"id":68,"stage_id":0,"group_id":1,"round_id":6,"number":6,"child_count":0,"status":4,"opponent1":{"id":39,"score":0,"result":"loss"},"opponent2":{"id":37,"score":1,"result":"win"}},{"id":69,"stage_id":0,"group_id":1,"round_id":6,"number":7,"child_count":0,"status":4,"opponent1":{"id":32,"score":1,"result":"win"},"opponent2":{"id":30,"score":0,"result":"loss"}},{"id":70,"stage_id":0,"group_id":1,"round_id":6,"number":8,"child_count":0,"status":4,"opponent1":{"id":54,"score":1,"result":"win"},"opponent2":{"id":56,"score":0,"result":"loss"}},{"id":71,"stage_id":0,"group_id":1,"round_id":6,"number":9,"child_count":0,"status":4,"opponent1":{"id":52,"score":1,"result":"win"},"opponent2":{"id":50,"score":0,"result":"loss"}},{"id":72,"stage_id":0,"group_id":1,"round_id":6,"number":10,"child_count":0,"status":4,"opponent1":{"id":46,"score":0,"result":"loss"},"opponent2":{"id":44,"score":1,"result":"win"}},{"id":73,"stage_id":0,"group_id":1,"round_id":7,"number":1,"child_count":0,"status":4,"opponent1":{"id":38,"score":1,"result":"win"},"opponent2":{"id":21,"score":0,"result":"loss"}},{"id":74,"stage_id":0,"group_id":1,"round_id":7,"number":2,"child_count":0,"status":4,"opponent1":{"id":15,"score":1,"result":"win"},"opponent2":{"id":41,"score":0,"result":"loss"}},{"id":75,"stage_id":0,"group_id":1,"round_id":7,"number":3,"child_count":0,"status":4,"opponent1":{"id":28,"score":1,"result":"win"},"opponent2":{"id":35,"score":0,"result":"loss","forfeit":true}},{"id":76,"stage_id":0,"group_id":1,"round_id":7,"number":4,"child_count":0,"status":4,"opponent1":{"id":31,"score":1,"result":"win"},"opponent2":{"id":23,"score":0,"result":"loss"}},{"id":77,"stage_id":0,"group_id":1,"round_id":7,"number":5,"child_count":0,"status":4,"opponent1":{"id":6,"score":0,"result":"loss"},"opponent2":{"id":51,"score":1,"result":"win"}},{"id":78,"stage_id":0,"group_id":1,"round_id":7,"number":6,"child_count":0,"status":4,"opponent1":{"id":1,"score":1,"result":"win"},"opponent2":{"id":55,"score":0,"result":"loss"}},{"id":79,"stage_id":0,"group_id":1,"round_id":7,"number":7,"child_count":0,"status":4,"opponent1":{"id":9,"score":1,"result":"win"},"opponent2":{"id":45,"score":0,"result":"loss"}},{"id":80,"stage_id":0,"group_id":1,"round_id":7,"number":8,"child_count":0,"status":4,"opponent1":{"id":11,"score":1,"result":"win"},"opponent2":{"id":48,"score":0,"result":"loss"}},{"id":81,"stage_id":0,"group_id":1,"round_id":7,"number":9,"child_count":0,"status":4,"opponent1":{"id":20,"score":1,"result":"win"},"opponent2":{"id":37,"score":0,"result":"loss"}},{"id":82,"stage_id":0,"group_id":1,"round_id":7,"number":10,"child_count":0,"status":4,"opponent1":{"id":42,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":16,"score":1,"result":"win"}},{"id":83,"stage_id":0,"group_id":1,"round_id":7,"number":11,"child_count":0,"status":4,"opponent1":{"id":32,"score":0,"result":"loss"},"opponent2":{"id":24,"score":1,"result":"win"}},{"id":84,"stage_id":0,"group_id":1,"round_id":7,"number":12,"child_count":0,"status":4,"opponent1":{"id":34,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":27,"score":1,"result":"win"}},{"id":85,"stage_id":0,"group_id":1,"round_id":7,"number":13,"child_count":0,"status":4,"opponent1":{"id":2,"score":0,"result":"loss"},"opponent2":{"id":54,"score":1,"result":"win"}},{"id":86,"stage_id":0,"group_id":1,"round_id":7,"number":14,"child_count":0,"status":4,"opponent1":{"id":52,"score":1,"result":"win"},"opponent2":{"id":5,"score":0,"result":"loss"}},{"id":87,"stage_id":0,"group_id":1,"round_id":7,"number":15,"child_count":0,"status":4,"opponent1":{"id":8,"score":0,"result":"loss"},"opponent2":{"id":44,"score":1,"result":"win"}},{"id":88,"stage_id":0,"group_id":1,"round_id":7,"number":16,"child_count":0,"status":4,"opponent1":{"id":39,"score":1,"result":"win"},"opponent2":{"id":12,"score":0,"result":"loss","forfeit":true}},{"id":89,"stage_id":0,"group_id":1,"round_id":8,"number":1,"child_count":0,"status":4,"opponent1":{"id":15,"score":0,"result":"loss"},"opponent2":{"id":38,"score":1,"result":"win"}},{"id":90,"stage_id":0,"group_id":1,"round_id":8,"number":2,"child_count":0,"status":4,"opponent1":{"id":28,"score":1,"result":"win"},"opponent2":{"id":31,"score":0,"result":"loss"}},{"id":91,"stage_id":0,"group_id":1,"round_id":8,"number":3,"child_count":0,"status":4,"opponent1":{"id":51,"score":1,"result":"win"},"opponent2":{"id":1,"score":0,"result":"loss"}},{"id":92,"stage_id":0,"group_id":1,"round_id":8,"number":4,"child_count":0,"status":4,"opponent1":{"id":11,"score":0,"result":"loss"},"opponent2":{"id":9,"score":11,"result":"win"}},{"id":93,"stage_id":0,"group_id":1,"round_id":8,"number":5,"child_count":0,"status":4,"opponent1":{"id":16,"score":0,"result":"loss"},"opponent2":{"id":20,"score":1,"result":"win"}},{"id":94,"stage_id":0,"group_id":1,"round_id":8,"number":6,"child_count":0,"status":4,"opponent1":{"id":27,"score":0,"result":"loss"},"opponent2":{"id":24,"score":1,"result":"win"}},{"id":95,"stage_id":0,"group_id":1,"round_id":8,"number":7,"child_count":0,"status":4,"opponent1":{"id":54,"score":1,"result":"win"},"opponent2":{"id":52,"score":0,"result":"loss"}},{"id":96,"stage_id":0,"group_id":1,"round_id":8,"number":8,"child_count":0,"status":4,"opponent1":{"id":39,"score":0,"result":"loss"},"opponent2":{"id":44,"score":1,"result":"win"}},{"id":97,"stage_id":0,"group_id":1,"round_id":9,"number":1,"child_count":0,"status":4,"opponent1":{"id":38,"score":0,"result":"loss"},"opponent2":{"id":3,"score":1,"result":"win"}},{"id":98,"stage_id":0,"group_id":1,"round_id":9,"number":2,"child_count":0,"status":4,"opponent1":{"id":10,"score":0,"result":"loss","forfeit":true},"opponent2":{"id":28,"score":1,"result":"win"}},{"id":99,"stage_id":0,"group_id":1,"round_id":9,"number":3,"child_count":0,"status":4,"opponent1":{"id":51,"score":1,"result":"win"},"opponent2":{"id":18,"score":0,"result":"loss"}},{"id":100,"stage_id":0,"group_id":1,"round_id":9,"number":4,"child_count":0,"status":4,"opponent1":{"id":9,"score":1,"result":"win"},"opponent2":{"id":25,"score":0,"result":"loss"}},{"id":101,"stage_id":0,"group_id":1,"round_id":9,"number":5,"child_count":0,"status":4,"opponent1":{"id":53,"score":0,"result":"loss"},"opponent2":{"id":20,"score":1,"result":"win"}},{"id":102,"stage_id":0,"group_id":1,"round_id":9,"number":6,"child_count":0,"status":4,"opponent1":{"id":24,"score":1,"result":"win"},"opponent2":{"id":47,"score":0,"result":"loss","forfeit":true}},{"id":103,"stage_id":0,"group_id":1,"round_id":9,"number":7,"child_count":0,"status":4,"opponent1":{"id":40,"score":0,"result":"loss"},"opponent2":{"id":54,"score":1,"result":"win"}},{"id":104,"stage_id":0,"group_id":1,"round_id":9,"number":8,"child_count":0,"status":4,"opponent1":{"id":33,"score":1,"result":"win"},"opponent2":{"id":44,"score":0,"result":"loss"}},{"id":105,"stage_id":0,"group_id":1,"round_id":10,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"win"},"opponent2":{"id":28,"score":0,"result":"loss"}},{"id":106,"stage_id":0,"group_id":1,"round_id":10,"number":2,"child_count":0,"status":4,"opponent1":{"id":9,"score":0,"result":"loss"},"opponent2":{"id":51,"score":1,"result":"win"}},{"id":107,"stage_id":0,"group_id":1,"round_id":10,"number":3,"child_count":0,"status":4,"opponent1":{"id":24,"score":0,"result":"loss"},"opponent2":{"id":20,"score":1,"result":"win"}},{"id":108,"stage_id":0,"group_id":1,"round_id":10,"number":4,"child_count":0,"status":4,"opponent1":{"id":54,"score":1,"result":"win"},"opponent2":{"id":33,"score":0,"result":"loss"}},{"id":109,"stage_id":0,"group_id":1,"round_id":11,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"win"},"opponent2":{"id":49,"score":0,"result":"loss"}},{"id":110,"stage_id":0,"group_id":1,"round_id":11,"number":2,"child_count":0,"status":4,"opponent1":{"id":51,"score":1,"result":"win"},"opponent2":{"id":36,"score":0,"result":"loss"}},{"id":111,"stage_id":0,"group_id":1,"round_id":11,"number":3,"child_count":0,"status":4,"opponent1":{"id":20,"score":1,"result":"win"},"opponent2":{"id":7,"score":0,"result":"loss"}},{"id":112,"stage_id":0,"group_id":1,"round_id":11,"number":4,"child_count":0,"status":4,"opponent1":{"id":22,"score":1,"result":"win"},"opponent2":{"id":54,"score":0,"result":"loss"}},{"id":113,"stage_id":0,"group_id":1,"round_id":12,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"win"},"opponent2":{"id":51,"score":0,"result":"loss"}},{"id":114,"stage_id":0,"group_id":1,"round_id":12,"number":2,"child_count":0,"status":4,"opponent1":{"id":20,"score":1,"result":"win"},"opponent2":{"id":22,"score":0,"result":"loss"}},{"id":115,"stage_id":0,"group_id":1,"round_id":13,"number":1,"child_count":0,"status":4,"opponent1":{"id":14,"score":0,"result":"loss"},"opponent2":{"id":3,"score":1,"result":"win"}},{"id":116,"stage_id":0,"group_id":1,"round_id":13,"number":2,"child_count":0,"status":4,"opponent1":{"id":43,"score":0,"result":"loss"},"opponent2":{"id":20,"score":1,"result":"win"}},{"id":117,"stage_id":0,"group_id":1,"round_id":14,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":2,"result":"win"},"opponent2":{"id":20,"score":0,"result":"loss"}},{"id":118,"stage_id":0,"group_id":1,"round_id":15,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"loss"},"opponent2":{"id":29,"score":2,"result":"win"}},{"id":119,"stage_id":0,"group_id":2,"round_id":16,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":3,"result":"win"},"opponent2":{"id":29,"score":1,"result":"loss"}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"mrlink2k"},{"id":1,"tournament_id":0,"name":"Notolectq"},{"id":2,"tournament_id":0,"name":"Zweek"},{"id":3,"tournament_id":0,"name":"Hackakat"},{"id":4,"tournament_id":0,"name":"shovelclaws"},{"id":5,"tournament_id":0,"name":"Ivey"},{"id":6,"tournament_id":0,"name":"Leonrecon"},{"id":7,"tournament_id":0,"name":"Badroenis"},{"id":8,"tournament_id":0,"name":"HeartOfOak"},{"id":9,"tournament_id":0,"name":"Dotmaster"},{"id":10,"tournament_id":0,"name":"OopsItsANerd"},{"id":11,"tournament_id":0,"name":"XanderIsALoser"},{"id":12,"tournament_id":0,"name":"nardy20"},{"id":13,"tournament_id":0,"name":"Catpogers"},{"id":14,"tournament_id":0,"name":"Suigi"},{"id":15,"tournament_id":0,"name":"typedef_sorbet"},{"id":16,"tournament_id":0,"name":"j0tt"},{"id":17,"tournament_id":0,"name":"bombbeard"},{"id":18,"tournament_id":0,"name":"jade"},{"id":19,"tournament_id":0,"name":"Samkee00"},{"id":20,"tournament_id":0,"name":"Jaq"},{"id":21,"tournament_id":0,"name":"Greggles90"},{"id":22,"tournament_id":0,"name":"impossablank"},{"id":23,"tournament_id":0,"name":"Storster"},{"id":24,"tournament_id":0,"name":"30Aces"},{"id":25,"tournament_id":0,"name":"alrightness"},{"id":26,"tournament_id":0,"name":"AstrasEvolution"},{"id":27,"tournament_id":0,"name":"didquartz"},{"id":28,"tournament_id":0,"name":"SoaringSloth"},{"id":29,"tournament_id":0,"name":"keucher"},{"id":30,"tournament_id":0,"name":"catangelthing"},{"id":31,"tournament_id":0,"name":"something dumber"},{"id":32,"tournament_id":0,"name":"ShyguyVai"},{"id":33,"tournament_id":0,"name":"Gemneant"},{"id":34,"tournament_id":0,"name":"Prisma_Goat"},{"id":35,"tournament_id":0,"name":"Star Anise"},{"id":36,"tournament_id":0,"name":"Queen_Magnolia"},{"id":37,"tournament_id":0,"name":"KyoshiCadre"},{"id":38,"tournament_id":0,"name":"LunaticJ"},{"id":39,"tournament_id":0,"name":"EpicCrossover"},{"id":40,"tournament_id":0,"name":"raxdflipnote"},{"id":41,"tournament_id":0,"name":"MellowMikal"},{"id":42,"tournament_id":0,"name":"lilywhitesail"},{"id":43,"tournament_id":0,"name":"RheaStarGirl"},{"id":44,"tournament_id":0,"name":"GTAce"},{"id":45,"tournament_id":0,"name":"elise224"},{"id":46,"tournament_id":0,"name":"Cloverbugged"},{"id":47,"tournament_id":0,"name":"dreaded_"},{"id":48,"tournament_id":0,"name":"CrayFray"},{"id":49,"tournament_id":0,"name":"Dorkus64"},{"id":50,"tournament_id":0,"name":"Gorillawarfare"},{"id":51,"tournament_id":0,"name":"LotsaTella"},{"id":52,"tournament_id":0,"name":"MetaSR"},{"id":53,"tournament_id":0,"name":"Snowcat11"},{"id":54,"tournament_id":0,"name":"willyjwillyj"},{"id":55,"tournament_id":0,"name":"azuraeth"},{"id":56,"tournament_id":0,"name":"wooffledee"}]}, { selector: '#bv-main' });
   addBracketFlags('#bv-main', {"0":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg","title":"Ohio"},"2":{"src":"https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/de.svg","title":"Germany"},"7":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg","title":"Ohio"},"8":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg","title":"Illinois"},"11":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg","title":"Michigan"},"12":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg","title":"Michigan"},"19":{"src":"https://upload.wikimedia.org/wikipedia/en/6/6d/Flag_of_Seattle.svg","title":"Seattle"},"22":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Connecticut.svg","title":"Connecticut"},"24":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg","title":"Ohio"},"26":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_California.svg","title":"California"},"28":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg","title":"Illinois"},"29":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg","title":"Ohio"},"30":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_California.svg","title":"California"},"32":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Washington.svg","title":"Washington"},"36":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Portland%2C_Oregon.svg","title":"Portland"},"38":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg","title":"Michigan"},"41":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Washington.svg","title":"Washington"},"43":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Chicago%2C_Illinois.svg","title":"Chicago"},"44":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Illinois.svg","title":"Illinois"},"46":{"src":"https://commons.wikimedia.org/wiki/Special:FilePath/Flag_of_Ontario.svg","title":"Ontario"},"48":{"src":"https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/de.svg","title":"Germany"},"51":{"src":"https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/gb.svg","title":"United Kingdom"},"54":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg","title":"Michigan"},"55":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Wisconsin.svg","title":"Wisconsin"},"56":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_North_Carolina.svg","title":"North Carolina"}});
+  pluralizeBracketNames();
   layoutBrackets();
   markPendingMatches();
 </script>
+    <script>setupBracketInteractivity();</script>
+  </div>
 </div>
 </body>
 </html>
