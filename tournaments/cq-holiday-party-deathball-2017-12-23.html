@@ -128,10 +128,12 @@
   /* Synced with the standings list (see .standings-list li.player-active
      and setupBracketInteractivity below): hovering or clicking a player
      anywhere highlights every match they appear in across the whole
-     bracket, plus their standings row. */
+     bracket (background only), plus their standings row. The green border
+     outline stays native-hover-only (--border-hover-color above), so it
+     marks just the exact match under the cursor rather than spreading to
+     every match the highlighted player appears in. */
   .brackets-viewer .participant { cursor: pointer; }
   .brackets-viewer .participant.player-active { background-color: rgba(62,255,139,0.18); }
-  .brackets-viewer .match.match-player-active .opponents { border-color: rgba(62,255,139,0.7); }
   /* Click-and-drag panning, and the arrow-key scroll from keydown below —
      both need the container to actually be scrollable (it already is,
      horizontally, via the library's own overflow:auto) and focusable
@@ -341,7 +343,6 @@
   // within their own stage's render, not across the whole page.
   function setActivePlayer(name) {
     for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
-    for (const el of document.querySelectorAll('.match-player-active')) el.classList.remove('match-player-active');
     if (!name) return;
     const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
     if (li) li.classList.add('player-active');
@@ -349,8 +350,6 @@
       const nameEl = p.querySelector('.name');
       if (!nameEl || nameEl.textContent.trim() !== name) continue;
       p.classList.add('player-active');
-      const match = p.closest('.match');
-      if (match) match.classList.add('match-player-active');
     }
   }
 
@@ -433,7 +432,7 @@
 <h1>CQ Holiday Party Deathball</h1>
 <div class="tourney-meta">
   <span>December 23, 2017</span>
-  <span>Close Quarters, Columbus, OH</span>
+  <span class="tourney-loc"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio"><span class="loc-venue">Close Quarters</span><span class="loc-sep">&middot;</span><span class="loc-citystate">Columbus, OH</span></span>
   <a href="https://challonge.com/CQHPD" target="_blank" rel="noopener">View original on Challonge &#8599;</a>
 </div>
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>

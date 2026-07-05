@@ -261,9 +261,32 @@ function formatLocation(loc) {
   return [loc.location, [loc.city, loc.state].filter(Boolean).join(', ')].filter(Boolean).join(', ');
 }
 
-function resolveLocation(url, builtIn) {
-  const override = tournamentLocations[url];
-  return formatLocation(override || builtIn);
+function resolveLocationInfo(url, builtIn) {
+  return tournamentLocations[url] || builtIn;
+}
+
+// Structured version of formatLocation for display contexts that visually
+// separate the venue from the city/state, plus the flag to show alongside
+// it (keyed off the tournament's city by default; a `flag: { city, state }`
+// override in tournament-locations.json can point the flag elsewhere
+// without changing the displayed venue/city/state text).
+function locationDisplay(loc) {
+  if (!loc) return { venue: '', cityState: '', flag: null };
+  const flagSource = loc.flag || loc;
+  return {
+    venue: loc.location || '',
+    cityState: [loc.city, loc.state].filter(Boolean).join(', '),
+    flag: flagForInfo({ city: flagSource.city, state: flagSource.state, country: flagSource.country || loc.country }),
+  };
+}
+
+function locationHtml(disp) {
+  if (!disp || (!disp.venue && !disp.cityState)) return '';
+  const flagImg = disp.flag ? `<img class="loc-flag" src="${escapeHtml(disp.flag.src)}" title="${escapeHtml(disp.flag.title)}" alt="${escapeHtml(disp.flag.title)}">` : '';
+  const venueSpan = disp.venue ? `<span class="loc-venue">${escapeHtml(disp.venue)}</span>` : '';
+  const sep = disp.venue && disp.cityState ? '<span class="loc-sep">&middot;</span>' : '';
+  const cityStateSpan = disp.cityState ? `<span class="loc-citystate">${escapeHtml(disp.cityState)}</span>` : '';
+  return `${flagImg}${venueSpan}${sep}${cityStateSpan}`;
 }
 
 function resolveDate(url, builtIn) {
@@ -394,11 +417,13 @@ function collectChallonge() {
       finalRank: p.participant.final_rank != null ? p.participant.final_rank : null,
     }));
 
+    const locInfo = resolveLocationInfo(url, null);
     result.push({
       url,
       label,
       date: resolveDate(url, (t.started_at || t.created_at || '').slice(0, 10)),
-      location: resolveLocation(url, null),
+      location: formatLocation(locInfo),
+      locationDisplay: locationDisplay(locInfo),
       participants: t.participants.length,
       matchCount: matches.length,
       source: 'Challonge',
@@ -474,11 +499,13 @@ function collectStartgg() {
       finalRank: null,
     })).filter((p) => p.name);
 
+    const locInfo = resolveLocationInfo(url, { city: rec.tournament.city, state: rec.tournament.addrState });
     result.push({
       url,
       label,
       date: resolveDate(url, rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : ''),
-      location: resolveLocation(url, { city: rec.tournament.city, state: rec.tournament.addrState }),
+      location: formatLocation(locInfo),
+      locationDisplay: locationDisplay(locInfo),
       participants: rec.entrants.length,
       matchCount: matches.length,
       source: 'start.gg',
@@ -754,6 +781,14 @@ function buildStandings(t) {
 
   if (t.stages && t.stages.length === 1 && t.stages[0].bracketData) {
     return withRecord(deriveStandingsFromBracket(t.stages[0].bracketData));
+  }
+
+  // Elimination order (last-loss order) only makes sense for a bracket —
+  // a round-robin/swiss stage has no eliminations to order by, so rank by
+  // win record instead (this also drives the crosstable's row/column order,
+  // since it's built from these standings).
+  if (t.tournamentType === 'round robin' || t.tournamentType === 'swiss') {
+    return withRecord(rankByPoolRecord(canonicalMatches, canonicalNames).map((name, i) => ({ name, rank: i + 1 })));
   }
 
   return withRecord(rankByEliminationOrder(canonicalMatches, canonicalNames));
@@ -1041,7 +1076,7 @@ function buildPlayerHistories(allTournaments) {
       const id = idByCanonName.get(s.name);
       if (!id) continue;
       ensure(id).placements.push({
-        url: t.url, slug: t.slug, label: t.label, date: t.date,
+        url: t.url, slug: t.slug, label: t.label, date: t.date, flag: t.locationDisplay.flag,
         rank: s.rank, totalEntrants: standings.length, wins: s.wins, losses: s.losses,
       });
     }
@@ -1214,12 +1249,19 @@ function writeCss() {
 [hidden] { display: none !important; }
 body { font-family: 'Rajdhani', system-ui, sans-serif; margin: 0; padding: 1.5rem 2rem; background: #050505; color: #f0f0f0; font-size: 1rem; }
 h1 { font-family: 'Press Start 2P', monospace; font-size: 1.6rem; letter-spacing: 0.05em; margin: 0 0 1.5rem; color: #fff; }
+#tab-heading { display: inline-block; transition: opacity 180ms ease, transform 180ms ease; }
+#tab-heading.h1-swap { opacity: 0; transform: translateY(-6px); }
 a { color: #3eff8b; text-decoration: none; }
 a:hover { text-decoration: underline; }
-.tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #222; }
-.tab-button { background: none; border: none; border-bottom: 2px solid transparent; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.6rem 1.2rem; cursor: pointer; margin-bottom: -1px; transition: color 150ms ease, border-color 150ms ease; }
+.tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #222; position: relative; }
+.tab-button { background: none; border: none; border-bottom: 2px solid transparent; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.6rem 1.2rem; cursor: pointer; margin-bottom: -1px; transition: color 150ms ease; }
 .tab-button:hover { color: #bbb; }
-.tab-button.active { color: #3eff8b; border-bottom-color: #3eff8b; }
+.tab-button.active { color: #3eff8b; }
+/* Positioned/sized by JS (enableTabs) to sit under whichever tab is active,
+   sliding there via the left/width transition instead of the underline
+   just appearing under the newly-clicked tab and disappearing from the old
+   one. */
+.tab-underline { position: absolute; bottom: -1px; height: 2px; background: #3eff8b; transition: left 220ms ease, width 220ms ease; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 .tab-controls { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -1229,9 +1271,13 @@ a:hover { text-decoration: underline; }
 .tab-controls select:focus { outline: none; border-color: #3eff8b; }
 .filter-count, .ranking-count { color: #555; font-size: 0.9rem; font-weight: 500; }
 #count { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
-.view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; }
-.view-btn { background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: background 150ms, color 150ms; }
-.view-btn.active { background: #3eff8b; color: #000; }
+.view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; position: relative; }
+/* Same sliding-indicator treatment as .tab-underline above, but as a filled
+   pill behind the buttons rather than a line under them (positioned/sized
+   by JS in enableViewToggle). */
+.view-toggle-indicator { position: absolute; top: 2px; bottom: 2px; background: #3eff8b; border-radius: 2px; transition: left 200ms ease, width 200ms ease; }
+.view-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
+.view-btn.active { color: #000; }
 .view-btn:not(.active):hover { color: #bbb; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
@@ -1249,6 +1295,10 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .col-location { white-space: nowrap; }
 .loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 1px; }
+.loc-venue { color: #f0f0f0; font-weight: 700; }
+.loc-citystate { color: #888; }
+.loc-sep { color: #444; margin: 0 0.4em; }
+.tourney-loc { display: flex; align-items: center; }
 .uncertain { opacity: 0.45; }
 .filter-dim { opacity: 0.45; }
 .pr-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
@@ -1336,7 +1386,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .alias-list { color: #888; font-size: 0.9rem; }
 .player-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; }
-.stat-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
+.stat-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
 .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
 .stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .stat-sub { font-size: 1rem; font-weight: 700; color: #3eff8b; }
@@ -1348,7 +1398,7 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
 .player-col { flex: 1 1 300px; min-width: 0; }
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
-.h2h-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.h2h-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .h2h-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .h2h-value { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; font-weight: 700; }
 .h2h-count { font-family: 'Orbitron', monospace; font-size: 1.05rem; font-weight: 900; color: #f0f0f0; }
@@ -1372,6 +1422,25 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .hist-tourney-name a { color: #777; }
 .hist-tourney-name a:hover { color: #3eff8b; }
 .show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+/* Player pages carry a background glow matching their power-ranking card
+   color (see cardAccent), but the page's own accent TEXT is the opposite
+   color — a green-carded player gets a purple page accent and vice versa,
+   so text reads clearly against its own glow. Green is the site default
+   (matches the colors above already), so only card-green needs a text
+   override here — but it needs one for every green usage that can appear
+   on a player page. */
+body.card-green, body.card-purple { min-height: 100vh; }
+body.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(0, 70, 30) 0%, #050505 55%); }
+body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70) 0%, #050505 55%); }
+:where(body.card-green) a,
+body.card-green .tourney-section h2,
+body.card-green .stat-sub,
+body.card-green .hist-record,
+body.card-green .show-more-btn,
+body.card-green .standings-rank.result-win { color: #b04fff; }
+body.card-green .back-link:hover,
+body.card-green .match-tourney-name a:hover,
+body.card-green .hist-tourney-name a:hover { color: #b04fff; }
 .show-more-btn:hover { text-decoration: underline; }
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
@@ -1433,9 +1502,38 @@ function writeJs() {
     });
   }
 
+  // Positions indicator (a .tab-underline or .view-toggle-indicator) to
+  // sit under/behind target within container, sized to match — called on
+  // init and again on every switch so it slides there via the element's
+  // own CSS transition instead of just appearing in the new spot.
+  function moveIndicator(indicator, container, target) {
+    if (!indicator || !container || !target) return;
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    indicator.style.left = (targetRect.left - containerRect.left) + 'px';
+    indicator.style.width = targetRect.width + 'px';
+  }
+
+  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings' };
+
+  // Cross-fades just the variable part of the page heading ("DeathBall" is
+  // static) to the tab's own heading instead of snapping straight to it.
+  function setHeaderForTab(tabId) {
+    const heading = document.getElementById('tab-heading');
+    const label = TAB_HEADERS[tabId] || TAB_HEADERS['rankings-tab'];
+    if (!heading || heading.textContent === label) return;
+    heading.classList.add('h1-swap');
+    setTimeout(() => {
+      heading.textContent = label;
+      heading.classList.remove('h1-swap');
+    }, 180);
+  }
+
   function enableTabs() {
     const buttons = [...document.querySelectorAll('.tab-button')];
     const panels = [...document.querySelectorAll('.tab-panel')];
+    const tabsEl = document.querySelector('.tabs');
+    const underline = document.querySelector('.tab-underline');
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -1443,12 +1541,15 @@ function writeJs() {
         btn.classList.add('active');
         const panel = document.getElementById(btn.dataset.tab);
         panel.classList.add('active');
+        moveIndicator(underline, tabsEl, btn);
+        setHeaderForTab(btn.dataset.tab);
         // Cards were sized while this panel was display:none (offsetWidth 0
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
         fitCardNames(panel);
       });
     });
+    moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
   }
 
   function populateStateFilter(panel) {
@@ -1563,7 +1664,11 @@ function writeJs() {
     const countEl = panel.querySelector('.filter-count');
     if (countEl) {
       const noun = isRankingsTab ? 'players ranked' : 'unique players';
-      countEl.textContent = visible + ' ' + noun + '. Click a column header to sort.';
+      // The sort hint only applies while the sortable table is actually the
+      // visible view — grid mode has no columns to click.
+      const table = panel.querySelector('table');
+      const tableVisible = !grid || !table || table.style.display !== 'none';
+      countEl.textContent = visible + ' ' + noun + (tableVisible ? '. Click a column header to sort.' : '.');
     }
   }
 
@@ -1586,6 +1691,8 @@ function writeJs() {
     if (!buttons.length) return;
     const grid = panel.querySelector('.pr-grid');
     const table = panel.querySelector('table');
+    const toggleEl = panel.querySelector('.view-toggle');
+    const indicator = panel.querySelector('.view-toggle-indicator');
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -1593,9 +1700,13 @@ function writeJs() {
         const view = btn.dataset.view;
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
-        if (view === 'grid') fitCardNames(panel);
+        moveIndicator(indicator, toggleEl, btn);
+        // Also refreshes the "Click a column header to sort." hint for the
+        // view just switched to.
+        applyFilters(panel);
       });
     });
+    moveIndicator(indicator, toggleEl, buttons.find((b) => b.classList.contains('active')));
   }
 
   function initPanel(panelId) {
@@ -1642,7 +1753,7 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
     .map((t) => `<tr>
       <td><a href="tournaments/${escapeHtml(t.slug)}.html">${escapeHtml(t.label)}</a><a class="ext-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener" title="View original">&#8599;</a></td>
       <td data-sort="${t.date}">${escapeHtml(t.date)}</td>
-      <td>${escapeHtml(t.location)}</td>
+      <td>${locationHtml(t.locationDisplay)}</td>
       <td>${escapeHtml(t.source)}</td>
       <td class="numeric" data-sort="${t.participants}">${t.participants}</td>
       <td class="numeric" data-sort="${t.matchCount}">${t.matchCount}</td>
@@ -1687,14 +1798,15 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
 <link rel="stylesheet" href="index.css">
 </head>
 <body>
-<h1>DeathBall Power Rankings</h1>
+<h1>DeathBall <span id="tab-heading">Power Rankings</span></h1>
 <div class="tabs">
-  <button class="tab-button active" data-tab="players-tab">Players</button>
+  <button class="tab-button active" data-tab="rankings-tab">Power Rankings</button>
+  <button class="tab-button" data-tab="players-tab">Players</button>
   <button class="tab-button" data-tab="tournaments-tab">Tournaments</button>
-  <button class="tab-button" data-tab="rankings-tab">Power Rankings</button>
+  <span class="tab-underline"></span>
 </div>
 
-<div id="players-tab" class="tab-panel active">
+<div id="players-tab" class="tab-panel">
   <div class="tab-controls">
     <label>State/Province:
       <select class="state-filter-select">
@@ -1741,9 +1853,10 @@ ${tournamentTableRows}
   </table>
 </div>
 
-<div id="rankings-tab" class="tab-panel">
+<div id="rankings-tab" class="tab-panel active">
   <div class="tab-controls">
     <div class="view-toggle">
+      <span class="view-toggle-indicator"></span>
       <button class="view-btn active" data-view="grid">Grid</button>
       <button class="view-btn" data-view="table">Table</button>
     </div>
@@ -1938,10 +2051,12 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
   /* Synced with the standings list (see .standings-list li.player-active
      and setupBracketInteractivity below): hovering or clicking a player
      anywhere highlights every match they appear in across the whole
-     bracket, plus their standings row. */
+     bracket (background only), plus their standings row. The green border
+     outline stays native-hover-only (--border-hover-color above), so it
+     marks just the exact match under the cursor rather than spreading to
+     every match the highlighted player appears in. */
   .brackets-viewer .participant { cursor: pointer; }
   .brackets-viewer .participant.player-active { background-color: rgba(62,255,139,0.18); }
-  .brackets-viewer .match.match-player-active .opponents { border-color: rgba(62,255,139,0.7); }
   /* Click-and-drag panning, and the arrow-key scroll from keydown below —
      both need the container to actually be scrollable (it already is,
      horizontally, via the library's own overflow:auto) and focusable
@@ -2151,7 +2266,6 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
   // within their own stage's render, not across the whole page.
   function setActivePlayer(name) {
     for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
-    for (const el of document.querySelectorAll('.match-player-active')) el.classList.remove('match-player-active');
     if (!name) return;
     const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
     if (li) li.classList.add('player-active');
@@ -2159,8 +2273,6 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
       const nameEl = p.querySelector('.name');
       if (!nameEl || nameEl.textContent.trim() !== name) continue;
       p.classList.add('player-active');
-      const match = p.closest('.match');
-      if (match) match.classList.add('match-player-active');
     }
   }
 
@@ -2361,7 +2473,7 @@ ${extraHead}
 <h1>${escapeHtml(t.label)}</h1>
 <div class="tourney-meta">
   <span>${escapeHtml(formatDateHuman(t.date))}</span>
-  ${t.location ? `<span>${escapeHtml(t.location)}</span>` : ''}
+  ${t.locationDisplay.venue || t.locationDisplay.cityState ? `<span class="tourney-loc">${locationHtml(t.locationDisplay)}</span>` : ''}
   <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">View original on ${escapeHtml(t.source)} &#8599;</a>
 </div>
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>
@@ -2474,8 +2586,8 @@ function writePlayerPages(players, glicko, histories, rankingRows) {
 
     const goalsTile = `<div class="stat-tile">
   <div class="stat-multi">
-    <span><span class="stat-value">${stocksFor}</span><span class="stat-label">Goals For</span></span>
-    <span><span class="stat-value">${stocksAgainst}</span><span class="stat-label">Goals Against</span></span>
+    <span><span class="stat-value">${stocksFor}</span><span class="stat-label">Goals Scored</span></span>
+    <span><span class="stat-value">${stocksAgainst}</span><span class="stat-label">Goals Allowed</span></span>
     <span><span class="stat-value">${stockDiff > 0 ? '+' : ''}${stockDiff}</span><span class="stat-label">Goal Diff.</span></span>
   </div>
 </div>`;
@@ -2501,8 +2613,10 @@ ${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).t
 ${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
 </div>`;
 
-    const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) =>
-      `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name"><a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a></span><span class="standings-record">${escapeHtml(formatDateHuman(pl.date))}</span></li>`,
+    const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) => {
+      const histFlagImg = pl.flag ? `<img class="loc-flag" src="${escapeHtml(pl.flag.src)}" title="${escapeHtml(pl.flag.title)}" alt="${escapeHtml(pl.flag.title)}">` : '';
+      return `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name">${histFlagImg}<a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a></span><span class="standings-record">${escapeHtml(formatDateHuman(pl.date))}</span></li>`;
+    },
       'No tournaments on record.');
 
     const aliasCaption = aliases.length
@@ -2519,7 +2633,7 @@ ${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100)
 <title>${escapeHtml(name)} — DeathBall Power Rankings</title>
 <link rel="stylesheet" href="../index.css">
 </head>
-<body>
+<body class="${cardAccent(id, info.color)}">
 <h1>${escapeHtml(name)}</h1>
 ${metaLine}
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>
@@ -2534,12 +2648,12 @@ ${rankingTiles}
 
 <div class="player-columns">
   <div class="tourney-section player-col">
-    <h2>Recent Matches (${p.games})</h2>
+    <h2>Matches (${p.games})</h2>
     ${recentMatchesHtml}
   </div>
 
   <div class="tourney-section player-col">
-    <h2>Tournament History (${p.tournaments.size})</h2>
+    <h2>Tournaments (${p.tournaments.size})</h2>
     ${historyRows}
   </div>
 

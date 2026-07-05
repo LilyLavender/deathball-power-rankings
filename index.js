@@ -35,9 +35,38 @@
     });
   }
 
+  // Positions indicator (a .tab-underline or .view-toggle-indicator) to
+  // sit under/behind target within container, sized to match — called on
+  // init and again on every switch so it slides there via the element's
+  // own CSS transition instead of just appearing in the new spot.
+  function moveIndicator(indicator, container, target) {
+    if (!indicator || !container || !target) return;
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    indicator.style.left = (targetRect.left - containerRect.left) + 'px';
+    indicator.style.width = targetRect.width + 'px';
+  }
+
+  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings' };
+
+  // Cross-fades just the variable part of the page heading ("DeathBall" is
+  // static) to the tab's own heading instead of snapping straight to it.
+  function setHeaderForTab(tabId) {
+    const heading = document.getElementById('tab-heading');
+    const label = TAB_HEADERS[tabId] || TAB_HEADERS['rankings-tab'];
+    if (!heading || heading.textContent === label) return;
+    heading.classList.add('h1-swap');
+    setTimeout(() => {
+      heading.textContent = label;
+      heading.classList.remove('h1-swap');
+    }, 180);
+  }
+
   function enableTabs() {
     const buttons = [...document.querySelectorAll('.tab-button')];
     const panels = [...document.querySelectorAll('.tab-panel')];
+    const tabsEl = document.querySelector('.tabs');
+    const underline = document.querySelector('.tab-underline');
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -45,12 +74,15 @@
         btn.classList.add('active');
         const panel = document.getElementById(btn.dataset.tab);
         panel.classList.add('active');
+        moveIndicator(underline, tabsEl, btn);
+        setHeaderForTab(btn.dataset.tab);
         // Cards were sized while this panel was display:none (offsetWidth 0
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
         fitCardNames(panel);
       });
     });
+    moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
   }
 
   function populateStateFilter(panel) {
@@ -165,7 +197,11 @@
     const countEl = panel.querySelector('.filter-count');
     if (countEl) {
       const noun = isRankingsTab ? 'players ranked' : 'unique players';
-      countEl.textContent = visible + ' ' + noun + '. Click a column header to sort.';
+      // The sort hint only applies while the sortable table is actually the
+      // visible view — grid mode has no columns to click.
+      const table = panel.querySelector('table');
+      const tableVisible = !grid || !table || table.style.display !== 'none';
+      countEl.textContent = visible + ' ' + noun + (tableVisible ? '. Click a column header to sort.' : '.');
     }
   }
 
@@ -188,6 +224,8 @@
     if (!buttons.length) return;
     const grid = panel.querySelector('.pr-grid');
     const table = panel.querySelector('table');
+    const toggleEl = panel.querySelector('.view-toggle');
+    const indicator = panel.querySelector('.view-toggle-indicator');
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -195,9 +233,13 @@
         const view = btn.dataset.view;
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
-        if (view === 'grid') fitCardNames(panel);
+        moveIndicator(indicator, toggleEl, btn);
+        // Also refreshes the "Click a column header to sort." hint for the
+        // view just switched to.
+        applyFilters(panel);
       });
     });
+    moveIndicator(indicator, toggleEl, buttons.find((b) => b.classList.contains('active')));
   }
 
   function initPanel(panelId) {

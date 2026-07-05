@@ -4,12 +4,19 @@
 [hidden] { display: none !important; }
 body { font-family: 'Rajdhani', system-ui, sans-serif; margin: 0; padding: 1.5rem 2rem; background: #050505; color: #f0f0f0; font-size: 1rem; }
 h1 { font-family: 'Press Start 2P', monospace; font-size: 1.6rem; letter-spacing: 0.05em; margin: 0 0 1.5rem; color: #fff; }
+#tab-heading { display: inline-block; transition: opacity 180ms ease, transform 180ms ease; }
+#tab-heading.h1-swap { opacity: 0; transform: translateY(-6px); }
 a { color: #3eff8b; text-decoration: none; }
 a:hover { text-decoration: underline; }
-.tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #222; }
-.tab-button { background: none; border: none; border-bottom: 2px solid transparent; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.6rem 1.2rem; cursor: pointer; margin-bottom: -1px; transition: color 150ms ease, border-color 150ms ease; }
+.tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #222; position: relative; }
+.tab-button { background: none; border: none; border-bottom: 2px solid transparent; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.6rem 1.2rem; cursor: pointer; margin-bottom: -1px; transition: color 150ms ease; }
 .tab-button:hover { color: #bbb; }
-.tab-button.active { color: #3eff8b; border-bottom-color: #3eff8b; }
+.tab-button.active { color: #3eff8b; }
+/* Positioned/sized by JS (enableTabs) to sit under whichever tab is active,
+   sliding there via the left/width transition instead of the underline
+   just appearing under the newly-clicked tab and disappearing from the old
+   one. */
+.tab-underline { position: absolute; bottom: -1px; height: 2px; background: #3eff8b; transition: left 220ms ease, width 220ms ease; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 .tab-controls { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -19,9 +26,13 @@ a:hover { text-decoration: underline; }
 .tab-controls select:focus { outline: none; border-color: #3eff8b; }
 .filter-count, .ranking-count { color: #555; font-size: 0.9rem; font-weight: 500; }
 #count { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
-.view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; }
-.view-btn { background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: background 150ms, color 150ms; }
-.view-btn.active { background: #3eff8b; color: #000; }
+.view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; position: relative; }
+/* Same sliding-indicator treatment as .tab-underline above, but as a filled
+   pill behind the buttons rather than a line under them (positioned/sized
+   by JS in enableViewToggle). */
+.view-toggle-indicator { position: absolute; top: 2px; bottom: 2px; background: #3eff8b; border-radius: 2px; transition: left 200ms ease, width 200ms ease; }
+.view-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
+.view-btn.active { color: #000; }
 .view-btn:not(.active):hover { color: #bbb; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
@@ -39,6 +50,10 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .col-location { white-space: nowrap; }
 .loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 1px; }
+.loc-venue { color: #f0f0f0; font-weight: 700; }
+.loc-citystate { color: #888; }
+.loc-sep { color: #444; margin: 0 0.4em; }
+.tourney-loc { display: flex; align-items: center; }
 .uncertain { opacity: 0.45; }
 .filter-dim { opacity: 0.45; }
 .pr-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
@@ -126,7 +141,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .alias-list { color: #888; font-size: 0.9rem; }
 .player-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; }
-.stat-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
+.stat-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
 .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
 .stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .stat-sub { font-size: 1rem; font-weight: 700; color: #3eff8b; }
@@ -138,7 +153,7 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
 .player-col { flex: 1 1 300px; min-width: 0; }
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
-.h2h-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.h2h-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .h2h-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .h2h-value { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; font-weight: 700; }
 .h2h-count { font-family: 'Orbitron', monospace; font-size: 1.05rem; font-weight: 900; color: #f0f0f0; }
@@ -162,4 +177,23 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .hist-tourney-name a { color: #777; }
 .hist-tourney-name a:hover { color: #3eff8b; }
 .show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+/* Player pages carry a background glow matching their power-ranking card
+   color (see cardAccent), but the page's own accent TEXT is the opposite
+   color — a green-carded player gets a purple page accent and vice versa,
+   so text reads clearly against its own glow. Green is the site default
+   (matches the colors above already), so only card-green needs a text
+   override here — but it needs one for every green usage that can appear
+   on a player page. */
+body.card-green, body.card-purple { min-height: 100vh; }
+body.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(0, 70, 30) 0%, #050505 55%); }
+body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70) 0%, #050505 55%); }
+:where(body.card-green) a,
+body.card-green .tourney-section h2,
+body.card-green .stat-sub,
+body.card-green .hist-record,
+body.card-green .show-more-btn,
+body.card-green .standings-rank.result-win { color: #b04fff; }
+body.card-green .back-link:hover,
+body.card-green .match-tourney-name a:hover,
+body.card-green .hist-tourney-name a:hover { color: #b04fff; }
 .show-more-btn:hover { text-decoration: underline; }
