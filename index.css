@@ -21,9 +21,12 @@ a:hover { text-decoration: underline; }
 .tab-panel.active { display: block; }
 .tab-controls { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
 .tab-controls label { color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem; }
-.tab-controls select { background: #111; color: #f0f0f0; border: 1px solid #333; border-radius: 2px; padding: 0.3rem 0.6rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; transition: border-color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; }
-.tab-controls select:hover { border-color: #555; }
-.tab-controls select:focus { outline: none; border-color: #3eff8b; }
+/* appearance:none drops the native arrow entirely, so a chevron is drawn as
+   a background image instead (color-scheme:dark keeps the native option
+   popup itself dark too, since that part can't be styled directly). */
+.tab-controls select { background: #111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.65rem center; background-size: 0.6rem; color: #f0f0f0; border: 1px solid #333; border-radius: 3px; padding: 0.32rem 1.8rem 0.32rem 0.7rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; transition: border-color 150ms, background-color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; color-scheme: dark; }
+.tab-controls select:hover { border-color: #555; background-color: #161616; }
+.tab-controls select:focus { outline: none; border-color: #3eff8b; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233eff8b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 .filter-count, .ranking-count { color: #555; font-size: 0.9rem; font-weight: 500; }
 #count { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
 .view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; position: relative; }
@@ -118,7 +121,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .match-dq { color: #ff5e5e; font-size: 0.8rem; }
 .standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; }
 .standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; cursor: pointer; transition: background-color 150ms ease; }
-.standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; }
+.standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; flex-shrink: 0; }
 .standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 /* Synced with the bracket: hovering or clicking a player in either place
@@ -140,16 +143,30 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .crosstable td.cell-draw { color: #ccc; }
 h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .alias-list { color: #888; font-size: 0.9rem; }
-.player-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; }
-.stat-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
+/* 13-column grid so Record (3) + Goals (4) + the combined ranking card (6)
+   line up evenly across one row on wide screens. */
+.player-stats-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 0.75rem; }
+.stat-span-3 { grid-column: span 3; }
+.stat-span-4 { grid-column: span 4; }
+.stat-span-6 { grid-column: span 6; }
+@media (max-width: 700px) {
+  .player-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-span-3, .stat-span-4, .stat-span-6 { grid-column: span 2; }
+}
+.stat-tile { position: relative; background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 1rem 0.9rem; min-height: 5.5rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
 .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
 .stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .stat-sub { font-size: 1rem; font-weight: 700; color: #3eff8b; }
-.stat-multi { display: flex; gap: 1.25rem; }
+.stat-multi { display: flex; gap: 1.25rem; flex-wrap: wrap; row-gap: 0.4rem; }
 .stat-multi > span { display: flex; flex-direction: column; gap: 0.15rem; }
+/* Positioned out of flow so a qualification note doesn't add a line to the
+   stat-multi row it sits under — the tile's height (and every other item's
+   vertical centering within it) stays identical whether or not the note is
+   present, instead of the row growing/shifting when it appears. */
+.stat-note { position: absolute; left: 0.9rem; right: 0.9rem; bottom: 0.6rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: #3eff8b; }
 .rank-total { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666; }
 /* Fixed width so "1st"/"21st" etc. don't shift the record that follows it. */
-.rank-ordinal { display: inline-block; width: 3.2em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
+.rank-ordinal { display: inline-block; width: 2.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
 .player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
 .player-col { flex: 1 1 300px; min-width: 0; }
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
@@ -163,7 +180,7 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
    line or butt up against the W/L letter before it. Margin is asymmetric —
    more space separating it from the W/L letter, much less before the
    opponent name that follows (the li's flex gap already provides some). */
-.match-score-mini { display: inline-block; width: 3em; margin-left: 0.35rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 600; color: #888; }
+.match-score-mini { display: inline-block; width: 1.2em; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 600; color: #888; }
 .match-tourney-name { font-size: 0.85em; color: #999; }
 .match-tourney-name a { color: #999; }
 .match-tourney-name a:hover { color: #3eff8b; }
@@ -171,29 +188,17 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .standings-rank.result-loss { color: #ff5e5e; }
 /* Fixed width so "W" and "L" — different glyph widths in this font — don't
    shift the score/opponent columns that follow depending on which one shows. */
-.result-letter { display: inline-block; width: 0.85em; text-align: center; }
-.hist-record { display: inline-block; width: 2.6em; margin-left: -0.15rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.95rem; color: #3eff8b; }
+.result-letter { display: inline-block; width: 1.6em; text-align: center; }
+.hist-record { display: inline-block; width: 1.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.95rem; color: #3eff8b; }
 .hist-tourney-name { font-size: 0.85em; }
 .hist-tourney-name a { color: #777; }
 .hist-tourney-name a:hover { color: #3eff8b; }
 .show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
 /* Player pages carry a background glow matching their power-ranking card
-   color (see cardAccent), but the page's own accent TEXT is the opposite
-   color — a green-carded player gets a purple page accent and vice versa,
-   so text reads clearly against its own glow. Green is the site default
-   (matches the colors above already), so only card-green needs a text
-   override here — but it needs one for every green usage that can appear
-   on a player page. */
+   color (see cardAccent) — card-green vs card-purple varies the glow for
+   visual variety, but page text always stays the site's green accent
+   regardless of which glow is showing. */
 body.card-green, body.card-purple { min-height: 100vh; }
 body.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(0, 70, 30) 0%, #050505 55%); }
 body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70) 0%, #050505 55%); }
-:where(body.card-green) a,
-body.card-green .tourney-section h2,
-body.card-green .stat-sub,
-body.card-green .hist-record,
-body.card-green .show-more-btn,
-body.card-green .standings-rank.result-win { color: #b04fff; }
-body.card-green .back-link:hover,
-body.card-green .match-tourney-name a:hover,
-body.card-green .hist-tourney-name a:hover { color: #b04fff; }
 .show-more-btn:hover { text-decoration: underline; }

@@ -948,7 +948,12 @@ function loadManualMatches(knownUrls) {
 // while keeping each player's own historical prior (originalPreStates) as the
 // starting point for their update. This corrects new-player bias within an
 // event without using any information from future tournaments.
-function processChronologically(allTournaments, players, glicko) {
+// preTournamentRatings, if passed, is filled with Map<tournamentUrl,
+// Map<playerId, glickoState>> — each player's rating as they entered that
+// tournament, before any of its matches were applied. Used to answer
+// "what was this opponent rated at the time of the match" (e.g. a
+// player's best win) without conflating it with their current rating.
+function processChronologically(allTournaments, players, glicko, preTournamentRatings) {
   for (const tournament of allTournaments) {
     // Compute pre-tournament states with lazy decay — fixed across all passes.
     const originalPreStates = new Map();
@@ -964,6 +969,7 @@ function processChronologically(allTournaments, players, glicko) {
         originalPreStates.set(identity.id, glicko2.decayRd(current, months, GLICKO_RD_DECAY_PER_MONTH, GLICKO_DEFAULT_RD));
       }
     }
+    if (preTournamentRatings) preTournamentRatings.set(tournament.url, new Map(originalPreStates));
 
     // Opponent estimates start at originalPreStates and improve each pass.
     let currentStates = new Map(originalPreStates);
@@ -1048,7 +1054,7 @@ function assignPlayerSlugs(players) {
 //                 date, tournamentUrl, tournamentSlug, tournamentLabel }
 //   placements: one entry per tournament entered, newest last —
 //               { url, slug, label, date, rank, totalEntrants, wins, losses }
-function buildPlayerHistories(allTournaments) {
+function buildPlayerHistories(allTournaments, preTournamentRatings) {
   const histories = new Map();
   const ensure = (id) => {
     if (!histories.has(id)) histories.set(id, { matches: [], placements: [] });
@@ -1105,8 +1111,11 @@ function buildPlayerHistories(allTournaments) {
       // date alone ties every match in the same tournament together, so this
       // is needed as a same-day tiebreaker for "most recent match" ordering.
       const shared = { date: t.date, order: m.order != null ? m.order : 0, tournamentUrl: t.url, tournamentSlug: t.slug, tournamentLabel: t.label, isDQ: m.isDQ };
-      ensure(winner.id).matches.push({ ...shared, opponentId: loser.id, opponentName: loser.name, won: true, stocksFor: winnerGoals, stocksAgainst: loserGoals, scoreFor: winnerSets, scoreAgainst: loserSets });
-      ensure(loser.id).matches.push({ ...shared, opponentId: winner.id, opponentName: winner.name, won: false, stocksFor: loserGoals, stocksAgainst: winnerGoals, scoreFor: loserSets, scoreAgainst: winnerSets });
+      const ratingsForT = preTournamentRatings ? preTournamentRatings.get(t.url) : null;
+      const winnerOppRating = ratingsForT ? ratingsForT.get(loser.id)?.r : null;
+      const loserOppRating = ratingsForT ? ratingsForT.get(winner.id)?.r : null;
+      ensure(winner.id).matches.push({ ...shared, opponentId: loser.id, opponentName: loser.name, won: true, stocksFor: winnerGoals, stocksAgainst: loserGoals, scoreFor: winnerSets, scoreAgainst: loserSets, opponentRatingAtMatch: winnerOppRating ?? null });
+      ensure(loser.id).matches.push({ ...shared, opponentId: winner.id, opponentName: winner.name, won: false, stocksFor: loserGoals, stocksAgainst: winnerGoals, scoreFor: loserSets, scoreAgainst: winnerSets, opponentRatingAtMatch: loserOppRating ?? null });
     }
   }
 
@@ -1131,12 +1140,18 @@ function buildHeadToHead(matches) {
   const maxBy = (arr, key) => arr.reduce((best, o) => (!best || o[key] > best[key] ? o : best), null);
   const minBy = (arr, key) => arr.reduce((best, o) => (!best || o[key] < best[key] ? o : best), null);
 
+  // Closest to an even 50/50 record (min. 3 matches, ties broken by whichever
+  // rivalry has the larger sample size) — the "well-matched" opponent, as
+  // opposed to bestWinRate/worstWinRate which single out the lopsided ends.
+  const rival = [...eligible].sort((a, b) => Math.abs(a.winPct - 0.5) - Math.abs(b.winPct - 0.5) || b.total - a.total)[0] || null;
+
   return {
     mostPlayed: maxBy(opponents, 'total'),
     mostWinsAgainst: maxBy(opponents.filter((o) => o.wins > 0), 'wins'),
     mostLossesAgainst: maxBy(opponents.filter((o) => o.losses > 0), 'losses'),
     bestWinRate: maxBy(eligible, 'winPct'),
     worstWinRate: minBy(eligible, 'winPct'),
+    rival,
   };
 }
 
@@ -1266,9 +1281,12 @@ a:hover { text-decoration: underline; }
 .tab-panel.active { display: block; }
 .tab-controls { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
 .tab-controls label { color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem; }
-.tab-controls select { background: #111; color: #f0f0f0; border: 1px solid #333; border-radius: 2px; padding: 0.3rem 0.6rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; transition: border-color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; }
-.tab-controls select:hover { border-color: #555; }
-.tab-controls select:focus { outline: none; border-color: #3eff8b; }
+/* appearance:none drops the native arrow entirely, so a chevron is drawn as
+   a background image instead (color-scheme:dark keeps the native option
+   popup itself dark too, since that part can't be styled directly). */
+.tab-controls select { background: #111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.65rem center; background-size: 0.6rem; color: #f0f0f0; border: 1px solid #333; border-radius: 3px; padding: 0.32rem 1.8rem 0.32rem 0.7rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; transition: border-color 150ms, background-color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; color-scheme: dark; }
+.tab-controls select:hover { border-color: #555; background-color: #161616; }
+.tab-controls select:focus { outline: none; border-color: #3eff8b; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233eff8b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 .filter-count, .ranking-count { color: #555; font-size: 0.9rem; font-weight: 500; }
 #count { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
 .view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; position: relative; }
@@ -1363,7 +1381,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .match-dq { color: #ff5e5e; font-size: 0.8rem; }
 .standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; }
 .standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; cursor: pointer; transition: background-color 150ms ease; }
-.standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; }
+.standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; flex-shrink: 0; }
 .standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 /* Synced with the bracket: hovering or clicking a player in either place
@@ -1385,16 +1403,30 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .crosstable td.cell-draw { color: #ccc; }
 h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .alias-list { color: #888; font-size: 0.9rem; }
-.player-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; }
-.stat-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
+/* 13-column grid so Record (3) + Goals (4) + the combined ranking card (6)
+   line up evenly across one row on wide screens. */
+.player-stats-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 0.75rem; }
+.stat-span-3 { grid-column: span 3; }
+.stat-span-4 { grid-column: span 4; }
+.stat-span-6 { grid-column: span 6; }
+@media (max-width: 700px) {
+  .player-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-span-3, .stat-span-4, .stat-span-6 { grid-column: span 2; }
+}
+.stat-tile { position: relative; background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 1rem 0.9rem; min-height: 5.5rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
 .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
 .stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .stat-sub { font-size: 1rem; font-weight: 700; color: #3eff8b; }
-.stat-multi { display: flex; gap: 1.25rem; }
+.stat-multi { display: flex; gap: 1.25rem; flex-wrap: wrap; row-gap: 0.4rem; }
 .stat-multi > span { display: flex; flex-direction: column; gap: 0.15rem; }
+/* Positioned out of flow so a qualification note doesn't add a line to the
+   stat-multi row it sits under — the tile's height (and every other item's
+   vertical centering within it) stays identical whether or not the note is
+   present, instead of the row growing/shifting when it appears. */
+.stat-note { position: absolute; left: 0.9rem; right: 0.9rem; bottom: 0.6rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: #3eff8b; }
 .rank-total { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666; }
 /* Fixed width so "1st"/"21st" etc. don't shift the record that follows it. */
-.rank-ordinal { display: inline-block; width: 3.2em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
+.rank-ordinal { display: inline-block; width: 2.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
 .player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
 .player-col { flex: 1 1 300px; min-width: 0; }
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
@@ -1408,7 +1440,7 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
    line or butt up against the W/L letter before it. Margin is asymmetric —
    more space separating it from the W/L letter, much less before the
    opponent name that follows (the li's flex gap already provides some). */
-.match-score-mini { display: inline-block; width: 3em; margin-left: 0.35rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 600; color: #888; }
+.match-score-mini { display: inline-block; width: 1.2em; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 600; color: #888; }
 .match-tourney-name { font-size: 0.85em; color: #999; }
 .match-tourney-name a { color: #999; }
 .match-tourney-name a:hover { color: #3eff8b; }
@@ -1416,31 +1448,19 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .standings-rank.result-loss { color: #ff5e5e; }
 /* Fixed width so "W" and "L" — different glyph widths in this font — don't
    shift the score/opponent columns that follow depending on which one shows. */
-.result-letter { display: inline-block; width: 0.85em; text-align: center; }
-.hist-record { display: inline-block; width: 2.6em; margin-left: -0.15rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.95rem; color: #3eff8b; }
+.result-letter { display: inline-block; width: 1.6em; text-align: center; }
+.hist-record { display: inline-block; width: 1.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.95rem; color: #3eff8b; }
 .hist-tourney-name { font-size: 0.85em; }
 .hist-tourney-name a { color: #777; }
 .hist-tourney-name a:hover { color: #3eff8b; }
 .show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
 /* Player pages carry a background glow matching their power-ranking card
-   color (see cardAccent), but the page's own accent TEXT is the opposite
-   color — a green-carded player gets a purple page accent and vice versa,
-   so text reads clearly against its own glow. Green is the site default
-   (matches the colors above already), so only card-green needs a text
-   override here — but it needs one for every green usage that can appear
-   on a player page. */
+   color (see cardAccent) — card-green vs card-purple varies the glow for
+   visual variety, but page text always stays the site's green accent
+   regardless of which glow is showing. */
 body.card-green, body.card-purple { min-height: 100vh; }
 body.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(0, 70, 30) 0%, #050505 55%); }
 body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70) 0%, #050505 55%); }
-:where(body.card-green) a,
-body.card-green .tourney-section h2,
-body.card-green .stat-sub,
-body.card-green .hist-record,
-body.card-green .show-more-btn,
-body.card-green .standings-rank.result-win { color: #b04fff; }
-body.card-green .back-link:hover,
-body.card-green .match-tourney-name a:hover,
-body.card-green .hist-tourney-name a:hover { color: #b04fff; }
 .show-more-btn:hover { text-decoration: underline; }
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
@@ -2575,16 +2595,47 @@ function writePlayerPages(players, glicko, histories, rankingRows) {
     const rankingRow = rankIdx >= 0 ? rankingRows[rankIdx] : null;
     const officialIdx = officialRows.findIndex((r) => r.id === id);
 
+    // Signature win: the highest-rated opponent (rating as they entered that
+    // tournament, not their current rating) this player has beaten. Also
+    // surfaces the opponent's current overall rank and how many spots that
+    // is above/below this player's own rank, for context on how big a scalp
+    // it still is today.
+    const bestWinMatch = hist.matches
+      .filter((m) => m.won && !m.isDQ && m.opponentRatingAtMatch != null)
+      .reduce((best, m) => (!best || m.opponentRatingAtMatch > best.opponentRatingAtMatch ? m : best), null);
+    let bestWin = null;
+    if (bestWinMatch) {
+      const oppRankIdx = rankingRows.findIndex((r) => r.id === bestWinMatch.opponentId);
+      bestWin = {
+        opponentId: bestWinMatch.opponentId,
+        opponentName: bestWinMatch.opponentName,
+        rating: bestWinMatch.opponentRatingAtMatch,
+        oppRank: oppRankIdx >= 0 ? oppRankIdx + 1 : null,
+        spots: (oppRankIdx >= 0 && rankIdx >= 0) ? (rankIdx - oppRankIdx) : null,
+      };
+    }
+
     const winPct = p.games > 0 ? p.wins / p.games : 0;
     const stockDiff = stocksFor - stocksAgainst;
 
     const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
 
-    const statTiles = [
-      { label: 'Record', value: `${p.wins}-${p.losses} (${(winPct * 100).toFixed(1)}%)` },
-    ].map((s) => `<div class="stat-tile"><span class="stat-value">${escapeHtml(String(s.value))}</span><span class="stat-label">${escapeHtml(s.label)}</span></div>`).join('\n');
+    // Years the player has tournament placements in, collapsed to a single
+    // year ("2021") or a range ("2021-2024") for a compact tenure callout
+    // shown in the subtitle rather than a stat tile.
+    const activeYears = [...new Set(hist.placements.map((pl) => (pl.date || '').slice(0, 4)).filter(Boolean))].sort();
+    const activeRange = activeYears.length
+      ? (activeYears[0] === activeYears[activeYears.length - 1] ? activeYears[0] : `${activeYears[0]}-${activeYears[activeYears.length - 1]}`)
+      : '';
 
-    const goalsTile = `<div class="stat-tile">
+    const statTiles = `<div class="stat-tile stat-span-3">
+  <div class="stat-multi">
+    <span><span class="stat-value">${p.wins}-${p.losses} (${(winPct * 100).toFixed(1)}%)</span><span class="stat-label">Record</span></span>
+    <span><span class="stat-value">${p.games}</span><span class="stat-label">Games Played</span></span>
+  </div>
+</div>`;
+
+    const goalsTile = `<div class="stat-tile stat-span-4">
   <div class="stat-multi">
     <span><span class="stat-value">${stocksFor}</span><span class="stat-label">Goals Scored</span></span>
     <span><span class="stat-value">${stocksAgainst}</span><span class="stat-label">Goals Allowed</span></span>
@@ -2592,10 +2643,32 @@ function writePlayerPages(players, glicko, histories, rankingRows) {
   </div>
 </div>`;
 
-    const rankingTiles = [
-      { label: 'Overall Ranking', value: rankingRow ? `#${rankIdx + 1}` : 'Unranked', sub: rankingRow ? `${Math.round(rankingRow.r)} ±${Math.round(rankingRow.rd)}` : '' },
-      { label: 'Power Ranking', value: officialIdx >= 0 ? `#${officialIdx + 1}` : 'Not Qualified', sub: officialIdx >= 0 ? `${Math.round(officialRows[officialIdx].r)} ±${Math.round(officialRows[officialIdx].rd)}` : 'Needs 5+ games, RD ≤ 150' },
-    ].map((s) => `<div class="stat-tile"><span class="stat-value">${escapeHtml(s.value)}</span><span class="stat-label">${escapeHtml(s.label)}</span>${s.sub ? `<span class="stat-sub">${escapeHtml(s.sub)}</span>` : ''}</div>`).join('\n');
+    // One combined card (Power Ranking, Overall Ranking, Glicko-2 Rating, RD)
+    // instead of two separate tiles — same underlying rankingRow/officialIdx
+    // data as before, just laid out left-to-right as one stat-multi row.
+    // When not qualified, name the specific blocker(s) instead of a blanket
+    // "needs 5+ games, RD <= 150" — a player short on RD only shouldn't be
+    // told they also need more games when they don't.
+    const qualBlockers = [];
+    if (officialIdx < 0) {
+      if (p.games < 5) qualBlockers.push('5+ games');
+      if ((rankingRow ? rankingRow.rd : GLICKO_DEFAULT_RD) > 150) qualBlockers.push('RD ≤ 150');
+    }
+    const qualNote = qualBlockers.length ? `Needs ${qualBlockers.join(', ')}` : '';
+
+    // The note is absolutely positioned (see .stat-note) so it never adds a
+    // line to the stat-multi row or changes the tile's height — a
+    // Not-Qualified card renders pixel-identical to a qualified one, just
+    // with a note overlaid near the bottom.
+    const rankingTiles = `<div class="stat-tile stat-span-6">
+  <div class="stat-multi">
+    <span><span class="stat-value">${officialIdx >= 0 ? `#${officialIdx + 1}` : 'Not Qualified'}</span><span class="stat-label">Power Ranking</span></span>
+    <span><span class="stat-value">${rankingRow ? `#${rankIdx + 1}` : 'Unranked'}</span><span class="stat-label">Overall Ranking</span></span>
+    <span><span class="stat-value">${rankingRow ? Math.round(rankingRow.r) : '—'}</span><span class="stat-label">Glicko-2 Rating</span></span>
+    <span><span class="stat-value">${rankingRow ? `±${Math.round(rankingRow.rd)}` : '—'}</span><span class="stat-label">RD</span></span>
+  </div>
+  ${qualNote ? `<div class="stat-note">${escapeHtml(qualNote)}</div>` : ''}
+</div>`;
 
     const recentMatchesHtml = paginatedListHtml(matchesDesc, 'recent-matches-list', (m, hidden) =>
       `      <li${hidden ? ' hidden' : ''}><span class="standings-rank ${m.won ? 'result-win' : 'result-loss'}"><span class="result-letter">${m.won ? 'W' : 'L'}</span> <span class="match-score-mini">${m.isDQ ? 'DQ' : `${m.scoreFor}-${m.scoreAgainst}`}</span></span><span>vs ${opponentLinkHtml(m.opponentId, m.opponentName)} <span class="match-tourney-name">(<a href="../tournaments/${escapeHtml(m.tournamentSlug)}.html">${escapeHtml(m.tournamentLabel)}</a>)</span></span><span class="standings-record">${escapeHtml(formatDateHuman(m.date))}</span></li>`,
@@ -2605,12 +2678,19 @@ function writePlayerPages(players, glicko, histories, rankingRows) {
       if (!entry) return `<div class="h2h-tile"><span class="h2h-label">${escapeHtml(label)}</span><span class="h2h-value">&mdash;</span></div>`;
       return `<div class="h2h-tile"><span class="h2h-label">${escapeHtml(label)}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
     };
+    const bestWinMetric = (e) => {
+      const rankLabel = e.oppRank != null ? `#${e.oppRank}` : 'Unranked';
+      const spotsLabel = e.spots != null ? (e.spots > 0 ? `+${e.spots}` : `${e.spots}`) : '';
+      return `${rankLabel}${spotsLabel ? ` <span class="h2h-record-dim">(${spotsLabel})</span>` : ''}`;
+    };
     const h2hSection = `<div class="h2h-grid">
-${h2hRow('Most Played', h2h.mostPlayed, (e) => `&times;${e.total}`)}
-${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`)}
-${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`)}
 ${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
 ${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
+${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`)}
+${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`)}
+${h2hRow('Most Played', h2h.mostPlayed, (e) => `&times;${e.total}`)}
+${h2hRow('Rival (Min. 3)', h2h.rival, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
+${h2hRow('Best Win', bestWin, bestWinMetric)}
 </div>`;
 
     const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) => {
@@ -2622,8 +2702,9 @@ ${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100)
     const aliasCaption = aliases.length
       ? `<span class="alias-list">Also known as: ${aliases.map(escapeHtml).join(', ')}</span>`
       : '';
-    const metaLine = location || aliasCaption
-      ? `<div class="tourney-meta">${location ? `<span>${flagImg}${escapeHtml(location)}</span>` : ''}${aliasCaption}</div>`
+    const activeCaption = activeRange ? `<span class="alias-list">Active ${escapeHtml(activeRange)}</span>` : '';
+    const metaLine = location || activeCaption || aliasCaption
+      ? `<div class="tourney-meta">${location ? `<span>${flagImg}${escapeHtml(location)}</span>` : ''}${activeCaption}${aliasCaption}</div>`
       : '';
 
     const html = `<!DOCTYPE html>
@@ -2752,7 +2833,8 @@ async function main() {
 
   const players = new Map();
   const glicko = new Map();
-  processChronologically(allTournaments, players, glicko);
+  const preTournamentRatings = new Map();
+  processChronologically(allTournaments, players, glicko, preTournamentRatings);
 
   const tournamentMetaByUrl = new Map(allTournaments.map((t) => [t.url, { location: t.location, slug: t.slug }]));
   const playerRows = buildPlayerRows(players, tournamentMetaByUrl);
@@ -2761,7 +2843,7 @@ async function main() {
   // Must run before writeHtml/writeTournamentPages/writePlayerPages — they
   // all link player names via playerHref(), which reads this.
   assignPlayerSlugs(players);
-  const histories = buildPlayerHistories(allTournaments);
+  const histories = buildPlayerHistories(allTournaments, preTournamentRatings);
 
   writeCsv(playerRows);
   writeCss();
