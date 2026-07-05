@@ -171,7 +171,19 @@ function cardAccent(id, colorOverride) {
 function resolveDisplayName(rawName, tournamentUrl) {
   const identity = resolveIdentity(rawName, tournamentUrl);
   const info = lookupPlayerInfo(identity.id, identity.name);
-  return { name: identity.name, flag: flagForInfo(info) };
+  return { id: identity.id, name: identity.name, flag: flagForInfo(info) };
+}
+
+// Maps identity id -> filename slug (players/<slug>.html), assigned once all
+// players are known (see main()). Read by nameHtml/writeHtml/writeTournamentPages
+// to link a player's name to their page; empty until assignPlayerSlugs runs.
+let playerSlugById = new Map();
+
+// prefix is '' when linking from a root-level page (index.html) or '../' when
+// linking from one level deep (tournaments/*.html, players/*.html).
+function playerHref(id, prefix) {
+  const slug = playerSlugById.get(id);
+  return slug ? `${prefix}players/${slug}.html` : null;
 }
 
 // Stats-only pass (no Glicko) — used by add_tournaments.js to build a
@@ -195,6 +207,13 @@ function getPlayer(map, identity) {
       wins: 0, losses: 0, games: 0,
       tournaments: new Map(),
       nameCounts: new Map(),
+      // Raw in-tournament spellings actually typed, keyed before alias/split
+      // resolution — nameCounts (below) only ever holds the *resolved*
+      // canonical name, so a player with an explicit alias merge (e.g.
+      // "somewes" aliasing "wes"/"Westley"/"Wizley"/...) would otherwise
+      // never have their real alternate spellings recorded anywhere; every
+      // raw variant collapses to the same nameCounts key before it's counted.
+      rawNames: new Map(),
     });
   }
   const player = map.get(key);
@@ -206,11 +225,29 @@ function displayName(player) {
   return [...player.nameCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
+// Every distinct raw spelling a player has been seen under, most-used first
+// — excludes anything that's just a case variant of their display name.
+function aliasesUsed(player) {
+  const nameLower = displayName(player).toLowerCase();
+  const byLower = new Map();
+  for (const [raw, count] of player.rawNames.entries()) {
+    const lower = raw.toLowerCase();
+    if (lower === nameLower) continue;
+    const existing = byLower.get(lower);
+    if (!existing || count > existing.count) byLower.set(lower, { raw, count });
+  }
+  return [...byLower.values()].sort((a, b) => b.count - a.count || a.raw.localeCompare(b.raw)).map((e) => e.raw);
+}
+
 function recordMatch(map, winnerRawName, loserRawName, tournamentUrl, tournamentLabel) {
   if (hiddenNames.has(normName(winnerRawName).toLowerCase()) || hiddenNames.has(normName(loserRawName).toLowerCase())) return;
   const winner = getPlayer(map, resolveIdentity(winnerRawName, tournamentUrl));
   const loser = getPlayer(map, resolveIdentity(loserRawName, tournamentUrl));
   if (!winner || !loser) return;
+  const winnerRaw = normName(winnerRawName);
+  const loserRaw = normName(loserRawName);
+  winner.rawNames.set(winnerRaw, (winner.rawNames.get(winnerRaw) || 0) + 1);
+  loser.rawNames.set(loserRaw, (loser.rawNames.get(loserRaw) || 0) + 1);
   winner.wins += 1;
   winner.games += 1;
   winner.tournaments.set(tournamentUrl, tournamentLabel);
@@ -455,8 +492,19 @@ function collectStartgg() {
   return result;
 }
 
+// Windows reserves these device names for any file whose base name matches,
+// regardless of extension (CON.html still resolves to the console device for
+// native Win32 APIs like git.exe) — Node's fs can create such a file via its
+// own path handling, but git and other Win32 tools then fail to open it.
+const WINDOWS_RESERVED_NAMES = new Set([
+  'con', 'prn', 'aux', 'nul',
+  'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9',
+  'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9',
+]);
+
 function slugify(s) {
-  return (s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const slug = (s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return WINDOWS_RESERVED_NAMES.has(slug) ? `${slug}-player` : slug;
 }
 
 // Assigns a unique, filesystem-safe slug to each tournament (name + date),
@@ -938,6 +986,125 @@ function processChronologically(allTournaments, players, glicko) {
   }
 }
 
+// Assigns a unique, filesystem-safe slug (players/<slug>.html) to every known
+// player id, keyed off their display name — mirrors assignSlugs() for
+// tournaments. Must run before nameHtml()/writeHtml()/writeTournamentPages()
+// are called, since they all read playerSlugById via playerHref().
+function assignPlayerSlugs(players) {
+  const used = new Set();
+  for (const [id, p] of players.entries()) {
+    const base = slugify(displayName(p)) || 'player';
+    let slug = base;
+    let n = 1;
+    while (used.has(slug)) slug = `${base}-${++n}`;
+    used.add(slug);
+    playerSlugById.set(id, slug);
+  }
+}
+
+// Per-player match log + tournament placement history, built from the fully
+// resolved/merged/filtered tournament set (post manual-match merge, post
+// hidden-name filtering). Powers the player pages: recent form, head-to-head
+// records, goal(stock) differential, and full tournament history.
+//
+// Returns Map<id, { matches: [...], placements: [...] }> where:
+//   matches:    one entry per match this player was in, newest last —
+//               { opponentId, opponentName, won, isDQ, stocksFor, stocksAgainst,
+//                 date, tournamentUrl, tournamentSlug, tournamentLabel }
+//   placements: one entry per tournament entered, newest last —
+//               { url, slug, label, date, rank, totalEntrants, wins, losses }
+function buildPlayerHistories(allTournaments) {
+  const histories = new Map();
+  const ensure = (id) => {
+    if (!histories.has(id)) histories.set(id, { matches: [], placements: [] });
+    return histories.get(id);
+  };
+
+  for (const t of allTournaments) {
+    const standings = buildStandings(t);
+
+    const idByCanonName = new Map();
+    for (const p of t.participantList) {
+      if (!p.name) continue;
+      const identity = resolveIdentity(p.name, t.url);
+      idByCanonName.set(identity.name, identity.id);
+    }
+    for (const m of t.matches) {
+      for (const raw of [m.winnerName, m.loserName]) {
+        if (!raw) continue;
+        const identity = resolveIdentity(raw, t.url);
+        if (!idByCanonName.has(identity.name)) idByCanonName.set(identity.name, identity.id);
+      }
+    }
+
+    for (const s of standings) {
+      const id = idByCanonName.get(s.name);
+      if (!id) continue;
+      ensure(id).placements.push({
+        url: t.url, slug: t.slug, label: t.label, date: t.date,
+        rank: s.rank, totalEntrants: standings.length, wins: s.wins, losses: s.losses,
+      });
+    }
+
+    for (const m of t.matches) {
+      if (!m.winnerName || !m.loserName) continue;
+      const winner = resolveIdentity(m.winnerName, t.url);
+      const loser = resolveIdentity(m.loserName, t.url);
+      if (!winner.id || !loser.id) continue;
+      // A manual match with real per-game goal scores (m.games) overrides the
+      // games-won tally (winnerSets/loserSets) for goal totals — winnerSets/
+      // loserSets is just a 2-1-style set score, not actual goals scored, so
+      // it undercounts whenever the real per-game numbers are on file.
+      let winnerGoals;
+      let loserGoals;
+      if (m.games && m.games.length) {
+        winnerGoals = m.games.reduce((sum, g) => sum + g.winnerGoals, 0);
+        loserGoals = m.games.reduce((sum, g) => sum + g.loserGoals, 0);
+      } else {
+        winnerGoals = m.winnerSets != null ? m.winnerSets : 1;
+        loserGoals = m.loserSets != null ? m.loserSets : 0;
+      }
+      const winnerSets = m.winnerSets != null ? m.winnerSets : 1;
+      const loserSets = m.loserSets != null ? m.loserSets : 0;
+      // order carries the source platform's play-order/id for this match —
+      // date alone ties every match in the same tournament together, so this
+      // is needed as a same-day tiebreaker for "most recent match" ordering.
+      const shared = { date: t.date, order: m.order != null ? m.order : 0, tournamentUrl: t.url, tournamentSlug: t.slug, tournamentLabel: t.label, isDQ: m.isDQ };
+      ensure(winner.id).matches.push({ ...shared, opponentId: loser.id, opponentName: loser.name, won: true, stocksFor: winnerGoals, stocksAgainst: loserGoals, scoreFor: winnerSets, scoreAgainst: loserSets });
+      ensure(loser.id).matches.push({ ...shared, opponentId: winner.id, opponentName: winner.name, won: false, stocksFor: loserGoals, stocksAgainst: winnerGoals, scoreFor: loserSets, scoreAgainst: winnerSets });
+    }
+  }
+
+  return histories;
+}
+
+// Head-to-head breakdown from a player's match log: opponent totals plus the
+// most-played/most-wins/most-losses/best-and-worst-win-rate opponents
+// (min. 3 matches played for the win-rate picks, to avoid a 1-0 record
+// reading as a "100% win rate" callout).
+function buildHeadToHead(matches) {
+  const byOpponent = new Map();
+  for (const m of matches) {
+    if (!byOpponent.has(m.opponentId)) byOpponent.set(m.opponentId, { opponentId: m.opponentId, opponentName: m.opponentName, wins: 0, losses: 0 });
+    const o = byOpponent.get(m.opponentId);
+    o.opponentName = m.opponentName; // keep the most-recently-seen spelling
+    if (m.won) o.wins++; else o.losses++;
+  }
+  const opponents = [...byOpponent.values()].map((o) => ({ ...o, total: o.wins + o.losses, winPct: o.wins / (o.wins + o.losses) }));
+  const eligible = opponents.filter((o) => o.total >= 3);
+
+  const maxBy = (arr, key) => arr.reduce((best, o) => (!best || o[key] > best[key] ? o : best), null);
+  const minBy = (arr, key) => arr.reduce((best, o) => (!best || o[key] < best[key] ? o : best), null);
+
+  return {
+    mostPlayed: maxBy(opponents, 'total'),
+    mostWinsAgainst: maxBy(opponents.filter((o) => o.wins > 0), 'wins'),
+    mostLossesAgainst: maxBy(opponents.filter((o) => o.losses > 0), 'losses'),
+    bestWinRate: maxBy(eligible, 'winPct'),
+    worstWinRate: minBy(eligible, 'winPct'),
+  };
+}
+
 // --- Output builders ---
 
 function buildPlayerRows(players, tournamentMetaByUrl) {
@@ -946,6 +1113,7 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
       const name = displayName(p);
       const info = lookupPlayerInfo(id, name);
       return {
+        id,
         name,
         wins: p.wins,
         losses: p.losses,
@@ -1066,6 +1234,7 @@ a:hover { text-decoration: underline; }
 .view-btn.active { background: #3eff8b; color: #000; }
 .view-btn:not(.active):hover { color: #bbb; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
+#rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
 th { cursor: pointer; user-select: none; position: sticky; top: 0; background: #111; color: #666; font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid #222; }
 th:hover { background: #181818; color: #f0f0f0; }
@@ -1083,7 +1252,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .uncertain { opacity: 0.45; }
 .filter-dim { opacity: 0.45; }
 .pr-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
-.pr-card { background: #0f0f0f; border: 1px solid #222; border-radius: 0; padding: 3px 6px; display: flex; flex-direction: column; gap: 2px; min-width: 0; transition: border-color 150ms, background 150ms; }
+.pr-card { background: #0f0f0f; border: 1px solid #222; border-radius: 0; padding: 3px 6px; display: flex; flex-direction: column; gap: 2px; min-width: 0; transition: border-color 150ms, background 150ms; user-select: none; }
 .pr-card.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.22) 0%, #0f0f0f 65%); }
 .pr-card.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%); }
 .pr-card.card-green:hover { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.38) 0%, #181818 65%); border-color: rgba(62,255,139,0.65); }
@@ -1097,8 +1266,19 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .prc-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; }
 .prc-top-left { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1; overflow: hidden; }
 .prc-rank { font-family: 'Orbitron', monospace; font-size: 1.2rem; color: #888; font-weight: 900; flex-shrink: 0; line-height: 1; }
-.prc-name { font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; line-height: 18px; font-weight: 700; color: #f0f0f0; overflow: hidden; text-overflow: clip; white-space: nowrap; min-width: 0; position: relative; top: 1px; }
-.prc-flag { height: 1.15em; border-radius: 2px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+/* flex: 1 1 0 (not the default 0 1 auto) so this box's width comes purely
+   from available flex-row space, not from its own text's content width —
+   otherwise shrinking the font also shrinks the box being measured against,
+   and fitText() in index.js can converge on a false "it fits" reading before
+   the text actually does. */
+.prc-name { flex: 1 1 0; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; line-height: 18px; font-weight: 700; color: #f0f0f0; overflow: hidden; text-overflow: clip; white-space: nowrap; min-width: 0; position: relative; top: 1px; }
+/* width is fixed (not auto) so this box's footprint is known before the
+   (external, async-loaded) flag image itself has actually loaded — otherwise
+   the row lays out too wide the first time fitCardNames() runs (on load,
+   pre-image-load), then reflows narrower once the image arrives with no
+   further re-fit, leaving names under-shrunk until something else (e.g. the
+   grid/table view toggle) happens to re-trigger fitCardNames(). */
+.prc-flag { height: 1.15em; width: 1.5em; object-fit: contain; border-radius: 2px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
 .prc-stats { display: flex; align-items: baseline; gap: 2px; }
 .prc-loc-abbr { font-family: 'Rajdhani', sans-serif; font-size: 0.78rem; font-weight: 700; color: #777; letter-spacing: 0.04em; margin-left: auto; padding-left: 4px; flex-shrink: 0; }
 .prc-val { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; color: #aaa; }
@@ -1153,6 +1333,46 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .crosstable td.cell-win { color: #3eff8b; font-weight: 700; }
 .crosstable td.cell-loss { color: #ff5e5e; }
 .crosstable td.cell-draw { color: #ccc; }
+h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
+.alias-list { color: #888; font-size: 0.9rem; }
+.player-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; }
+.stat-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
+.stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
+.stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
+.stat-sub { font-size: 1rem; font-weight: 700; color: #3eff8b; }
+.stat-multi { display: flex; gap: 1.25rem; }
+.stat-multi > span { display: flex; flex-direction: column; gap: 0.15rem; }
+.rank-total { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666; }
+/* Fixed width so "1st"/"21st" etc. don't shift the record that follows it. */
+.rank-ordinal { display: inline-block; width: 3.2em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
+.player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.player-col { flex: 1 1 300px; min-width: 0; }
+.h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+.h2h-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.h2h-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
+.h2h-value { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; font-weight: 700; }
+.h2h-count { font-family: 'Orbitron', monospace; font-size: 1.05rem; font-weight: 900; color: #f0f0f0; }
+.h2h-record-dim { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 600; color: #666; }
+.standings-rank { white-space: nowrap; }
+/* Fixed width so a longer score (e.g. "12-11") doesn't wrap onto its own
+   line or butt up against the W/L letter before it. Margin is asymmetric —
+   more space separating it from the W/L letter, much less before the
+   opponent name that follows (the li's flex gap already provides some). */
+.match-score-mini { display: inline-block; width: 3em; margin-left: 0.35rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 600; color: #888; }
+.match-tourney-name { font-size: 0.85em; color: #999; }
+.match-tourney-name a { color: #999; }
+.match-tourney-name a:hover { color: #3eff8b; }
+.standings-rank.result-win { color: #3eff8b; }
+.standings-rank.result-loss { color: #ff5e5e; }
+/* Fixed width so "W" and "L" — different glyph widths in this font — don't
+   shift the score/opponent columns that follow depending on which one shows. */
+.result-letter { display: inline-block; width: 0.85em; text-align: center; }
+.hist-record { display: inline-block; width: 2.6em; margin-left: -0.15rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.95rem; color: #3eff8b; }
+.hist-tourney-name { font-size: 0.85em; }
+.hist-tourney-name a { color: #777; }
+.hist-tourney-name a:hover { color: #3eff8b; }
+.show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.show-more-btn:hover { text-decoration: underline; }
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
 }
@@ -1221,7 +1441,12 @@ function writeJs() {
         buttons.forEach((b) => b.classList.remove('active'));
         panels.forEach((p) => p.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
+        const panel = document.getElementById(btn.dataset.tab);
+        panel.classList.add('active');
+        // Cards were sized while this panel was display:none (offsetWidth 0
+        // at page load, or never resized since last becoming visible), so
+        // names need a fresh fit now that the panel actually has layout.
+        fitCardNames(panel);
       });
     });
   }
@@ -1399,8 +1624,9 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
     const tournamentLinks = p.tournaments
       .map((t) => `<a href="tournaments/${escapeHtml(t.slug)}.html"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
       .join(', ');
+    const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
     return `<tr${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
-      <td>${escapeHtml(p.name)}</td>
+      <td>${nameCell}</td>
       <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${p.flag ? `<img class="loc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : ''}${escapeHtml(p.location)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
@@ -1423,9 +1649,10 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
     </tr>`).join('\n');
 
   const rankingTableRows = rankingRows.map((p, i) => {
+    const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
     return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}${p.uncertain ? ' class="uncertain"' : ''}>
       <td class="rank-num">${i + 1}</td>
-      <td>${escapeHtml(p.name)}</td>
+      <td>${nameCell}</td>
       <td class="numeric">${Math.round(p.r)}</td>
       <td class="numeric" data-sort="${p.rd.toFixed(4)}">&#xB1;${Math.round(p.rd)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
@@ -1439,9 +1666,13 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
   const rankingCardItems = rankingRows.map((p, i) => {
     const flagImg = p.flag ? `<img class="prc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : '';
     const abbrSpan = p.locAbbr ? `<span class="prc-loc-abbr" title="${escapeHtml(p.location)}">${escapeHtml(p.locAbbr)}</span>` : '';
+    const href = playerHref(p.id, '');
+    const nameSpan = href
+      ? `<a class="prc-name" href="${escapeHtml(href)}" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</a>`
+      : `<span class="prc-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>`;
     return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
 <div class="prc-top">
-  <div class="prc-top-left"><span class="prc-rank">${i + 1}</span><span class="prc-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span></div>
+  <div class="prc-top-left"><span class="prc-rank">${i + 1}</span>${nameSpan}</div>
   ${flagImg}
 </div>
 <div class="prc-stats"><span class="prc-val">${Math.round(p.r)}</span><span class="prc-dim">&#xB1;</span><span class="prc-val">${Math.round(p.rd)}</span><span class="prc-sep">|</span><span class="prc-val">${Math.round(p.winPct * 100)}</span><span class="prc-dim">W%</span><span class="prc-sep">|</span><span class="prc-val">${p.games}</span><span class="prc-dim">gp</span>${abbrSpan}</div>
@@ -2011,9 +2242,11 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
 // Renders a raw in-tournament name as canonical-name-plus-flag markup.
 function nameHtml(rawName, tournamentUrl) {
   if (!rawName) return escapeHtml('?');
-  const { name, flag } = resolveDisplayName(rawName, tournamentUrl);
+  const { id, name, flag } = resolveDisplayName(rawName, tournamentUrl);
   const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
-  return `${flagImg}${escapeHtml(name)}`;
+  const href = playerHref(id, '../');
+  const inner = `${flagImg}${escapeHtml(name)}`;
+  return href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner;
 }
 
 // Standings/crosstable already canonicalize names (aliases/splits resolved)
@@ -2043,9 +2276,20 @@ function rawNameForCanonical(t, canonicalName) {
   return map.get(canonicalName) || canonicalName;
 }
 
+// Deletes any *.html file in `dir` not in `keepFilenames` — e.g. a
+// tournament whose slug changed, or a player merged/hidden away since the
+// last run — so stale pages don't linger in the output forever.
+function cleanStaleHtml(dir, keepFilenames) {
+  if (!fs.existsSync(dir)) return;
+  for (const f of fs.readdirSync(dir)) {
+    if (f.endsWith('.html') && !keepFilenames.has(f)) fs.unlinkSync(path.join(dir, f));
+  }
+}
+
 function writeTournamentPages(allTournaments) {
   const dir = path.join(REPO_ROOT, 'tournaments');
   fs.mkdirSync(dir, { recursive: true });
+  const keep = new Set();
 
   for (const t of allTournaments) {
     const standings = buildStandings(t);
@@ -2138,8 +2382,191 @@ ${extraHead}
 </html>
 `;
 
+    keep.add(`${t.slug}.html`);
     fs.writeFileSync(path.join(dir, `${t.slug}.html`), html);
   }
+
+  cleanStaleHtml(dir, keep);
+}
+
+function ordinal(n) {
+  if (n == null) return '—';
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1: return `${n}st`;
+    case 2: return `${n}nd`;
+    case 3: return `${n}rd`;
+    default: return `${n}th`;
+  }
+}
+
+function opponentLinkHtml(id, name) {
+  const href = playerHref(id, '../');
+  return href ? `<a href="${escapeHtml(href)}">${escapeHtml(name)}</a>` : escapeHtml(name);
+}
+
+const PAGE_SIZE = 10;
+
+// Renders a <ol> where only the first PAGE_SIZE <li>s start visible (the
+// rest carry `hidden` — server-rendered so there's no flash of the full list
+// before JS runs), plus a "Show more" button that reveals PAGE_SIZE more per
+// click. wireShowMore() in each player page's inline script drives it.
+function paginatedListHtml(items, listId, renderItem, emptyMessage) {
+  if (!items.length) return `<p>${emptyMessage}</p>`;
+  const lis = items.map((item, i) => renderItem(item, i >= PAGE_SIZE)).join('\n');
+  const btn = items.length > PAGE_SIZE ? `<button type="button" class="show-more-btn" id="${listId}-more" data-list="${listId}">Show more</button>` : '';
+  return `<ol class="standings-list" id="${listId}">
+${lis}
+    </ol>
+    ${btn}`;
+}
+
+// One HTML page per known player under players/, linked from tournament
+// standings/crosstables/round-lists (nameHtml) and the Players/Rankings tabs
+// (writeHtml) — but deliberately not from the brackets-viewer bracket itself,
+// which renders participant names as opaque JSON text with no HTML hook.
+function writePlayerPages(players, glicko, histories, rankingRows) {
+  const dir = path.join(REPO_ROOT, 'players');
+  fs.mkdirSync(dir, { recursive: true });
+  const keep = new Set();
+
+  const officialRows = rankingRows.filter((r) => r.games >= 5 && r.rd <= 150);
+
+  for (const [id, p] of players.entries()) {
+    const slug = playerSlugById.get(id);
+    if (!slug) continue;
+    const name = displayName(p);
+    const info = lookupPlayerInfo(id, name);
+    const flag = flagForInfo(info);
+    const location = info.city ? [info.city, info.state].filter(Boolean).join(', ')
+      : info.state ? (STATE_NAMES[info.state] || info.state) : (info.country || '');
+
+    const aliases = aliasesUsed(p);
+
+    const hist = histories.get(id) || { matches: [], placements: [] };
+    let stocksFor = 0;
+    let stocksAgainst = 0;
+    for (const m of hist.matches) {
+      if (m.isDQ) continue;
+      stocksFor += m.stocksFor;
+      stocksAgainst += m.stocksAgainst;
+    }
+
+    const placementsDesc = [...hist.placements].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    const matchesDesc = [...hist.matches].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.order - a.order));
+
+    const h2h = buildHeadToHead(hist.matches);
+
+    const rankIdx = rankingRows.findIndex((r) => r.id === id);
+    const rankingRow = rankIdx >= 0 ? rankingRows[rankIdx] : null;
+    const officialIdx = officialRows.findIndex((r) => r.id === id);
+
+    const winPct = p.games > 0 ? p.wins / p.games : 0;
+    const stockDiff = stocksFor - stocksAgainst;
+
+    const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
+
+    const statTiles = [
+      { label: 'Record', value: `${p.wins}-${p.losses} (${(winPct * 100).toFixed(1)}%)` },
+    ].map((s) => `<div class="stat-tile"><span class="stat-value">${escapeHtml(String(s.value))}</span><span class="stat-label">${escapeHtml(s.label)}</span></div>`).join('\n');
+
+    const goalsTile = `<div class="stat-tile">
+  <div class="stat-multi">
+    <span><span class="stat-value">${stocksFor}</span><span class="stat-label">Goals For</span></span>
+    <span><span class="stat-value">${stocksAgainst}</span><span class="stat-label">Goals Against</span></span>
+    <span><span class="stat-value">${stockDiff > 0 ? '+' : ''}${stockDiff}</span><span class="stat-label">Goal Diff.</span></span>
+  </div>
+</div>`;
+
+    const rankingTiles = [
+      { label: 'Overall Ranking', value: rankingRow ? `#${rankIdx + 1}` : 'Unranked', sub: rankingRow ? `${Math.round(rankingRow.r)} ±${Math.round(rankingRow.rd)}` : '' },
+      { label: 'Power Ranking', value: officialIdx >= 0 ? `#${officialIdx + 1}` : 'Not Qualified', sub: officialIdx >= 0 ? `${Math.round(officialRows[officialIdx].r)} ±${Math.round(officialRows[officialIdx].rd)}` : 'Needs 5+ games, RD ≤ 150' },
+    ].map((s) => `<div class="stat-tile"><span class="stat-value">${escapeHtml(s.value)}</span><span class="stat-label">${escapeHtml(s.label)}</span>${s.sub ? `<span class="stat-sub">${escapeHtml(s.sub)}</span>` : ''}</div>`).join('\n');
+
+    const recentMatchesHtml = paginatedListHtml(matchesDesc, 'recent-matches-list', (m, hidden) =>
+      `      <li${hidden ? ' hidden' : ''}><span class="standings-rank ${m.won ? 'result-win' : 'result-loss'}"><span class="result-letter">${m.won ? 'W' : 'L'}</span> <span class="match-score-mini">${m.isDQ ? 'DQ' : `${m.scoreFor}-${m.scoreAgainst}`}</span></span><span>vs ${opponentLinkHtml(m.opponentId, m.opponentName)} <span class="match-tourney-name">(<a href="../tournaments/${escapeHtml(m.tournamentSlug)}.html">${escapeHtml(m.tournamentLabel)}</a>)</span></span><span class="standings-record">${escapeHtml(formatDateHuman(m.date))}</span></li>`,
+      'No matches on record.');
+
+    const h2hRow = (label, entry, formatMetric) => {
+      if (!entry) return `<div class="h2h-tile"><span class="h2h-label">${escapeHtml(label)}</span><span class="h2h-value">&mdash;</span></div>`;
+      return `<div class="h2h-tile"><span class="h2h-label">${escapeHtml(label)}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
+    };
+    const h2hSection = `<div class="h2h-grid">
+${h2hRow('Most Played', h2h.mostPlayed, (e) => `&times;${e.total}`)}
+${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`)}
+${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`)}
+${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
+${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
+</div>`;
+
+    const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) =>
+      `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name"><a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a></span><span class="standings-record">${escapeHtml(formatDateHuman(pl.date))}</span></li>`,
+      'No tournaments on record.');
+
+    const aliasCaption = aliases.length
+      ? `<span class="alias-list">Also known as: ${aliases.map(escapeHtml).join(', ')}</span>`
+      : '';
+    const metaLine = location || aliasCaption
+      ? `<div class="tourney-meta">${location ? `<span>${flagImg}${escapeHtml(location)}</span>` : ''}${aliasCaption}</div>`
+      : '';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(name)} — DeathBall Power Rankings</title>
+<link rel="stylesheet" href="../index.css">
+</head>
+<body>
+<h1>${escapeHtml(name)}</h1>
+${metaLine}
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
+
+<div class="tourney-section">
+  <div class="player-stats-grid">
+${statTiles}
+${goalsTile}
+${rankingTiles}
+  </div>
+</div>
+
+<div class="player-columns">
+  <div class="tourney-section player-col">
+    <h2>Recent Matches (${p.games})</h2>
+    ${recentMatchesHtml}
+  </div>
+
+  <div class="tourney-section player-col">
+    <h2>Tournament History (${p.tournaments.size})</h2>
+    ${historyRows}
+  </div>
+
+  <div class="tourney-section player-col">
+    <h2>Head-to-Head</h2>
+    ${h2hSection}
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.show-more-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const list = document.getElementById(btn.dataset.list);
+      const hiddenItems = [...list.children].filter((li) => li.hidden).slice(0, ${PAGE_SIZE});
+      hiddenItems.forEach((li) => { li.hidden = false; });
+      if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
+    });
+  });
+</script>
+</body>
+</html>
+`;
+
+    keep.add(`${slug}.html`);
+    fs.writeFileSync(path.join(dir, `${slug}.html`), html);
+  }
+
+  cleanStaleHtml(dir, keep);
 }
 
 async function main() {
@@ -2217,11 +2644,17 @@ async function main() {
   const playerRows = buildPlayerRows(players, tournamentMetaByUrl);
   const rankingRows = buildRankingRows(players, glicko);
 
+  // Must run before writeHtml/writeTournamentPages/writePlayerPages — they
+  // all link player names via playerHref(), which reads this.
+  assignPlayerSlugs(players);
+  const histories = buildPlayerHistories(allTournaments);
+
   writeCsv(playerRows);
   writeCss();
   writeJs();
   writeHtml(playerRows, allTournaments, rankingRows);
   writeTournamentPages(allTournaments);
+  writePlayerPages(players, glicko, histories, rankingRows);
 
   console.log(`Unique players: ${playerRows.length}`);
   console.log(`Tournaments:    ${allTournaments.length}`);

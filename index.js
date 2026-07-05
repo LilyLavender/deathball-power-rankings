@@ -43,7 +43,12 @@
         buttons.forEach((b) => b.classList.remove('active'));
         panels.forEach((p) => p.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
+        const panel = document.getElementById(btn.dataset.tab);
+        panel.classList.add('active');
+        // Cards were sized while this panel was display:none (offsetWidth 0
+        // at page load, or never resized since last becoming visible), so
+        // names need a fresh fit now that the panel actually has layout.
+        fitCardNames(panel);
       });
     });
   }

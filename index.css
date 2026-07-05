@@ -24,6 +24,7 @@ a:hover { text-decoration: underline; }
 .view-btn.active { background: #3eff8b; color: #000; }
 .view-btn:not(.active):hover { color: #bbb; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
+#rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
 th { cursor: pointer; user-select: none; position: sticky; top: 0; background: #111; color: #666; font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid #222; }
 th:hover { background: #181818; color: #f0f0f0; }
@@ -41,7 +42,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .uncertain { opacity: 0.45; }
 .filter-dim { opacity: 0.45; }
 .pr-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
-.pr-card { background: #0f0f0f; border: 1px solid #222; border-radius: 0; padding: 3px 6px; display: flex; flex-direction: column; gap: 2px; min-width: 0; transition: border-color 150ms, background 150ms; }
+.pr-card { background: #0f0f0f; border: 1px solid #222; border-radius: 0; padding: 3px 6px; display: flex; flex-direction: column; gap: 2px; min-width: 0; transition: border-color 150ms, background 150ms; user-select: none; }
 .pr-card.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.22) 0%, #0f0f0f 65%); }
 .pr-card.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%); }
 .pr-card.card-green:hover { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.38) 0%, #181818 65%); border-color: rgba(62,255,139,0.65); }
@@ -55,8 +56,19 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .prc-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; }
 .prc-top-left { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1; overflow: hidden; }
 .prc-rank { font-family: 'Orbitron', monospace; font-size: 1.2rem; color: #888; font-weight: 900; flex-shrink: 0; line-height: 1; }
-.prc-name { font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; line-height: 18px; font-weight: 700; color: #f0f0f0; overflow: hidden; text-overflow: clip; white-space: nowrap; min-width: 0; position: relative; top: 1px; }
-.prc-flag { height: 1.15em; border-radius: 2px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+/* flex: 1 1 0 (not the default 0 1 auto) so this box's width comes purely
+   from available flex-row space, not from its own text's content width —
+   otherwise shrinking the font also shrinks the box being measured against,
+   and fitText() in index.js can converge on a false "it fits" reading before
+   the text actually does. */
+.prc-name { flex: 1 1 0; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; line-height: 18px; font-weight: 700; color: #f0f0f0; overflow: hidden; text-overflow: clip; white-space: nowrap; min-width: 0; position: relative; top: 1px; }
+/* width is fixed (not auto) so this box's footprint is known before the
+   (external, async-loaded) flag image itself has actually loaded — otherwise
+   the row lays out too wide the first time fitCardNames() runs (on load,
+   pre-image-load), then reflows narrower once the image arrives with no
+   further re-fit, leaving names under-shrunk until something else (e.g. the
+   grid/table view toggle) happens to re-trigger fitCardNames(). */
+.prc-flag { height: 1.15em; width: 1.5em; object-fit: contain; border-radius: 2px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
 .prc-stats { display: flex; align-items: baseline; gap: 2px; }
 .prc-loc-abbr { font-family: 'Rajdhani', sans-serif; font-size: 0.78rem; font-weight: 700; color: #777; letter-spacing: 0.04em; margin-left: auto; padding-left: 4px; flex-shrink: 0; }
 .prc-val { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; color: #aaa; }
@@ -111,3 +123,43 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .crosstable td.cell-win { color: #3eff8b; font-weight: 700; }
 .crosstable td.cell-loss { color: #ff5e5e; }
 .crosstable td.cell-draw { color: #ccc; }
+h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
+.alias-list { color: #888; font-size: 0.9rem; }
+.player-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; }
+.stat-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
+.stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
+.stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
+.stat-sub { font-size: 1rem; font-weight: 700; color: #3eff8b; }
+.stat-multi { display: flex; gap: 1.25rem; }
+.stat-multi > span { display: flex; flex-direction: column; gap: 0.15rem; }
+.rank-total { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666; }
+/* Fixed width so "1st"/"21st" etc. don't shift the record that follows it. */
+.rank-ordinal { display: inline-block; width: 3.2em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
+.player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.player-col { flex: 1 1 300px; min-width: 0; }
+.h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+.h2h-tile { background: #0f0f0f; border: 1px solid #222; border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.h2h-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
+.h2h-value { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; font-weight: 700; }
+.h2h-count { font-family: 'Orbitron', monospace; font-size: 1.05rem; font-weight: 900; color: #f0f0f0; }
+.h2h-record-dim { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 600; color: #666; }
+.standings-rank { white-space: nowrap; }
+/* Fixed width so a longer score (e.g. "12-11") doesn't wrap onto its own
+   line or butt up against the W/L letter before it. Margin is asymmetric —
+   more space separating it from the W/L letter, much less before the
+   opponent name that follows (the li's flex gap already provides some). */
+.match-score-mini { display: inline-block; width: 3em; margin-left: 0.35rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 600; color: #888; }
+.match-tourney-name { font-size: 0.85em; color: #999; }
+.match-tourney-name a { color: #999; }
+.match-tourney-name a:hover { color: #3eff8b; }
+.standings-rank.result-win { color: #3eff8b; }
+.standings-rank.result-loss { color: #ff5e5e; }
+/* Fixed width so "W" and "L" — different glyph widths in this font — don't
+   shift the score/opponent columns that follow depending on which one shows. */
+.result-letter { display: inline-block; width: 0.85em; text-align: center; }
+.hist-record { display: inline-block; width: 2.6em; margin-left: -0.15rem; margin-right: -0.55rem; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.95rem; color: #3eff8b; }
+.hist-tourney-name { font-size: 0.85em; }
+.hist-tourney-name a { color: #777; }
+.hist-tourney-name a:hover { color: #3eff8b; }
+.show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.show-more-btn:hover { text-decoration: underline; }
