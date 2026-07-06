@@ -23,6 +23,17 @@ const { buildBracketData } = require('./build_bracket');
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
+// Inlined as data: URIs at build time rather than referenced by path -- a
+// relative same-origin <img src> can silently fail to load if the page is
+// ever opened as a local file:// URL instead of served over http(s), and
+// (separately) the download feature's own image-inlining step can't fetch()
+// a file:// resource at all. Baking them in removes the runtime dependency
+// entirely, for both cases.
+function assetDataUri(relativePath) {
+  const buf = fs.readFileSync(path.join(REPO_ROOT, relativePath));
+  return `data:image/png;base64,${buf.toString('base64')}`;
+}
+
 // --- Glicko-2 tuning constants ---
 const GLICKO_DEFAULT_R = 1500;
 const GLICKO_DEFAULT_RD = 350;
@@ -1453,7 +1464,15 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
    is a clip guard, not the primary fit mechanism -- inner content is sized
    to actually fit, verified against the real 7-row height via screenshots
    rather than computed on paper (font metrics don't add up cleanly by hand). */
-.pr-square { grid-column: 3 / 7; grid-row: 5 / 12; height: 349.2px; box-sizing: border-box; background: #0a0a0a; border: 1px solid #3eff8b; padding: 10px 14px; display: flex; flex-direction: column; gap: 1em; user-select: none; box-shadow: 0 0 24px rgba(62,255,139,0.15); overflow: hidden; }
+/* position:relative so .pr-square-mascot (an absolutely positioned direct
+   child) sits relative to the square itself -- without this, since no
+   other ancestor is positioned on the live page (and the export clone's
+   ancestor is position:fixed), the mascot falls back to the initial
+   containing block and renders miles away from the square. */
+/* Hidden on the live site -- it only ever shows up in the downloaded image
+   (downloadRankingsImage clones it and explicitly overrides this back to
+   flex for the export). */
+.pr-square { display: none; position: relative; grid-column: 3 / 7; grid-row: 5 / 12; height: 349.2px; box-sizing: border-box; background: #0a0a0a; border: 1px solid #3eff8b; padding: 10px 14px; flex-direction: column; gap: 1em; user-select: none; box-shadow: 0 0 24px rgba(62,255,139,0.15); overflow: hidden; }
 .pr-square-title { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1.6rem; color: #fff; letter-spacing: 0.05em; text-align: center; white-space: nowrap; flex: none; }
 .pr-square-logo { height: 1.6em; width: auto; }
 .pr-square-row { display: flex; gap: 16px; flex: 1; min-height: 0; }
@@ -1464,7 +1483,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
    export's fixed-width clone, which render the square at different pixel
    widths. Sits in the empty gap between the two flex columns via absolute
    positioning so it doesn't participate in / disturb their flex sizing. */
-.pr-square-mascot { position: absolute; bottom: -38px; left: 50%; width: 8%; object-fit: contain; pointer-events: none; }
+.pr-square-mascot { position: absolute; bottom: 0; left: 50%; width: 15%; object-fit: contain; pointer-events: none; }
 .pr-square-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 /* "How to read a card" only needs to fit the demo card + callouts, so it
    shrinks to content; "how rankings are determined" gets the extra space. */
@@ -2105,19 +2124,39 @@ function writeJs() {
     }));
   }
 
-  // Captures the top 100 ranked cards (by rank, ignoring any live min-games/
-  // max-RD/state filtering) plus the .pr-square promo tile into an offscreen
-  // clone forced to the 8-column desktop layout, so the exported image is
-  // consistent regardless of the current viewport width or filter state.
+  // Captures the top 100 ranked cards passing the default min-games/max-RD
+  // filter (same 5+/<=150 thresholds as the default view, regardless of
+  // whatever the live min-games/max-RD/state selects are currently set to)
+  // plus the .pr-square promo tile into an offscreen clone forced to the
+  // 8-column desktop layout, so the exported image is consistent regardless
+  // of the current viewport width or filter state.
   async function downloadRankingsImage(panel) {
     const grid = panel.querySelector('.pr-grid');
     if (!grid || !window.html2canvas) return;
+    // Custom fonts may not have finished loading yet, and this also ensures
+    // the metrics fitCardNames() measures below are accurate.
+    await document.fonts.ready;
     const square = grid.querySelector('.pr-square');
-    const cards = [...grid.querySelectorAll(':scope > .pr-card')].slice(0, 100);
+    const qualifying = [...grid.querySelectorAll(':scope > .pr-card')].filter((c) => {
+      const games = parseInt(c.dataset.games || '0', 10);
+      const rd = parseFloat(c.dataset.rd || '0');
+      return games >= 5 && rd <= 150;
+    });
+    const cards = qualifying.slice(0, 100);
     const clone = document.createElement('div');
     clone.className = 'pr-grid pr-export-grid';
     clone.style.gridTemplateColumns = 'repeat(8, 1fr)';
-    clone.style.width = '1400px';
+    // Pinned to this specific width (rather than the live grid's current
+    // width) so every download comes out identically sized -- this is
+    // whatever .pr-grid measured on the developer's own screen, not a
+    // computed/responsive value. Retune by hand if it ever needs to change.
+    // box-sizing is forced back to content-box here (overriding the site's
+    // global * { box-sizing: border-box } reset) so this width is the actual
+    // content/column width, matching .pr-grid's own measured width exactly --
+    // otherwise the padding below would eat into it and every card would
+    // render slightly narrower than the live site's.
+    clone.style.boxSizing = 'content-box';
+    clone.style.width = '1472px';
     clone.style.padding = '24px';
     clone.style.background = '#050505';
     if (square) {
@@ -2125,11 +2164,11 @@ function writeJs() {
       squareClone.style.display = 'flex';
       clone.appendChild(squareClone);
     }
-    // Cards failing the live min-games/max-RD/state filter carry a hidden
-    // attribute, which cloneNode preserves -- left alone, those clones
-    // collapse to zero size, shrink the grid, and cut the export off early.
-    // Force every one of the top 100 visible and renumbered 1-100, since
-    // the export is always meant to show the top 100 regardless of filters.
+    // Cards already passed the games/RD check above, but may still carry a
+    // hidden attribute from a live state-filter selection (cloneNode
+    // preserves it, and left alone it'd collapse the clone to zero size) --
+    // force every one of the top 100 visible and renumbered 1-100, since the
+    // export always shows all locations regardless of the live state filter.
     cards.forEach((c, idx) => {
       const cardClone = c.cloneNode(true);
       cardClone.hidden = false;
@@ -2139,18 +2178,82 @@ function writeJs() {
       clone.appendChild(cardClone);
     });
     document.body.appendChild(clone);
-    // html2canvas mis-renders the cards' radial-gradient backgrounds (every
-    // card washes out to the same tint) -- swap to flat fallback colors,
-    // export-only, so green/purple stay visually distinct in the PNG.
-    clone.querySelectorAll('.pr-card').forEach((c) => {
-      if (c.classList.contains('card-green')) c.style.background = '#132a1d';
-      else if (c.classList.contains('card-purple')) c.style.background = '#241a30';
-      else c.style.background = '#0f0f0f';
-    });
+    // html2canvas's own gradient renderer doesn't size a radial-gradient's
+    // implicit farthest-corner extent correctly (tried it explicit, tried an
+    // explicit percentage size, tried hand-deriving and painting the
+    // ellipse ourselves via Canvas2D -- none matched the live page's actual
+    // rendered gradient). Instead of reimplementing it at all, literally
+    // copy the real thing: render an actual .pr-card.card-green/.card-purple
+    // through an SVG foreignObject, which uses the browser's own genuine CSS
+    // engine (not a reimplementation), rasterize that to a bitmap, and use
+    // it as a background-image -- html2canvas draws real images reliably,
+    // just not live CSS gradients.
+    const glowCache = {};
+    // Same as .pr-card.card-green/.card-purple's CSS -- inlined directly
+    // rather than referenced by class, since the foreignObject below is
+    // serialized to a standalone SVG document with no access to the page's
+    // external stylesheet (a class name alone rendered with no styling at
+    // all, confirmed by sampling the result: flat, no color whatsoever).
+    const glowBackgrounds = {
+      'card-green': 'radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.22) 0%, #0f0f0f 65%)',
+      'card-purple': 'radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%)',
+    };
+    async function glowDataUri(cardClass, w, h) {
+      const key = cardClass + '|' + w + '|' + h;
+      if (glowCache[key]) return glowCache[key];
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('width', w);
+      svg.setAttribute('height', h);
+      const fo = document.createElementNS(svgNS, 'foreignObject');
+      fo.setAttribute('width', '100%');
+      fo.setAttribute('height', '100%');
+      const div = document.createElement('div');
+      div.style.width = w + 'px';
+      div.style.height = h + 'px';
+      div.style.margin = '0';
+      div.style.background = glowBackgrounds[cardClass];
+      fo.appendChild(div);
+      svg.appendChild(fo);
+      const svgStr = new XMLSerializer().serializeToString(svg);
+      const svgUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+      const img = new Image();
+      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = svgUri; });
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0f0f0f';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0);
+      const uri = canvas.toDataURL('image/png');
+      glowCache[key] = uri;
+      return uri;
+    }
+    await Promise.all([...clone.querySelectorAll('.pr-card')].map(async (c) => {
+      const isGreen = c.classList.contains('card-green');
+      const isPurple = c.classList.contains('card-purple');
+      if (isGreen || isPurple) {
+        const rect = c.getBoundingClientRect();
+        const uri = await glowDataUri(isGreen ? 'card-green' : 'card-purple', rect.width, rect.height);
+        c.style.background = 'url(' + uri + ')';
+        c.style.backgroundSize = '100% 100%';
+      } else {
+        c.style.background = '#0f0f0f';
+      }
+    }));
+    // cloneNode copies each name's live inline font-size (set by
+    // fitCardNames() against the ORIGINAL grid's column width) verbatim --
+    // that size is wrong whenever the live grid's current width doesn't
+    // match this clone's pinned export width, so names clipped fine on-page
+    // can overflow their card here. Re-fit against the clone's actual width
+    // now that it's attached to the DOM.
+    fitCardNames(clone);
     await inlineImages(clone);
     html2canvas(clone, {
       backgroundColor: '#050505',
       scale: 2,
+      useCORS: true,
       ignoreElements: (node) => node.tagName === 'IMG' && !node.src.startsWith('data:'),
     }).then((canvas) => {
       canvas.toBlob((blob) => {
@@ -2313,7 +2416,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       <div class="pr-square-text">Every set updates both players' ratings with the Glicko-2 system, weighting opponent strength and match outcome. Ratings converge as players compete more, and a player's deviation (uncertainty) rises again the longer they go inactive.</div>
     </div>
     <div class="pr-square-qr-wrap">
-      <div class="pr-square-qr"><img src="assets/qr-code.png" alt="QR code"></div>
+      <div class="pr-square-qr"><img src="${assetDataUri('assets/qr-code.png')}" alt="QR code"></div>
       <div class="pr-square-qr-label">View Power Rankings</div>
     </div>
   </div>
@@ -2333,7 +2436,7 @@ ${recentTournamentsHtml}
       <div class="pr-square-tagline">Compete. Climb.<br>Get Ranked.</div>
     </div>
     <div class="pr-square-qr-wrap">
-      <div class="pr-square-qr"><img src="assets/qr-code-discord.png" alt="Discord QR code"></div>
+      <div class="pr-square-qr"><img src="${assetDataUri('assets/qr-code-discord.png')}" alt="Discord QR code"></div>
       <div class="pr-square-qr-label">Join the Discord</div>
     </div>
   </div>

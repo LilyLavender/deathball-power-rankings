@@ -145,9 +145,17 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
    is a clip guard, not the primary fit mechanism -- inner content is sized
    to actually fit, verified against the real 7-row height via screenshots
    rather than computed on paper (font metrics don't add up cleanly by hand). */
-.pr-square { grid-column: 3 / 7; grid-row: 5 / 12; height: 349.2px; box-sizing: border-box; background: #0a0a0a; border: 1px solid #3eff8b; padding: 10px 14px; display: flex; flex-direction: column; gap: 1em; user-select: none; box-shadow: 0 0 24px rgba(62,255,139,0.15); overflow: hidden; }
+/* position:relative so .pr-square-mascot (an absolutely positioned direct
+   child) sits relative to the square itself -- without this, since no
+   other ancestor is positioned on the live page (and the export clone's
+   ancestor is position:fixed), the mascot falls back to the initial
+   containing block and renders miles away from the square. */
+/* Hidden on the live site -- it only ever shows up in the downloaded image
+   (downloadRankingsImage clones it and explicitly overrides this back to
+   flex for the export). */
+.pr-square { display: none; position: relative; grid-column: 3 / 7; grid-row: 5 / 12; height: 349.2px; box-sizing: border-box; background: #0a0a0a; border: 1px solid #3eff8b; padding: 10px 14px; flex-direction: column; gap: 1em; user-select: none; box-shadow: 0 0 24px rgba(62,255,139,0.15); overflow: hidden; }
 .pr-square-title { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1.6rem; color: #fff; letter-spacing: 0.05em; text-align: center; white-space: nowrap; flex: none; }
-.pr-square-logo { height: 1.3em; width: auto; }
+.pr-square-logo { height: 1.6em; width: auto; }
 .pr-square-row { display: flex; gap: 16px; flex: 1; min-height: 0; }
 /* Breathing room above the second row so it doesn't butt against the first. */
 .pr-square-row-2 { margin-top: 2em; position: relative; }
@@ -156,7 +164,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
    export's fixed-width clone, which render the square at different pixel
    widths. Sits in the empty gap between the two flex columns via absolute
    positioning so it doesn't participate in / disturb their flex sizing. */
-.pr-square-mascot { position: absolute; bottom: -38px; left: 50%; width: 8%; object-fit: contain; pointer-events: none; }
+.pr-square-mascot { position: absolute; bottom: 0; left: 50%; width: 15%; object-fit: contain; pointer-events: none; }
 .pr-square-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 /* "How to read a card" only needs to fit the demo card + callouts, so it
    shrinks to content; "how rankings are determined" gets the extra space. */
