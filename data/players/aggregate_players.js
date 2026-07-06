@@ -106,6 +106,32 @@ function abbrevForInfo(info) {
   return '';
 }
 
+// Pre-projected US state / Canadian province outlines for the Map tab (see
+// data/generate_map_shapes.js for how this is generated).
+const mapShapes = JSON.parse(fs.readFileSync(path.join(DATA_ROOT, 'map-shapes.json'), 'utf8'));
+
+// The Map tab's default/reset viewBox, in map-shapes.json's coordinate
+// space — hand-picked (not computed from the data) so the map always
+// occupies the same amount of screen space regardless of which
+// states/provinces currently have data. Framed to the contiguous US;
+// deliberately crops off Ontario's northern reach toward Hudson Bay (its
+// label still falls well within this box) since Ontario is the only
+// Canadian province with any players/tournaments right now and its full
+// shape is far taller than any US state's — including all of it would
+// waste most of the frame on empty Arctic space. Re-tune by hand (see the
+// preview-render workflow in this file's CLAUDE.md entry) if a future
+// region's data needs more room.
+const MAP_HOME_VIEWBOX = [35, 150, 685, 450];
+
+// Normalizes a raw state value (a USPS/province abbreviation like "TX", or a
+// full name like "Ontario" as used by some player-info.json/tournament-locations.json
+// entries) to its abbreviation, for keying into mapShapes/STATE_NAMES.
+function regionAbbr(raw) {
+  if (!raw) return '';
+  if (STATE_NAMES[raw]) return raw;
+  return STATE_ABBR_BY_NAME[raw] || '';
+}
+
 // ---------------------------------
 
 function readJson(filePath, fallback) {
@@ -424,6 +450,8 @@ function collectChallonge() {
       date: resolveDate(url, (t.started_at || t.created_at || '').slice(0, 10)),
       location: formatLocation(locInfo),
       locationDisplay: locationDisplay(locInfo),
+      state: locInfo?.state || '',
+      country: locInfo?.country || '',
       participants: t.participants.length,
       matchCount: matches.length,
       source: 'Challonge',
@@ -506,6 +534,8 @@ function collectStartgg() {
       date: resolveDate(url, rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : ''),
       location: formatLocation(locInfo),
       locationDisplay: locationDisplay(locInfo),
+      state: locInfo?.state || '',
+      country: locInfo?.country || '',
       participants: rec.entrants.length,
       matchCount: matches.length,
       source: 'start.gg',
@@ -1243,6 +1273,13 @@ function formatDateHuman(iso) {
   return `${MONTH_NAMES[parseInt(mo, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
 }
 
+// Year only ("2025") — used for "Last Active" on the Map tab, where the
+// exact month/day isn't meaningful.
+function formatMonthYearHuman(iso) {
+  const m = /^(\d{4})-\d{2}-\d{2}$/.exec(iso || '');
+  return m ? m[1] : (iso || '');
+}
+
 function writeCsv(rows) {
   const header = ['Player', 'Wins', 'Losses', 'Games Played', 'Win %', 'Location', 'Tournament Count', 'Tournaments'];
   const csvRows = rows.map((p) => [
@@ -1297,6 +1334,42 @@ a:hover { text-decoration: underline; }
 .view-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
 .view-btn.active { color: #000; }
 .view-btn:not(.active):hover { color: #bbb; }
+.map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
+/* Fixed 2:1 column split (not flex-grow based) so the map's box never
+   resizes when the sidebar's content changes — the sidebar is always
+   present (full unfiltered list by default, filtered to a region on
+   click), never toggling in/out of layout the way it briefly did before.
+   No max-width: map + list together fill the same full content width as
+   every other tab's table. */
+.map-panel { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+.map-canvas { min-width: 0; }
+/* Fixed pixel height (not width-relative "auto") so the map never changes
+   size — only its width, via the 4fr column, flexes with viewport width. */
+.map-svg { width: 100%; height: 600px; display: block; }
+.map-region { fill: rgba(255, 255, 255, 0.05); stroke: #050505; stroke-width: 0.75; transition: fill 200ms ease, stroke 150ms ease; cursor: pointer; }
+.map-region:hover { stroke: #3eff8b; stroke-width: 1.5; }
+.map-region.selected { stroke: #3eff8b; stroke-width: 2; }
+.map-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700; fill: #eee; text-anchor: middle; dominant-baseline: middle; pointer-events: none; paint-order: stroke; stroke: #000; stroke-width: 2px; stroke-linejoin: round; }
+/* Deliberately no card box (background/border) — matches the plain,
+   unboxed section + list look used on player pages (see .tourney-section),
+   not a bordered "widget" look. */
+.map-sidebar { min-width: 0; height: 600px; display: flex; flex-direction: column; }
+.map-sidebar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; flex-shrink: 0; }
+.map-sidebar-back { background: none; border: none; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0; cursor: pointer; flex-shrink: 0; }
+.map-sidebar-back:hover { text-decoration: underline; }
+.map-sidebar-title { margin: 0; font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-sidebar-empty { color: #555; font-size: 0.88rem; padding: 0.4rem 0; }
+.map-sidebar-list { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+/* Name truncation is normally keyed off nth-child(2) (see .standings-list li
+   > span:nth-child(2) above), which assumes every row starts with a
+   standings-rank span — the map sidebar's tournament rows don't have one,
+   so truncation is pinned to the class directly instead of row position. */
+.hist-tourney-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Bigger than the player-page default (this list is the sidebar's main
+   content, not a secondary history section) — scoped to the map sidebar
+   only so player pages' own lists are untouched. */
+.map-sidebar-list .hist-tourney-name { font-size: 1.05rem; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
@@ -1454,6 +1527,22 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .hist-tourney-name a { color: #777; }
 .hist-tourney-name a:hover { color: #3eff8b; }
 .show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+/* Map sidebar: multi-column layout (name + placement/rating/last-active for
+   players, name + date for tournaments) with a matching header row above
+   the list — overrides standings-list's flex row (declared earlier) with a
+   grid so every column lines up with its header regardless of content
+   length. Column count/labels are set by JS (renderMapSidebar) via the
+   map-cols-players/map-cols-tournaments classes on both this header and
+   the list itself, so their grid-template-columns stay in sync. */
+.map-sidebar-colhead { display: grid; gap: 0.5rem; padding: 0 0.75rem 0.35rem; font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; }
+.map-sidebar-colhead span:not(:first-child) { text-align: right; }
+.map-sidebar-list li { display: grid; gap: 0.5rem; }
+.map-sidebar-list li > span:not(:first-child) { text-align: right; margin-left: 0; }
+/* The map-cols-* class is toggled onto both the header div (which is
+   itself the grid, so this rule applies directly) and the <ol> (which
+   isn't a grid — its <li> children are), hence the two selector forms. */
+.map-sidebar-colhead.map-cols-players, ol.map-cols-players li { grid-template-columns: 1fr 3.4rem 6.5rem 4rem; }
+.map-sidebar-colhead.map-cols-tournaments, ol.map-cols-tournaments li { grid-template-columns: 1fr 8.5rem; }
 /* Player pages carry a background glow matching their power-ranking card
    color (see cardAccent) — card-green vs card-purple varies the glow for
    visual variety, but page text always stays the site's green accent
@@ -1487,6 +1576,7 @@ function writeJs() {
 
   const js = `(function () {
   const STATE_NAMES = ${stateNamesJson};
+  const MAP_REGION_DATA = JSON.parse(document.getElementById('map-region-data')?.textContent || '{}');
 
   function enableSorting(table) {
     const tbody = table.tBodies[0];
@@ -1534,7 +1624,7 @@ function writeJs() {
     indicator.style.width = targetRect.width + 'px';
   }
 
-  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings' };
+  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map' };
 
   // Cross-fades just the variable part of the page heading ("DeathBall" is
   // static) to the tab's own heading instead of snapping straight to it.
@@ -1567,6 +1657,13 @@ function writeJs() {
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
         fitCardNames(panel);
+        // Same story for any view-toggle pill inside this panel (e.g. the
+        // Map tab's Players/Tournaments switch) — its indicator was
+        // positioned against a zero-width rect while hidden.
+        const innerToggle = panel.querySelector('.view-toggle');
+        const innerIndicator = panel.querySelector('.view-toggle-indicator');
+        const innerActive = panel.querySelector('.view-btn.active');
+        if (innerToggle && innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
@@ -1706,6 +1803,205 @@ function writeJs() {
     for (const el of scope.querySelectorAll('.prc-name')) fitText(el, 18, 9);
   }
 
+  // Sequential fill scale from dim (no data) up to bright green, using a
+  // sqrt scale so a handful of high-count hubs (e.g. Texas/Minnesota) don't
+  // wash out every other state to the same dim shade.
+  function countColor(count, max) {
+    if (!count) return 'rgba(255, 255, 255, 0.05)';
+    const t = max > 0 ? Math.sqrt(count / max) : 0;
+    const lightness = 16 + t * 44;
+    return 'hsl(150, 70%, ' + lightness.toFixed(1) + '%)';
+  }
+
+  function updateMap(panel, view) {
+    const regions = [...panel.querySelectorAll('.map-region')];
+    const labels = [...panel.querySelectorAll('.map-label')];
+    let max = 1;
+    for (const r of regions) max = Math.max(max, parseInt(r.dataset[view] || '0', 10));
+    regions.forEach((r) => {
+      const count = parseInt(r.dataset[view] || '0', 10);
+      r.style.fill = countColor(count, max);
+    });
+    labels.forEach((l) => {
+      const count = parseInt(l.dataset[view] || '0', 10);
+      l.textContent = count > 0 ? count : '';
+    });
+  }
+
+  function enableMapToggle(panel) {
+    if (!panel) return;
+    const buttons = [...panel.querySelectorAll('.view-btn')];
+    const toggleEl = panel.querySelector('.view-toggle');
+    const indicator = panel.querySelector('.view-toggle-indicator');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        moveIndicator(indicator, toggleEl, btn);
+        updateMap(panel, btn.dataset.view);
+        // Keep an open region's sidebar in sync with whichever list (players
+        // vs tournaments) is now the active view, without touching zoom.
+        if (panel._mapRefreshSidebar) panel._mapRefreshSidebar();
+      });
+    });
+    const active = buttons.find((b) => b.classList.contains('active'));
+    moveIndicator(indicator, toggleEl, active);
+    updateMap(panel, active ? active.dataset.view : 'players');
+  }
+
+  function animateViewBox(svg, toBox, duration) {
+    const fromBox = svg.getAttribute('viewBox').split(' ').map(Number);
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const box = fromBox.map((v, i) => v + (toBox[i] - v) * eased);
+      svg.setAttribute('viewBox', box.join(' '));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Mirrors the player page's tournament-history-list / recent-matches-list
+  // styling (standings-list / standings-rank / hist-tourney-name /
+  // standings-record) so this reads as the same kind of list elsewhere on
+  // the site, rather than a one-off sidebar design. The sidebar always
+  // shows a list — regionId '__ALL__' (the default) shows every
+  // player/tournament; clicking a region filters this same list down
+  // rather than swapping in a separate view.
+  function mapFlagNameSpan(item) {
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'hist-tourney-name';
+    if (item.f) {
+      const img = document.createElement('img');
+      img.className = 'loc-flag';
+      img.src = item.f.src;
+      img.alt = item.f.title;
+      img.title = item.f.title;
+      nameSpan.appendChild(img);
+    }
+    if (item.h) {
+      const a = document.createElement('a');
+      a.href = item.h;
+      a.textContent = item.n;
+      nameSpan.appendChild(a);
+    } else {
+      nameSpan.appendChild(document.createTextNode(item.n));
+    }
+    return nameSpan;
+  }
+
+  function renderMapSidebar(panel, regionId, view) {
+    const data = MAP_REGION_DATA[regionId];
+    if (!data) return;
+    const list = panel.querySelector('.map-sidebar-list');
+    const colhead = panel.querySelector('.map-sidebar-colhead');
+    const title = panel.querySelector('.map-sidebar-title');
+    const backBtn = panel.querySelector('.map-sidebar-back');
+    title.textContent = data.name;
+    if (backBtn) backBtn.hidden = regionId === '__ALL__';
+
+    const isTournaments = view === 'tournaments';
+    list.classList.toggle('map-cols-players', !isTournaments);
+    list.classList.toggle('map-cols-tournaments', isTournaments);
+    colhead.classList.toggle('map-cols-players', !isTournaments);
+    colhead.classList.toggle('map-cols-tournaments', isTournaments);
+    colhead.innerHTML = '';
+    (isTournaments ? ['Tournament', 'Date'] : ['Player', 'Placement', 'Rating', 'Last Active']).forEach((label) => {
+      const span = document.createElement('span');
+      span.textContent = label;
+      colhead.appendChild(span);
+    });
+
+    list.innerHTML = '';
+    const items = isTournaments ? data.tournamentsList : data.playersList;
+    if (!items.length) {
+      const li = document.createElement('li');
+      li.className = 'map-sidebar-empty';
+      li.textContent = 'No ' + view + ' from here yet.';
+      list.appendChild(li);
+      return;
+    }
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      li.appendChild(mapFlagNameSpan(item));
+      if (isTournaments) {
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'standings-record';
+        dateSpan.textContent = item.d || '';
+        li.appendChild(dateSpan);
+      } else {
+        const rankSpan = document.createElement('span');
+        rankSpan.className = 'standings-record';
+        rankSpan.textContent = '#' + item.rank;
+        li.appendChild(rankSpan);
+        const ratingSpan = document.createElement('span');
+        ratingSpan.className = 'standings-record';
+        ratingSpan.textContent = item.v + ' ± ' + item.rd;
+        li.appendChild(ratingSpan);
+        const lastActiveSpan = document.createElement('span');
+        lastActiveSpan.className = 'standings-record';
+        lastActiveSpan.textContent = item.la || '';
+        li.appendChild(lastActiveSpan);
+      }
+      list.appendChild(li);
+    });
+  }
+
+  function zoomToRegion(svg, regionEl) {
+    const bbox = regionEl.getBBox();
+    const padFactor = 0.4;
+    const minSize = 40;
+    const w = Math.max(bbox.width * (1 + padFactor * 2), minSize);
+    const h = Math.max(bbox.height * (1 + padFactor * 2), minSize);
+    const cx = bbox.x + bbox.width / 2;
+    const cy = bbox.y + bbox.height / 2;
+    animateViewBox(svg, [cx - w / 2, cy - h / 2, w, h], 450);
+  }
+
+  function zoomMapHome(svg) {
+    const home = (svg.dataset.home || '').split(' ').map(Number);
+    if (home.length === 4 && home.every((n) => !isNaN(n))) animateViewBox(svg, home, 450);
+  }
+
+  function enableMapRegions(panel) {
+    if (!panel) return;
+    const svg = panel.querySelector('.map-svg');
+    const regions = [...panel.querySelectorAll('.map-region')];
+    const backBtn = panel.querySelector('.map-sidebar-back');
+    let selectedId = '__ALL__';
+
+    function currentView() {
+      const active = panel.querySelector('.view-btn.active');
+      return active ? active.dataset.view : 'players';
+    }
+
+    function deselect() {
+      regions.forEach((r) => r.classList.remove('selected'));
+      selectedId = '__ALL__';
+      zoomMapHome(svg);
+      renderMapSidebar(panel, selectedId, currentView());
+    }
+
+    regions.forEach((r) => {
+      r.addEventListener('click', () => {
+        if (selectedId === r.dataset.id) { deselect(); return; }
+        regions.forEach((other) => other.classList.remove('selected'));
+        r.classList.add('selected');
+        selectedId = r.dataset.id;
+        zoomToRegion(svg, r);
+        renderMapSidebar(panel, selectedId, currentView());
+      });
+    });
+    if (backBtn) backBtn.addEventListener('click', deselect);
+
+    // Sidebar always shows a list (the full unfiltered one by default), so
+    // populate it immediately rather than waiting for a region click.
+    renderMapSidebar(panel, selectedId, currentView());
+
+    panel._mapRefreshSidebar = () => renderMapSidebar(panel, selectedId, currentView());
+  }
+
   function enableViewToggle(panel) {
     const buttons = [...panel.querySelectorAll('.view-btn')];
     if (!buttons.length) return;
@@ -1745,12 +2041,14 @@ function writeJs() {
   enableTabs();
   initPanel('players-tab');
   initPanel('rankings-tab');
+  enableMapToggle(document.getElementById('map-tab'));
+  enableMapRegions(document.getElementById('map-tab'));
 })();
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), js);
 }
 
-function writeHtml(playerRows, allTournaments, rankingRows) {
+function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments) {
   const playerTableRows = playerRows.map((p) => {
     const tournamentLinks = p.tournaments
       .map((t) => `<a href="tournaments/${escapeHtml(t.slug)}.html"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
@@ -1810,6 +2108,27 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
 </div>`;
   }).join('\n');
 
+  const mapPaths = mapRegions.map((r) => `<path class="map-region" data-id="${escapeHtml(r.id)}" data-players="${r.players}" data-tournaments="${r.tournaments}" d="${r.d}"><title>${escapeHtml(r.name)}: ${r.players} player${r.players === 1 ? '' : 's'}, ${r.tournaments} tournament${r.tournaments === 1 ? '' : 's'}</title></path>`).join('\n');
+  const mapLabels = mapRegions.map((r) => `<text class="map-label" data-players="${r.players}" data-tournaments="${r.tournaments}" x="${r.cx}" y="${r.cy}"></text>`).join('\n');
+  // Per-region player/tournament lists for the click-to-filter sidebar —
+  // kept out of the SVG itself (which only needs counts to color/label
+  // regions) and parsed once from this JSON blob by index.js. The special
+  // "__ALL__" key holds the unfiltered lists shown by default (the sidebar
+  // always shows a list; clicking a region filters it rather than
+  // replacing it with a totally separate view).
+  const toMapPlayerJson = (p) => ({ n: p.name, h: p.href, rank: p.rank, v: p.rating, rd: p.rd, la: p.lastActive, f: p.flag });
+  const toMapTournamentJson = (t) => ({ n: t.label, h: t.href, d: t.date, f: t.flag });
+  const mapRegionData = Object.fromEntries(mapRegions.map((r) => [r.id, {
+    name: r.name,
+    playersList: r.playersList.map(toMapPlayerJson),
+    tournamentsList: r.tournamentsList.map(toMapTournamentJson),
+  }]));
+  mapRegionData.__ALL__ = {
+    name: 'All States',
+    playersList: mapAllPlayers.map(toMapPlayerJson),
+    tournamentsList: mapAllTournaments.map(toMapTournamentJson),
+  };
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1823,6 +2142,7 @@ function writeHtml(playerRows, allTournaments, rankingRows) {
   <button class="tab-button active" data-tab="rankings-tab">Power Rankings</button>
   <button class="tab-button" data-tab="players-tab">Players</button>
   <button class="tab-button" data-tab="tournaments-tab">Tournaments</button>
+  <button class="tab-button" data-tab="map-tab">Map</button>
   <span class="tab-underline"></span>
 </div>
 
@@ -1872,6 +2192,42 @@ ${tournamentTableRows}
     </tbody>
   </table>
 </div>
+
+<div id="map-tab" class="tab-panel">
+  <div class="tab-controls">
+    <div class="view-toggle">
+      <span class="view-toggle-indicator"></span>
+      <button class="view-btn active" data-view="players">Players</button>
+      <button class="view-btn" data-view="tournaments">Tournaments</button>
+    </div>
+    <div class="map-legend">
+      <span class="map-legend-label">Fewer</span>
+      <span class="map-legend-swatch"></span>
+      <span class="map-legend-label">More</span>
+    </div>
+  </div>
+  <div class="map-panel">
+    <div class="map-canvas">
+      <svg class="map-svg" viewBox="${MAP_HOME_VIEWBOX.join(' ')}" data-home="${MAP_HOME_VIEWBOX.join(' ')}" preserveAspectRatio="xMidYMid meet">
+        <g class="map-regions">
+${mapPaths}
+        </g>
+        <g class="map-labels">
+${mapLabels}
+        </g>
+      </svg>
+    </div>
+    <div class="map-sidebar">
+      <div class="map-sidebar-head">
+        <h3 class="map-sidebar-title">All States</h3>
+        <button class="map-sidebar-back" type="button" hidden>&times; Clear</button>
+      </div>
+      <div class="map-sidebar-colhead"></div>
+      <ol class="standings-list map-sidebar-list"></ol>
+    </div>
+  </div>
+</div>
+<script type="application/json" id="map-region-data">${JSON.stringify(mapRegionData)}</script>
 
 <div id="rankings-tab" class="tab-panel active">
   <div class="tab-controls">
@@ -2845,10 +3201,92 @@ async function main() {
   assignPlayerSlugs(players);
   const histories = buildPlayerHistories(allTournaments, preTournamentRatings);
 
+  // Map sidebar player lists are alphabetical (not rank order) and only
+  // include players with a resolved location — even the unfiltered "All
+  // States" list, since an unlocatable player can't meaningfully belong to
+  // any region anyway. `rank` still reflects each player's real overall
+  // Power Ranking position (looked up from the rank-ordered rankingRows
+  // before re-sorting alphabetically), just displayed in an alpha-sorted list.
+  const rankById = new Map(rankingRows.map((p, i) => [p.id, i + 1]));
+  // Last active = the most recent tournament date among a player's own
+  // tournaments, cross-referenced against allTournaments (players only
+  // track which tournament URLs they played, not dates).
+  const urlToDate = new Map(allTournaments.map((t) => [t.url, t.date]));
+  const lastActiveById = new Map();
+  for (const [id, p] of players.entries()) {
+    let last = '';
+    for (const url of p.tournaments.keys()) {
+      const d = urlToDate.get(url);
+      if (d && d > last) last = d;
+    }
+    lastActiveById.set(id, last);
+  }
+  const toMapPlayer = (p) => ({
+    name: p.name,
+    href: playerHref(p.id, ''),
+    rank: rankById.get(p.id),
+    rating: Math.round(p.r),
+    rd: Math.round(p.rd),
+    lastActive: formatMonthYearHuman(lastActiveById.get(p.id)),
+    flag: p.flag,
+  });
+  const locatedPlayersAlpha = rankingRows
+    .filter((p) => p.state)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const mapAllPlayers = locatedPlayersAlpha.map(toMapPlayer);
+  const regionPlayers = new Map();
+  for (const p of locatedPlayersAlpha) {
+    const abbr = regionAbbr(p.state);
+    if (!abbr) continue;
+    if (!regionPlayers.has(abbr)) regionPlayers.set(abbr, []);
+    regionPlayers.get(abbr).push(toMapPlayer(p));
+  }
+
+  // Tournament dates are pre-formatted human-readable ("May 23, 2026") at
+  // generation time — sort by the raw ISO date first, then format, since
+  // sorting the formatted strings would order by month name instead of time.
+  const toMapTournament = (t) => ({ label: t.label, href: `tournaments/${t.slug}.html`, date: formatDateHuman(t.date), flag: t.locationDisplay.flag });
+  const mapAllTournaments = [...allTournaments].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(toMapTournament);
+  const regionTournamentsRaw = new Map();
+  for (const t of allTournaments) {
+    const abbr = regionAbbr(t.state);
+    if (!abbr) continue;
+    if (!regionTournamentsRaw.has(abbr)) regionTournamentsRaw.set(abbr, []);
+    regionTournamentsRaw.get(abbr).push(t);
+  }
+  const regionTournaments = new Map();
+  for (const [abbr, list] of regionTournamentsRaw) {
+    regionTournaments.set(abbr, [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(toMapTournament));
+  }
+
+  // A region's geometric centroid isn't always where its label should sit
+  // (e.g. a state with a panhandle, or two land masses joined by water) —
+  // nudge specific labels toward the state's visually-recognizable body.
+  const LABEL_OFFSETS = {
+    CA: [0, 18],   // centroid sits high (pulled up by the wide NorCal/OR border); drop toward the main body
+    FL: [9, 0],    // centroid pulled west by the panhandle; shift toward the peninsula
+    MI: [10, 23],  // centroid falls in Lake Huron between the UP and the mitten; shift into the mitten
+  };
+
+  const mapRegions = mapShapes.shapes.map((s) => {
+    const [dx, dy] = LABEL_OFFSETS[s.id] || [0, 0];
+    return {
+      id: s.id,
+      name: STATE_NAMES[s.id] || s.id,
+      d: s.d,
+      cx: Math.round((s.cx + dx) * 10) / 10,
+      cy: Math.round((s.cy + dy) * 10) / 10,
+      players: (regionPlayers.get(s.id) || []).length,
+      tournaments: (regionTournaments.get(s.id) || []).length,
+      playersList: regionPlayers.get(s.id) || [],
+      tournamentsList: regionTournaments.get(s.id) || [],
+    };
+  });
+
   writeCsv(playerRows);
   writeCss();
   writeJs();
-  writeHtml(playerRows, allTournaments, rankingRows);
+  writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments);
   writeTournamentPages(allTournaments);
   writePlayerPages(players, glicko, histories, rankingRows);
 

@@ -1,5 +1,6 @@
 (function () {
   const STATE_NAMES = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"Washington D.C.","AB":"Alberta","BC":"British Columbia","MB":"Manitoba","NB":"New Brunswick","NL":"Newfoundland and Labrador","NS":"Nova Scotia","NT":"Northwest Territories","NU":"Nunavut","ON":"Ontario","PE":"Prince Edward Island","QC":"Quebec","SK":"Saskatchewan","YT":"Yukon"};
+  const MAP_REGION_DATA = JSON.parse(document.getElementById('map-region-data')?.textContent || '{}');
 
   function enableSorting(table) {
     const tbody = table.tBodies[0];
@@ -47,7 +48,7 @@
     indicator.style.width = targetRect.width + 'px';
   }
 
-  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings' };
+  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map' };
 
   // Cross-fades just the variable part of the page heading ("DeathBall" is
   // static) to the tab's own heading instead of snapping straight to it.
@@ -80,6 +81,13 @@
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
         fitCardNames(panel);
+        // Same story for any view-toggle pill inside this panel (e.g. the
+        // Map tab's Players/Tournaments switch) — its indicator was
+        // positioned against a zero-width rect while hidden.
+        const innerToggle = panel.querySelector('.view-toggle');
+        const innerIndicator = panel.querySelector('.view-toggle-indicator');
+        const innerActive = panel.querySelector('.view-btn.active');
+        if (innerToggle && innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
@@ -219,6 +227,205 @@
     for (const el of scope.querySelectorAll('.prc-name')) fitText(el, 18, 9);
   }
 
+  // Sequential fill scale from dim (no data) up to bright green, using a
+  // sqrt scale so a handful of high-count hubs (e.g. Texas/Minnesota) don't
+  // wash out every other state to the same dim shade.
+  function countColor(count, max) {
+    if (!count) return 'rgba(255, 255, 255, 0.05)';
+    const t = max > 0 ? Math.sqrt(count / max) : 0;
+    const lightness = 16 + t * 44;
+    return 'hsl(150, 70%, ' + lightness.toFixed(1) + '%)';
+  }
+
+  function updateMap(panel, view) {
+    const regions = [...panel.querySelectorAll('.map-region')];
+    const labels = [...panel.querySelectorAll('.map-label')];
+    let max = 1;
+    for (const r of regions) max = Math.max(max, parseInt(r.dataset[view] || '0', 10));
+    regions.forEach((r) => {
+      const count = parseInt(r.dataset[view] || '0', 10);
+      r.style.fill = countColor(count, max);
+    });
+    labels.forEach((l) => {
+      const count = parseInt(l.dataset[view] || '0', 10);
+      l.textContent = count > 0 ? count : '';
+    });
+  }
+
+  function enableMapToggle(panel) {
+    if (!panel) return;
+    const buttons = [...panel.querySelectorAll('.view-btn')];
+    const toggleEl = panel.querySelector('.view-toggle');
+    const indicator = panel.querySelector('.view-toggle-indicator');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        moveIndicator(indicator, toggleEl, btn);
+        updateMap(panel, btn.dataset.view);
+        // Keep an open region's sidebar in sync with whichever list (players
+        // vs tournaments) is now the active view, without touching zoom.
+        if (panel._mapRefreshSidebar) panel._mapRefreshSidebar();
+      });
+    });
+    const active = buttons.find((b) => b.classList.contains('active'));
+    moveIndicator(indicator, toggleEl, active);
+    updateMap(panel, active ? active.dataset.view : 'players');
+  }
+
+  function animateViewBox(svg, toBox, duration) {
+    const fromBox = svg.getAttribute('viewBox').split(' ').map(Number);
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const box = fromBox.map((v, i) => v + (toBox[i] - v) * eased);
+      svg.setAttribute('viewBox', box.join(' '));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Mirrors the player page's tournament-history-list / recent-matches-list
+  // styling (standings-list / standings-rank / hist-tourney-name /
+  // standings-record) so this reads as the same kind of list elsewhere on
+  // the site, rather than a one-off sidebar design. The sidebar always
+  // shows a list — regionId '__ALL__' (the default) shows every
+  // player/tournament; clicking a region filters this same list down
+  // rather than swapping in a separate view.
+  function mapFlagNameSpan(item) {
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'hist-tourney-name';
+    if (item.f) {
+      const img = document.createElement('img');
+      img.className = 'loc-flag';
+      img.src = item.f.src;
+      img.alt = item.f.title;
+      img.title = item.f.title;
+      nameSpan.appendChild(img);
+    }
+    if (item.h) {
+      const a = document.createElement('a');
+      a.href = item.h;
+      a.textContent = item.n;
+      nameSpan.appendChild(a);
+    } else {
+      nameSpan.appendChild(document.createTextNode(item.n));
+    }
+    return nameSpan;
+  }
+
+  function renderMapSidebar(panel, regionId, view) {
+    const data = MAP_REGION_DATA[regionId];
+    if (!data) return;
+    const list = panel.querySelector('.map-sidebar-list');
+    const colhead = panel.querySelector('.map-sidebar-colhead');
+    const title = panel.querySelector('.map-sidebar-title');
+    const backBtn = panel.querySelector('.map-sidebar-back');
+    title.textContent = data.name;
+    if (backBtn) backBtn.hidden = regionId === '__ALL__';
+
+    const isTournaments = view === 'tournaments';
+    list.classList.toggle('map-cols-players', !isTournaments);
+    list.classList.toggle('map-cols-tournaments', isTournaments);
+    colhead.classList.toggle('map-cols-players', !isTournaments);
+    colhead.classList.toggle('map-cols-tournaments', isTournaments);
+    colhead.innerHTML = '';
+    (isTournaments ? ['Tournament', 'Date'] : ['Player', 'Placement', 'Rating', 'Last Active']).forEach((label) => {
+      const span = document.createElement('span');
+      span.textContent = label;
+      colhead.appendChild(span);
+    });
+
+    list.innerHTML = '';
+    const items = isTournaments ? data.tournamentsList : data.playersList;
+    if (!items.length) {
+      const li = document.createElement('li');
+      li.className = 'map-sidebar-empty';
+      li.textContent = 'No ' + view + ' from here yet.';
+      list.appendChild(li);
+      return;
+    }
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      li.appendChild(mapFlagNameSpan(item));
+      if (isTournaments) {
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'standings-record';
+        dateSpan.textContent = item.d || '';
+        li.appendChild(dateSpan);
+      } else {
+        const rankSpan = document.createElement('span');
+        rankSpan.className = 'standings-record';
+        rankSpan.textContent = '#' + item.rank;
+        li.appendChild(rankSpan);
+        const ratingSpan = document.createElement('span');
+        ratingSpan.className = 'standings-record';
+        ratingSpan.textContent = item.v + ' ± ' + item.rd;
+        li.appendChild(ratingSpan);
+        const lastActiveSpan = document.createElement('span');
+        lastActiveSpan.className = 'standings-record';
+        lastActiveSpan.textContent = item.la || '';
+        li.appendChild(lastActiveSpan);
+      }
+      list.appendChild(li);
+    });
+  }
+
+  function zoomToRegion(svg, regionEl) {
+    const bbox = regionEl.getBBox();
+    const padFactor = 0.4;
+    const minSize = 40;
+    const w = Math.max(bbox.width * (1 + padFactor * 2), minSize);
+    const h = Math.max(bbox.height * (1 + padFactor * 2), minSize);
+    const cx = bbox.x + bbox.width / 2;
+    const cy = bbox.y + bbox.height / 2;
+    animateViewBox(svg, [cx - w / 2, cy - h / 2, w, h], 450);
+  }
+
+  function zoomMapHome(svg) {
+    const home = (svg.dataset.home || '').split(' ').map(Number);
+    if (home.length === 4 && home.every((n) => !isNaN(n))) animateViewBox(svg, home, 450);
+  }
+
+  function enableMapRegions(panel) {
+    if (!panel) return;
+    const svg = panel.querySelector('.map-svg');
+    const regions = [...panel.querySelectorAll('.map-region')];
+    const backBtn = panel.querySelector('.map-sidebar-back');
+    let selectedId = '__ALL__';
+
+    function currentView() {
+      const active = panel.querySelector('.view-btn.active');
+      return active ? active.dataset.view : 'players';
+    }
+
+    function deselect() {
+      regions.forEach((r) => r.classList.remove('selected'));
+      selectedId = '__ALL__';
+      zoomMapHome(svg);
+      renderMapSidebar(panel, selectedId, currentView());
+    }
+
+    regions.forEach((r) => {
+      r.addEventListener('click', () => {
+        if (selectedId === r.dataset.id) { deselect(); return; }
+        regions.forEach((other) => other.classList.remove('selected'));
+        r.classList.add('selected');
+        selectedId = r.dataset.id;
+        zoomToRegion(svg, r);
+        renderMapSidebar(panel, selectedId, currentView());
+      });
+    });
+    if (backBtn) backBtn.addEventListener('click', deselect);
+
+    // Sidebar always shows a list (the full unfiltered one by default), so
+    // populate it immediately rather than waiting for a region click.
+    renderMapSidebar(panel, selectedId, currentView());
+
+    panel._mapRefreshSidebar = () => renderMapSidebar(panel, selectedId, currentView());
+  }
+
   function enableViewToggle(panel) {
     const buttons = [...panel.querySelectorAll('.view-btn')];
     if (!buttons.length) return;
@@ -258,4 +465,6 @@
   enableTabs();
   initPanel('players-tab');
   initPanel('rankings-tab');
+  enableMapToggle(document.getElementById('map-tab'));
+  enableMapRegions(document.getElementById('map-tab'));
 })();

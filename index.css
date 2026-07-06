@@ -37,6 +37,42 @@ a:hover { text-decoration: underline; }
 .view-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
 .view-btn.active { color: #000; }
 .view-btn:not(.active):hover { color: #bbb; }
+.map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
+/* Fixed 2:1 column split (not flex-grow based) so the map's box never
+   resizes when the sidebar's content changes — the sidebar is always
+   present (full unfiltered list by default, filtered to a region on
+   click), never toggling in/out of layout the way it briefly did before.
+   No max-width: map + list together fill the same full content width as
+   every other tab's table. */
+.map-panel { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+.map-canvas { min-width: 0; }
+/* Fixed pixel height (not width-relative "auto") so the map never changes
+   size — only its width, via the 4fr column, flexes with viewport width. */
+.map-svg { width: 100%; height: 600px; display: block; }
+.map-region { fill: rgba(255, 255, 255, 0.05); stroke: #050505; stroke-width: 0.75; transition: fill 200ms ease, stroke 150ms ease; cursor: pointer; }
+.map-region:hover { stroke: #3eff8b; stroke-width: 1.5; }
+.map-region.selected { stroke: #3eff8b; stroke-width: 2; }
+.map-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700; fill: #eee; text-anchor: middle; dominant-baseline: middle; pointer-events: none; paint-order: stroke; stroke: #000; stroke-width: 2px; stroke-linejoin: round; }
+/* Deliberately no card box (background/border) — matches the plain,
+   unboxed section + list look used on player pages (see .tourney-section),
+   not a bordered "widget" look. */
+.map-sidebar { min-width: 0; height: 600px; display: flex; flex-direction: column; }
+.map-sidebar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; flex-shrink: 0; }
+.map-sidebar-back { background: none; border: none; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0; cursor: pointer; flex-shrink: 0; }
+.map-sidebar-back:hover { text-decoration: underline; }
+.map-sidebar-title { margin: 0; font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-sidebar-empty { color: #555; font-size: 0.88rem; padding: 0.4rem 0; }
+.map-sidebar-list { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+/* Name truncation is normally keyed off nth-child(2) (see .standings-list li
+   > span:nth-child(2) above), which assumes every row starts with a
+   standings-rank span — the map sidebar's tournament rows don't have one,
+   so truncation is pinned to the class directly instead of row position. */
+.hist-tourney-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Bigger than the player-page default (this list is the sidebar's main
+   content, not a secondary history section) — scoped to the map sidebar
+   only so player pages' own lists are untouched. */
+.map-sidebar-list .hist-tourney-name { font-size: 1.05rem; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
@@ -194,6 +230,22 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .hist-tourney-name a { color: #777; }
 .hist-tourney-name a:hover { color: #3eff8b; }
 .show-more-btn { display: inline-block; margin-top: 0.6rem; background: none; border: none; padding: 0; color: #3eff8b; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+/* Map sidebar: multi-column layout (name + placement/rating/last-active for
+   players, name + date for tournaments) with a matching header row above
+   the list — overrides standings-list's flex row (declared earlier) with a
+   grid so every column lines up with its header regardless of content
+   length. Column count/labels are set by JS (renderMapSidebar) via the
+   map-cols-players/map-cols-tournaments classes on both this header and
+   the list itself, so their grid-template-columns stay in sync. */
+.map-sidebar-colhead { display: grid; gap: 0.5rem; padding: 0 0.75rem 0.35rem; font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; }
+.map-sidebar-colhead span:not(:first-child) { text-align: right; }
+.map-sidebar-list li { display: grid; gap: 0.5rem; }
+.map-sidebar-list li > span:not(:first-child) { text-align: right; margin-left: 0; }
+/* The map-cols-* class is toggled onto both the header div (which is
+   itself the grid, so this rule applies directly) and the <ol> (which
+   isn't a grid — its <li> children are), hence the two selector forms. */
+.map-sidebar-colhead.map-cols-players, ol.map-cols-players li { grid-template-columns: 1fr 3.4rem 6.5rem 4rem; }
+.map-sidebar-colhead.map-cols-tournaments, ol.map-cols-tournaments li { grid-template-columns: 1fr 8.5rem; }
 /* Player pages carry a background glow matching their power-ranking card
    color (see cardAccent) — card-green vs card-purple varies the glow for
    visual variety, but page text always stays the site's green accent
