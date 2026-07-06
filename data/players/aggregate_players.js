@@ -1257,6 +1257,17 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// prefix is '' from a root-level page (index.html) or '../' from one level
+// deep (tournaments/*.html, players/*.html) — same convention as playerHref.
+function siteFooter(prefix) {
+  return `<footer class="site-footer">
+  <span>&copy; ${new Date().getFullYear()} LilyLambda</span>
+  <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
+  <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
+  <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
+</footer>`;
+}
+
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Formats a stored YYYY-MM-DD date as "Month D, YYYY" for display (the raw
@@ -1551,6 +1562,9 @@ body.card-green, body.card-purple { min-height: 100vh; }
 body.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(0, 70, 30) 0%, #050505 55%); }
 body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70) 0%, #050505 55%); }
 .show-more-btn:hover { text-decoration: underline; }
+.site-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #222; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center; color: #555; font-size: 0.8rem; }
+.site-footer a { color: #777; }
+.site-footer a:hover { color: #3eff8b; }
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
 }
@@ -2284,6 +2298,7 @@ ${rankingTableRows}
   </table>
 </div>
 
+${siteFooter('')}
 <script src="index.js"></script>
 </body>
 </html>
@@ -2866,6 +2881,7 @@ ${extraHead}
     ${extraHead ? '<script>setupBracketInteractivity();</script>' : ''}
   </div>
 </div>
+${siteFooter('../')}
 </body>
 </html>
 `;
@@ -3109,6 +3125,7 @@ ${rankingTiles}
     });
   });
 </script>
+${siteFooter('../')}
 </body>
 </html>
 `;

@@ -254,3 +254,6 @@ body.card-green, body.card-purple { min-height: 100vh; }
 body.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(0, 70, 30) 0%, #050505 55%); }
 body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70) 0%, #050505 55%); }
 .show-more-btn:hover { text-decoration: underline; }
+.site-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #222; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center; color: #555; font-size: 0.8rem; }
+.site-footer a { color: #777; }
+.site-footer a:hover { color: #3eff8b; }
