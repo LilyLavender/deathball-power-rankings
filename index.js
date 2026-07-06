@@ -125,9 +125,12 @@
     const DEFAULT_MIN_GAMES = 5;
     const DEFAULT_MAX_RD = 150;
 
-    // Use card grid as count source for rankings (avoids double-counting with table)
+    // Use card grid as count source for rankings (avoids double-counting with table).
+    // Scoped to direct .pr-card children so the .pr-square promo tile (no
+    // data-games/data-rd, not a real ranked player) is never counted, ranked,
+    // or hidden by these filters.
     const grid = isRankingsTab ? panel.querySelector('.pr-grid') : null;
-    const countSource = grid ? [...grid.children] : (tbody ? [...tbody.rows] : []);
+    const countSource = grid ? [...grid.querySelectorAll(':scope > .pr-card')] : (tbody ? [...tbody.rows] : []);
 
     // First pass: count per state for items passing non-state filters
     const stateCounts = new Map();
@@ -180,7 +183,7 @@
     let visible = 0;
     if (grid) {
       let rank = 1;
-      for (const card of grid.children) {
+      for (const card of grid.querySelectorAll(':scope > .pr-card')) {
         const games = parseInt(card.dataset.games || '0', 10);
         const rd = parseFloat(card.dataset.rd || '0');
         const cardState = card.dataset.state || '';
@@ -426,6 +429,93 @@
     panel._mapRefreshSidebar = () => renderMapSidebar(panel, selectedId, currentView());
   }
 
+  // html2canvas draws cross-origin <img> elements (CDN flags, the square's
+  // logo) via a raw ctx.drawImage, which silently no-ops on a tainted
+  // source instead of throwing -- the image just never appears. Pre-fetch
+  // each one and swap its src for a same-origin data: URI before capture
+  // sidesteps that entirely (see downloadRankingsImage).
+  async function inlineImages(root) {
+    const imgs = [...root.querySelectorAll('img')];
+    await Promise.all(imgs.map(async (img) => {
+      try {
+        const resp = await fetch(img.src);
+        const blob = await resp.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        img.src = dataUrl;
+      } catch (_) {
+        // Leave the original src; ignoreElements below drops it from the
+        // render instead of leaving a broken/cross-origin image in place.
+      }
+    }));
+  }
+
+  // Captures the top 100 ranked cards (by rank, ignoring any live min-games/
+  // max-RD/state filtering) plus the .pr-square promo tile into an offscreen
+  // clone forced to the 8-column desktop layout, so the exported image is
+  // consistent regardless of the current viewport width or filter state.
+  async function downloadRankingsImage(panel) {
+    const grid = panel.querySelector('.pr-grid');
+    if (!grid || !window.html2canvas) return;
+    const square = grid.querySelector('.pr-square');
+    const cards = [...grid.querySelectorAll(':scope > .pr-card')].slice(0, 100);
+    const clone = document.createElement('div');
+    clone.className = 'pr-grid pr-export-grid';
+    clone.style.gridTemplateColumns = 'repeat(8, 1fr)';
+    clone.style.width = '1400px';
+    clone.style.padding = '24px';
+    clone.style.background = '#050505';
+    if (square) {
+      const squareClone = square.cloneNode(true);
+      squareClone.style.display = 'flex';
+      clone.appendChild(squareClone);
+    }
+    // Cards failing the live min-games/max-RD/state filter carry a hidden
+    // attribute, which cloneNode preserves -- left alone, those clones
+    // collapse to zero size, shrink the grid, and cut the export off early.
+    // Force every one of the top 100 visible and renumbered 1-100, since
+    // the export is always meant to show the top 100 regardless of filters.
+    cards.forEach((c, idx) => {
+      const cardClone = c.cloneNode(true);
+      cardClone.hidden = false;
+      cardClone.classList.remove('filter-dim', 'uncertain');
+      const rankEl = cardClone.querySelector('.prc-rank');
+      if (rankEl) rankEl.textContent = idx + 1;
+      clone.appendChild(cardClone);
+    });
+    document.body.appendChild(clone);
+    // html2canvas mis-renders the cards' radial-gradient backgrounds (every
+    // card washes out to the same tint) -- swap to flat fallback colors,
+    // export-only, so green/purple stay visually distinct in the PNG.
+    clone.querySelectorAll('.pr-card').forEach((c) => {
+      if (c.classList.contains('card-green')) c.style.background = '#132a1d';
+      else if (c.classList.contains('card-purple')) c.style.background = '#241a30';
+      else c.style.background = '#0f0f0f';
+    });
+    await inlineImages(clone);
+    html2canvas(clone, {
+      backgroundColor: '#050505',
+      scale: 2,
+      ignoreElements: (node) => node.tagName === 'IMG' && !node.src.startsWith('data:'),
+    }).then((canvas) => {
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'deathball-power-rankings-top100.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+      clone.remove();
+    }).catch(() => clone.remove());
+  }
+
   function enableViewToggle(panel) {
     const buttons = [...panel.querySelectorAll('.view-btn')];
     if (!buttons.length) return;
@@ -433,6 +523,8 @@
     const table = panel.querySelector('table');
     const toggleEl = panel.querySelector('.view-toggle');
     const indicator = panel.querySelector('.view-toggle-indicator');
+    const downloadBtn = panel.querySelector('.download-btn');
+    if (downloadBtn) downloadBtn.addEventListener('click', () => downloadRankingsImage(panel));
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -440,13 +532,16 @@
         const view = btn.dataset.view;
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
+        if (downloadBtn) downloadBtn.hidden = view !== 'grid';
         moveIndicator(indicator, toggleEl, btn);
         // Also refreshes the "Click a column header to sort." hint for the
         // view just switched to.
         applyFilters(panel);
       });
     });
-    moveIndicator(indicator, toggleEl, buttons.find((b) => b.classList.contains('active')));
+    const activeBtn = buttons.find((b) => b.classList.contains('active'));
+    if (downloadBtn) downloadBtn.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
+    moveIndicator(indicator, toggleEl, activeBtn);
   }
 
   function initPanel(panelId) {

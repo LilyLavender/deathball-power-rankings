@@ -1345,6 +1345,9 @@ a:hover { text-decoration: underline; }
 .view-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
 .view-btn.active { color: #000; }
 .view-btn:not(.active):hover { color: #bbb; }
+.download-btn { margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
+.download-btn:hover { border-color: #3eff8b; color: #3eff8b; }
+.download-btn[hidden] { display: none; }
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -1436,7 +1439,65 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .prc-val { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; color: #aaa; }
 .prc-dim { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 600; color: #444; }
 .prc-sep { font-size: 0.75rem; color: #333; font-family: 'Rajdhani', sans-serif; font-weight: 600; margin: 0 1px; }
-@media (max-width: 1100px) { .pr-grid { grid-template-columns: repeat(4, 1fr); } }
+/* Positioned so its four corners land one row up from where cards 43-46
+   (top edge) and 91-94 (bottom edge) would fall in the 8-column grid (row =
+   floor(index/8)+1, col = index%8+1) — this only lines up at the 8-column
+   breakpoint, so it's hidden below that rather than recomputed per
+   breakpoint. The download export clone forces 8 columns and re-shows it
+   inline regardless of viewport (see downloadRankingsImage). */
+/* Height is pinned to exactly 7 native card rows (7 * 45.6px card height +
+   6 * 5px grid row-gap = 349.2px, measured live) rather than left to grow
+   with content -- letting it grow taller stretches the grid's row tracks,
+   which also stretches every other card sharing those rows. box-sizing:
+   border-box so padding/border count inside that height; overflow:hidden
+   is a clip guard, not the primary fit mechanism -- inner content is sized
+   to actually fit, verified against the real 7-row height via screenshots
+   rather than computed on paper (font metrics don't add up cleanly by hand). */
+.pr-square { grid-column: 3 / 7; grid-row: 5 / 12; height: 349.2px; box-sizing: border-box; background: #0a0a0a; border: 1px solid #3eff8b; padding: 10px 14px; display: flex; flex-direction: column; gap: 1em; user-select: none; box-shadow: 0 0 24px rgba(62,255,139,0.15); overflow: hidden; }
+.pr-square-title { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1.6rem; color: #fff; letter-spacing: 0.05em; text-align: center; white-space: nowrap; flex: none; }
+.pr-square-logo { height: 1.6em; width: auto; }
+.pr-square-row { display: flex; gap: 16px; flex: 1; min-height: 0; }
+/* Breathing room above the second row so it doesn't butt against the first. */
+.pr-square-row-2 { margin-top: 2em; position: relative; }
+/* Percentage-based (not fixed px) so it stays roughly between the stats and
+   the tagline whether measured on the live responsive grid or the download
+   export's fixed-width clone, which render the square at different pixel
+   widths. Sits in the empty gap between the two flex columns via absolute
+   positioning so it doesn't participate in / disturb their flex sizing. */
+.pr-square-mascot { position: absolute; bottom: -38px; left: 50%; width: 8%; object-fit: contain; pointer-events: none; }
+.pr-square-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+/* "How to read a card" only needs to fit the demo card + callouts, so it
+   shrinks to content; "how rankings are determined" gets the extra space. */
+.pr-square-col-card { flex: 0 0 auto; }
+.pr-square-col-text { flex: 1 1 0; }
+/* Right-aligned and non-growing so the tagline sits close to the QR code
+   next to it instead of centered in its own wide flex share. */
+.pr-square-col-tagline { flex: 0 1 auto; align-items: flex-end; }
+.pr-square-label { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase; color: #666; }
+.pr-square-text { font-family: 'Rajdhani', sans-serif; font-size: 0.74rem; color: #999; line-height: 1.3; }
+.pr-square-example { pointer-events: none; width: 210px; flex: none; }
+.pr-square-callouts { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.pr-square-callout { font-family: 'Rajdhani', sans-serif; font-size: 0.66rem; color: #666; }
+.pr-square-callout b { color: #aaa; }
+.pr-square-qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+.pr-square-qr { width: 78px; height: 78px; display: flex; align-items: center; justify-content: center; }
+.pr-square-qr img { width: 100%; height: 100%; object-fit: contain; }
+.pr-square-qr-label { font-family: 'Rajdhani', sans-serif; font-size: 0.6rem; color: #666; letter-spacing: 0.04em; text-transform: uppercase; }
+/* Grid (not flex) so three stat tiles are guaranteed to fit within the
+   column's own width instead of overflowing into the next column when
+   their combined natural width exceeds it. */
+.pr-square-stats { display: grid; grid-template-columns: 4em 4em 4em; gap: 3em; }
+.pr-square-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pr-square-stat-num { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1.05rem; color: #3eff8b; line-height: 1; }
+.pr-square-stat-label { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.55rem; letter-spacing: 0.02em; text-transform: uppercase; color: #666; }
+.pr-square-latest { margin-top: 4px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pr-square-latest-item { font-family: 'Rajdhani', sans-serif; font-size: 0.66rem; color: #999; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-square-tagline { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 0.95rem; color: #fff; line-height: 1.35; text-align: right; overflow-wrap: break-word; }
+.pr-square-footer { font-family: 'Rajdhani', sans-serif; font-size: 0.62rem; color: #555; text-align: left; flex: none; }
+/* Off-screen clone target used by downloadRankingsImage — not display:none
+   (html2canvas needs real layout) so it's shoved out via position instead. */
+.pr-export-grid { position: fixed; top: 0; left: -10000px; z-index: -1; }
+@media (max-width: 1100px) { .pr-grid { grid-template-columns: repeat(4, 1fr); } .pr-square { display: none; } }
 @media (max-width: 600px) { .pr-grid { grid-template-columns: repeat(2, 1fr); } body { padding: 1rem; } }
 .back-link { display: inline-block; color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
 .back-link:hover { color: #3eff8b; }
@@ -1715,9 +1776,12 @@ function writeJs() {
     const DEFAULT_MIN_GAMES = 5;
     const DEFAULT_MAX_RD = 150;
 
-    // Use card grid as count source for rankings (avoids double-counting with table)
+    // Use card grid as count source for rankings (avoids double-counting with table).
+    // Scoped to direct .pr-card children so the .pr-square promo tile (no
+    // data-games/data-rd, not a real ranked player) is never counted, ranked,
+    // or hidden by these filters.
     const grid = isRankingsTab ? panel.querySelector('.pr-grid') : null;
-    const countSource = grid ? [...grid.children] : (tbody ? [...tbody.rows] : []);
+    const countSource = grid ? [...grid.querySelectorAll(':scope > .pr-card')] : (tbody ? [...tbody.rows] : []);
 
     // First pass: count per state for items passing non-state filters
     const stateCounts = new Map();
@@ -1770,7 +1834,7 @@ function writeJs() {
     let visible = 0;
     if (grid) {
       let rank = 1;
-      for (const card of grid.children) {
+      for (const card of grid.querySelectorAll(':scope > .pr-card')) {
         const games = parseInt(card.dataset.games || '0', 10);
         const rd = parseFloat(card.dataset.rd || '0');
         const cardState = card.dataset.state || '';
@@ -2016,6 +2080,93 @@ function writeJs() {
     panel._mapRefreshSidebar = () => renderMapSidebar(panel, selectedId, currentView());
   }
 
+  // html2canvas draws cross-origin <img> elements (CDN flags, the square's
+  // logo) via a raw ctx.drawImage, which silently no-ops on a tainted
+  // source instead of throwing -- the image just never appears. Pre-fetch
+  // each one and swap its src for a same-origin data: URI before capture
+  // sidesteps that entirely (see downloadRankingsImage).
+  async function inlineImages(root) {
+    const imgs = [...root.querySelectorAll('img')];
+    await Promise.all(imgs.map(async (img) => {
+      try {
+        const resp = await fetch(img.src);
+        const blob = await resp.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        img.src = dataUrl;
+      } catch (_) {
+        // Leave the original src; ignoreElements below drops it from the
+        // render instead of leaving a broken/cross-origin image in place.
+      }
+    }));
+  }
+
+  // Captures the top 100 ranked cards (by rank, ignoring any live min-games/
+  // max-RD/state filtering) plus the .pr-square promo tile into an offscreen
+  // clone forced to the 8-column desktop layout, so the exported image is
+  // consistent regardless of the current viewport width or filter state.
+  async function downloadRankingsImage(panel) {
+    const grid = panel.querySelector('.pr-grid');
+    if (!grid || !window.html2canvas) return;
+    const square = grid.querySelector('.pr-square');
+    const cards = [...grid.querySelectorAll(':scope > .pr-card')].slice(0, 100);
+    const clone = document.createElement('div');
+    clone.className = 'pr-grid pr-export-grid';
+    clone.style.gridTemplateColumns = 'repeat(8, 1fr)';
+    clone.style.width = '1400px';
+    clone.style.padding = '24px';
+    clone.style.background = '#050505';
+    if (square) {
+      const squareClone = square.cloneNode(true);
+      squareClone.style.display = 'flex';
+      clone.appendChild(squareClone);
+    }
+    // Cards failing the live min-games/max-RD/state filter carry a hidden
+    // attribute, which cloneNode preserves -- left alone, those clones
+    // collapse to zero size, shrink the grid, and cut the export off early.
+    // Force every one of the top 100 visible and renumbered 1-100, since
+    // the export is always meant to show the top 100 regardless of filters.
+    cards.forEach((c, idx) => {
+      const cardClone = c.cloneNode(true);
+      cardClone.hidden = false;
+      cardClone.classList.remove('filter-dim', 'uncertain');
+      const rankEl = cardClone.querySelector('.prc-rank');
+      if (rankEl) rankEl.textContent = idx + 1;
+      clone.appendChild(cardClone);
+    });
+    document.body.appendChild(clone);
+    // html2canvas mis-renders the cards' radial-gradient backgrounds (every
+    // card washes out to the same tint) -- swap to flat fallback colors,
+    // export-only, so green/purple stay visually distinct in the PNG.
+    clone.querySelectorAll('.pr-card').forEach((c) => {
+      if (c.classList.contains('card-green')) c.style.background = '#132a1d';
+      else if (c.classList.contains('card-purple')) c.style.background = '#241a30';
+      else c.style.background = '#0f0f0f';
+    });
+    await inlineImages(clone);
+    html2canvas(clone, {
+      backgroundColor: '#050505',
+      scale: 2,
+      ignoreElements: (node) => node.tagName === 'IMG' && !node.src.startsWith('data:'),
+    }).then((canvas) => {
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'deathball-power-rankings-top100.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+      clone.remove();
+    }).catch(() => clone.remove());
+  }
+
   function enableViewToggle(panel) {
     const buttons = [...panel.querySelectorAll('.view-btn')];
     if (!buttons.length) return;
@@ -2023,6 +2174,8 @@ function writeJs() {
     const table = panel.querySelector('table');
     const toggleEl = panel.querySelector('.view-toggle');
     const indicator = panel.querySelector('.view-toggle-indicator');
+    const downloadBtn = panel.querySelector('.download-btn');
+    if (downloadBtn) downloadBtn.addEventListener('click', () => downloadRankingsImage(panel));
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -2030,13 +2183,16 @@ function writeJs() {
         const view = btn.dataset.view;
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
+        if (downloadBtn) downloadBtn.hidden = view !== 'grid';
         moveIndicator(indicator, toggleEl, btn);
         // Also refreshes the "Click a column header to sort." hint for the
         // view just switched to.
         applyFilters(panel);
       });
     });
-    moveIndicator(indicator, toggleEl, buttons.find((b) => b.classList.contains('active')));
+    const activeBtn = buttons.find((b) => b.classList.contains('active'));
+    if (downloadBtn) downloadBtn.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
+    moveIndicator(indicator, toggleEl, activeBtn);
   }
 
   function initPanel(panelId) {
@@ -2122,6 +2278,69 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
 </div>`;
   }).join('\n');
 
+  // Sits in the middle of the grid at the 8-column breakpoint, its corners
+  // landing exactly on cards 43-46 (top) and 91-94 (bottom) — see the
+  // .pr-square CSS comment for the row/column math. Always shown for now;
+  // remove this element (and the CSS block) once the design's approved.
+  const now = new Date();
+  // allTournaments is sorted ascending by date (see main()), so the last
+  // entries are the most recent; reverse so newest shows first.
+  const recentTournaments = allTournaments.slice(-3).reverse();
+  const totalMatches = allTournaments.reduce((sum, t) => sum + (t.matchCount || 0), 0);
+  const recentTournamentsHtml = recentTournaments
+    .map((t) => `<div class="pr-square-latest-item">${escapeHtml(t.label)} &mdash; ${formatDateHuman(t.date)}</div>`)
+    .join('\n');
+  const prSquareHtml = `<div class="pr-square">
+  <div class="pr-square-title"><img class="pr-square-logo" src="https://images.squarespace-cdn.com/content/v1/5a6facad12abd9a8e6582589/1533013208287-LWVLCI0D9HZTELC7P0KT/LogoTextOnly.png?format=1500w" alt="DeathBall"> Power Rankings &mdash; ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}</div>
+  <div class="pr-square-row">
+    <div class="pr-square-col pr-square-col-card">
+      <div class="pr-square-label">How to read player information</div>
+      <div class="pr-card card-green pr-square-example">
+        <div class="prc-top">
+          <div class="prc-top-left"><span class="prc-rank">1</span><span class="prc-name">Player Name</span></div>
+        </div>
+        <div class="prc-stats"><span class="prc-val">1850</span><span class="prc-dim">&#xB1;</span><span class="prc-val">45</span><span class="prc-sep">|</span><span class="prc-val">68</span><span class="prc-dim">W%</span><span class="prc-sep">|</span><span class="prc-val">32</span><span class="prc-dim">gp</span></div>
+      </div>
+      <div class="pr-square-callouts">
+        <div class="pr-square-callout"><b>Rank</b> &middot; position in the ranking</div>
+        <div class="pr-square-callout"><b>Rating</b> &middot; Glicko-2 skill estimate</div>
+        <div class="pr-square-callout"><b>&#xB1;Deviation</b> &middot; confidence (lower is more certain)</div>
+        <div class="pr-square-callout"><b>W% / gp</b> &middot; win rate and games played</div>
+      </div>
+    </div>
+    <div class="pr-square-col pr-square-col-text">
+      <div class="pr-square-label">How rankings are determined</div>
+      <div class="pr-square-text">Every set updates both players' ratings with the Glicko-2 system, weighting opponent strength and match outcome. Ratings converge as players compete more, and a player's deviation (uncertainty) rises again the longer they go inactive.</div>
+    </div>
+    <div class="pr-square-qr-wrap">
+      <div class="pr-square-qr"><img src="assets/qr-code.png" alt="QR code"></div>
+      <div class="pr-square-qr-label">View Power Rankings</div>
+    </div>
+  </div>
+  <div class="pr-square-row pr-square-row-2">
+    <div class="pr-square-col pr-square-col-text">
+      <div class="pr-square-stats">
+        <div class="pr-square-stat"><span class="pr-square-stat-num">${playerRows.length}</span><span class="pr-square-stat-label">Players</span></div>
+        <div class="pr-square-stat"><span class="pr-square-stat-num">${allTournaments.length}</span><span class="pr-square-stat-label">Tournaments</span></div>
+        <div class="pr-square-stat"><span class="pr-square-stat-num">${totalMatches}</span><span class="pr-square-stat-label">Matches</span></div>
+      </div>
+      <div class="pr-square-latest">
+        <div class="pr-square-label">Latest Tournaments</div>
+${recentTournamentsHtml}
+      </div>
+    </div>
+    <div class="pr-square-col pr-square-col-tagline">
+      <div class="pr-square-tagline">Compete. Climb.<br>Get Ranked.</div>
+    </div>
+    <div class="pr-square-qr-wrap">
+      <div class="pr-square-qr"><img src="assets/qr-code-discord.png" alt="Discord QR code"></div>
+      <div class="pr-square-qr-label">Join the Discord</div>
+    </div>
+  </div>
+  <div class="pr-square-footer">&copy; ${now.getFullYear()} LilyLambda &middot; Data sourced from start.gg &amp; Challonge</div>
+  <img class="pr-square-mascot" src="https://images.squarespace-cdn.com/content/v1/5a6facad12abd9a8e6582589/ab04b855-7d9a-4bb8-b6a9-9f456e9d395d/Purple-wizard-large-deathball-arcade.png" alt="">
+</div>`;
+
   const mapPaths = mapRegions.map((r) => `<path class="map-region" data-id="${escapeHtml(r.id)}" data-players="${r.players}" data-tournaments="${r.tournaments}" d="${r.d}"><title>${escapeHtml(r.name)}: ${r.players} player${r.players === 1 ? '' : 's'}, ${r.tournaments} tournament${r.tournaments === 1 ? '' : 's'}</title></path>`).join('\n');
   const mapLabels = mapRegions.map((r) => `<text class="map-label" data-players="${r.players}" data-tournaments="${r.tournaments}" x="${r.cx}" y="${r.cy}"></text>`).join('\n');
   // Per-region player/tournament lists for the click-to-filter sidebar —
@@ -2149,6 +2368,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
 <meta charset="UTF-8">
 <title>DeathBall Power Rankings</title>
 <link rel="stylesheet" href="index.css">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
 <h1>DeathBall <span id="tab-heading">Power Rankings</span></h1>
@@ -2274,8 +2494,10 @@ ${mapLabels}
       </select>
     </label>
     <span class="filter-count"></span>
+    <button class="download-btn" type="button">Download Top 100</button>
   </div>
   <div class="pr-grid">
+${prSquareHtml}
 ${rankingCardItems}
   </div>
   <table data-sortable style="display:none">
