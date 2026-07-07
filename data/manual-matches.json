@@ -58,6 +58,20 @@
       "tournament": "https://www.start.gg/tournament/combobreaker-deathball-tournament/events/1v1-deathball/brackets/2275520/3296662/overview",
       "match_index": "BO",
       "games": ["3-0", "3-0"]
+    },
+    {
+      "p1": "Dotmaster",
+      "p2": "XanderIsALoser",
+      "tournament": "https://challonge.com/sgdq2025_deathball",
+      "match_index": "CK",
+      "score": "1-0"
+    },
+    {
+      "p1": "Corley",
+      "p2": "Ducky",
+      "tournament": "https://challonge.com/db20190406",
+      "match_index": "Z",
+      "score": "0-1"
     }
   ]
 }
