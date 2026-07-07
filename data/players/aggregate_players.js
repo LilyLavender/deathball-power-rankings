@@ -1544,7 +1544,11 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .pr-square-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pr-square-stat-num { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1.05rem; color: #3eff8b; line-height: 1; }
 .pr-square-stat-label { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.55rem; letter-spacing: 0.02em; text-transform: uppercase; color: #666; }
-.pr-square-latest { margin-top: 4px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+/* Outer gap separates independent label+item(s) groups (e.g. "Next
+   Tournament" vs "Latest Tournament"); each group's own inner gap (below)
+   stays tight since a label sits directly above its own item(s). */
+.pr-square-latest { margin-top: 4px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pr-square-latest-group { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .pr-square-latest-item { font-family: 'Rajdhani', sans-serif; font-size: 0.66rem; color: #999; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pr-square-tagline { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 0.95rem; color: #fff; line-height: 1.35; text-align: right; overflow-wrap: break-word; }
 .pr-square-footer { font-family: 'Rajdhani', sans-serif; font-size: 0.62rem; color: #555; text-align: left; flex: none; }
@@ -2382,11 +2386,17 @@ function writeJs() {
 // whose date has already passed dropped entirely -- there's no "past
 // events" view, so once a date is gone it should just disappear rather than
 // need manual cleanup from upcoming-events.json.
-function buildEventsTabHtml(events) {
+// Shared by the Upcoming Events tab and the pr-square's "Next Tournament"
+// callout so both agree on what counts as upcoming and in what order.
+function sortedUpcomingEvents(events) {
   const today = todayIso();
-  const upcoming = events
+  return events
     .filter((e) => (e.date || '') >= today)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+}
+
+function buildEventsTabHtml(events) {
+  const upcoming = sortedUpcomingEvents(events);
 
   if (upcoming.length === 0) {
     return '<div class="events-empty">No future events&hellip; try scheduling one!</div>';
@@ -2487,13 +2497,37 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
   // .pr-square CSS comment for the row/column math. Always shown for now;
   // remove this element (and the CSS block) once the design's approved.
   const now = new Date();
-  // allTournaments is sorted ascending by date (see main()), so the last
-  // entries are the most recent; reverse so newest shows first.
-  const recentTournaments = allTournaments.slice(-3).reverse();
   const totalMatches = allTournaments.reduce((sum, t) => sum + (t.matchCount || 0), 0);
-  const recentTournamentsHtml = recentTournaments
-    .map((t) => `<div class="pr-square-latest-item">${escapeHtml(t.label)} &mdash; ${formatDateHuman(t.date)}</div>`)
-    .join('\n');
+  // When there's a scheduled event on file, swap the usual 3-item "latest
+  // tournaments" list for two small groups -- a single-item "Latest
+  // Tournament" above a "Next Tournament" callout (soonest upcoming.json
+  // entry) -- instead of a third stale result nobody asked for.
+  const nextEvent = sortedUpcomingEvents(upcomingEvents)[0];
+  let latestSectionHtml;
+  if (nextEvent) {
+    const latestTournament = allTournaments[allTournaments.length - 1];
+    const latestGroupHtml = latestTournament
+      ? `<div class="pr-square-latest-group">
+  <div class="pr-square-label">Latest Tournament</div>
+  <div class="pr-square-latest-item">${escapeHtml(latestTournament.label)} &mdash; ${formatDateHuman(latestTournament.date)}</div>
+</div>
+`
+      : '';
+    latestSectionHtml = `${latestGroupHtml}<div class="pr-square-latest-group">
+  <div class="pr-square-label">Next Tournament</div>
+  <div class="pr-square-latest-item">${escapeHtml(nextEvent.name || '')} &mdash; ${escapeHtml(formatDateHuman(nextEvent.date))}</div>
+</div>`;
+  } else {
+    // allTournaments is sorted ascending by date (see main()), so the last
+    // entries are the most recent; reverse so newest shows first.
+    const recentTournamentsHtml = allTournaments.slice(-3).reverse()
+      .map((t) => `<div class="pr-square-latest-item">${escapeHtml(t.label)} &mdash; ${formatDateHuman(t.date)}</div>`)
+      .join('\n');
+    latestSectionHtml = `<div class="pr-square-latest-group">
+  <div class="pr-square-label">Latest Tournaments</div>
+${recentTournamentsHtml}
+</div>`;
+  }
   const prSquareHtml = `<div class="pr-square">
   <div class="pr-square-title"><img class="pr-square-logo" src="https://images.squarespace-cdn.com/content/v1/5a6facad12abd9a8e6582589/1533013208287-LWVLCI0D9HZTELC7P0KT/LogoTextOnly.png?format=1500w" alt="DeathBall"> Power Rankings &mdash; ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}</div>
   <div class="pr-square-row">
@@ -2529,8 +2563,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
         <div class="pr-square-stat"><span class="pr-square-stat-num">${totalMatches}</span><span class="pr-square-stat-label">Matches</span></div>
       </div>
       <div class="pr-square-latest">
-        <div class="pr-square-label">Latest Tournaments</div>
-${recentTournamentsHtml}
+${latestSectionHtml}
       </div>
     </div>
     <div class="pr-square-col pr-square-col-tagline">
