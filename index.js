@@ -48,7 +48,7 @@
     indicator.style.width = targetRect.width + 'px';
   }
 
-  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map' };
+  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map', 'events-tab': 'Upcoming Events' };
 
   // Cross-fades just the variable part of the page heading ("DeathBall" is
   // static) to the tab's own heading instead of snapping straight to it.

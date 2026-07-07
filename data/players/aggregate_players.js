@@ -169,6 +169,11 @@ function lookupPlayerInfo(id, name) {
     || {};
 }
 const tournamentLocations = readJson(path.join(DATA_ROOT, 'tournament-locations.json'), { locations: {} }).locations || {};
+// Manually maintained list for the "Upcoming Events" tab -- each entry is
+// { date, link, city, state, location, name }, keyed by nothing (just an
+// array) since these aren't cross-referenced against scraped tournament
+// data the way tournament-locations.json entries are.
+const upcomingEvents = readJson(path.join(DATA_ROOT, 'upcoming-events.json'), { events: [] }).events || [];
 
 function normName(name) {
   return (name || '').trim();
@@ -1306,6 +1311,27 @@ function formatMonthYearHuman(iso) {
   return m ? m[1] : (iso || '');
 }
 
+// Today as a YYYY-MM-DD string, built from local date parts (not
+// toISOString(), which is UTC and can read as tomorrow/yesterday depending
+// on the machine's timezone) -- used to filter upcoming-events.json down to
+// events that haven't passed yet.
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Parses upcoming-events.json's optional "H, S%, L%" color triple (e.g.
+// "205, 80%, 55%") into the three raw pieces an event card's inline style
+// feeds to CSS custom properties -- kept as strings (not numbers) since the
+// saturation/lightness parts carry their own "%" and get used verbatim
+// inside hsl()/hsla() in the generated CSS.
+function parseHsl(raw) {
+  if (!raw) return null;
+  const parts = raw.split(',').map((s) => s.trim());
+  if (parts.length !== 3 || !parts.every(Boolean)) return null;
+  return { h: parts[0], s: parts[1], l: parts[2] };
+}
+
 function writeCsv(rows) {
   const header = ['Player', 'Wins', 'Losses', 'Games Played', 'Win %', 'Location', 'Tournament Count', 'Tournaments'];
   const csvRows = rows.map((p) => [
@@ -1325,7 +1351,12 @@ function writeCss() {
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { font-family: 'Rajdhani', system-ui, sans-serif; margin: 0; padding: 1.5rem 2rem; background: #050505; color: #f0f0f0; font-size: 1rem; }
+/* display:flex + min-height:100vh so .site-footer's margin-top:auto (below)
+   can push it to the bottom of the viewport on short pages instead of
+   riding up under sparse content -- on tall pages it just sits after the
+   last child like normal block flow, since there's no leftover space to
+   push into. */
+body { font-family: 'Rajdhani', system-ui, sans-serif; margin: 0; padding: 1.5rem 2rem; background: #050505; color: #f0f0f0; font-size: 1rem; display: flex; flex-direction: column; min-height: 100vh; }
 h1 { font-family: 'Press Start 2P', monospace; font-size: 1.6rem; letter-spacing: 0.05em; margin: 0 0 1.5rem; color: #fff; }
 #tab-heading { display: inline-block; transition: opacity 180ms ease, transform 180ms ease; }
 #tab-heading.h1-swap { opacity: 0; transform: translateY(-6px); }
@@ -1522,6 +1553,27 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .pr-export-grid { position: fixed; top: 0; left: -10000px; z-index: -1; }
 @media (max-width: 1100px) { .pr-grid { grid-template-columns: repeat(4, 1fr); } .pr-square { display: none; } }
 @media (max-width: 600px) { .pr-grid { grid-template-columns: repeat(2, 1fr); } body { padding: 1rem; } }
+.events-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+@media (max-width: 1100px) { .events-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px) { .events-grid { grid-template-columns: 1fr; } }
+/* --eh/--es/--el default to the site's amber (hsl(36,100%,65%) ~= #ffb74d)
+   via each var()'s fallback argument; an event's "color" field in
+   upcoming-events.json overrides them via an inline style on .event-card
+   (see parseHsl/buildEventsTabHtml) instead of needing a separate CSS class
+   per hue. */
+.event-card { display: flex; flex-direction: column; gap: 6px; background: radial-gradient(ellipse at 20% 0%, hsla(var(--eh, 36), var(--es, 100%), var(--el, 65%), 0.16) 0%, #0f0f0f 70%); border: 1px solid hsla(var(--eh, 36), var(--es, 100%), var(--el, 65%), 0.4); border-radius: 0; padding: 1.1rem 1.3rem; text-decoration: none; box-shadow: 0 0 18px hsla(var(--eh, 36), var(--es, 100%), var(--el, 65%), 0.08); transition: border-color 150ms, background 150ms, box-shadow 150ms, transform 150ms; }
+.event-card:hover { border-color: hsl(var(--eh, 36), var(--es, 100%), var(--el, 65%)); background: radial-gradient(ellipse at 20% 0%, hsla(var(--eh, 36), var(--es, 100%), var(--el, 65%), 0.3) 0%, #181818 70%); box-shadow: 0 0 28px hsla(var(--eh, 36), var(--es, 100%), var(--el, 65%), 0.2); text-decoration: none; transform: translateY(-2px); }
+/* Only cards with a logo (has-image) split into columns -- imageless cards
+   stay a plain single-column block so there's no empty 2/5 gap. */
+.event-card.has-image { flex-direction: row; align-items: center; gap: 14px; }
+.event-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 3 1 0; }
+.event-image-wrap { flex: 2 1 0; display: flex; align-items: center; justify-content: center; min-width: 0; height: 100%; }
+.event-image { max-width: 100%; max-height: 100px; object-fit: contain; }
+.event-date { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 0.95rem; letter-spacing: 0.04em; color: hsl(var(--eh, 36), var(--es, 100%), var(--el, 65%)); text-transform: uppercase; }
+.event-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.3rem; color: #fff; line-height: 1.2; }
+.event-venue { display: flex; align-items: center; gap: 6px; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #999; }
+.events-footer { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: #666; text-align: center; margin-top: 1.5rem; letter-spacing: 0.03em; }
+.events-empty { font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; color: #888; text-align: center; padding: 3rem 0; }
 .back-link { display: inline-block; color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
 .back-link:hover { color: #3eff8b; }
 .tourney-meta { display: flex; align-items: center; gap: 1.25rem; color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
@@ -1646,7 +1698,7 @@ body.card-green, body.card-purple { min-height: 100vh; }
 body.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(0, 70, 30) 0%, #050505 55%); }
 body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70) 0%, #050505 55%); }
 .show-more-btn:hover { text-decoration: underline; }
-.site-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #222; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center; color: #555; font-size: 0.8rem; }
+.site-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #222; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center; color: #555; font-size: 0.8rem; }
 .site-footer a { color: #777; }
 .site-footer a:hover { color: #3eff8b; }
 `;
@@ -1722,7 +1774,7 @@ function writeJs() {
     indicator.style.width = targetRect.width + 'px';
   }
 
-  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map' };
+  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map', 'events-tab': 'Upcoming Events' };
 
   // Cross-fades just the variable part of the page heading ("DeathBall" is
   // static) to the tab's own heading instead of snapping straight to it.
@@ -2325,6 +2377,51 @@ function writeJs() {
   fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), js);
 }
 
+// Renders the Upcoming Events tab body: a 3-wide grid of event cards (each
+// a link out to registration/bracket), sorted soonest-first, with events
+// whose date has already passed dropped entirely -- there's no "past
+// events" view, so once a date is gone it should just disappear rather than
+// need manual cleanup from upcoming-events.json.
+function buildEventsTabHtml(events) {
+  const today = todayIso();
+  const upcoming = events
+    .filter((e) => (e.date || '') >= today)
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  if (upcoming.length === 0) {
+    return '<div class="events-empty">No future events&hellip; try scheduling one!</div>';
+  }
+
+  const cards = upcoming.map((e) => {
+    const cityState = [e.city, e.state].filter(Boolean).join(', ');
+    const venueLine = [e.location, cityState].filter(Boolean).map(escapeHtml).join(' &middot; ');
+    const flag = flagForInfo({ city: e.city, state: e.state, country: e.country });
+    const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
+    // "color" is an "H, S%, L%" triple in the JSON (e.g. "205, 80%, 55%"),
+    // fed straight into hsl()/hsla() via CSS custom properties so the card's
+    // background/border/date-color all derive from one hue instead of
+    // needing three separate colors picked by hand. Falls back to the
+    // default amber via each hsla()'s third var() argument (see CSS) when
+    // no color is set, so the style attribute is only emitted when needed.
+    const hsl = parseHsl(e.color);
+    const styleAttr = hsl ? ` style="--eh:${hsl.h};--es:${hsl.s};--el:${hsl.l}"` : '';
+    const imageImg = e.image ? `<div class="event-image-wrap"><img class="event-image" src="${escapeHtml(e.image)}" alt=""></div>` : '';
+    return `<a class="event-card${e.image ? ' has-image' : ''}" href="${escapeHtml(e.link || '')}" target="_blank" rel="noopener"${styleAttr}>
+  <div class="event-body">
+    <div class="event-date">${escapeHtml(formatDateHuman(e.date))}</div>
+    <div class="event-name">${escapeHtml(e.name || '')}</div>
+    ${venueLine ? `<div class="event-venue">${flagImg}${venueLine}</div>` : ''}
+  </div>
+  ${imageImg}
+</a>`;
+  }).join('\n');
+
+  return `<div class="events-grid">
+${cards}
+</div>
+<div class="events-footer">That's all for now, try scheduling an event!</div>`;
+}
+
 function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments) {
   const playerTableRows = playerRows.map((p) => {
     const tournamentLinks = p.tournaments
@@ -2484,7 +2581,12 @@ ${recentTournamentsHtml}
   <button class="tab-button" data-tab="players-tab">Players</button>
   <button class="tab-button" data-tab="tournaments-tab">Tournaments</button>
   <button class="tab-button" data-tab="map-tab">Map</button>
+  <button class="tab-button" data-tab="events-tab">Upcoming Events</button>
   <span class="tab-underline"></span>
+</div>
+
+<div id="events-tab" class="tab-panel">
+${buildEventsTabHtml(upcomingEvents)}
 </div>
 
 <div id="players-tab" class="tab-panel">

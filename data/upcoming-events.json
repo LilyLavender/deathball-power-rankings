@@ -1,0 +1,15 @@
+{
+  "_schema": "Upcoming events shown in the site's Upcoming Events tab, as a flat list (not keyed by URL, since these are announced events rather than scraped tournaments). Each entry needs `date` (YYYY-MM-DD) and `link` at minimum; `city`/`state`/`location` (venue) and `name` are optional but should be filled in for a real listing. `image` (optional) is a logo URL rendered in the right 2/5 of the card -- omit it and the card stays full-width text. `color` (optional) is an \"H, S%, L%\" hue triple (e.g. \"205, 80%, 55%\") the card derives its background/border/date-color from; omit to use the default amber. Events whose `date` has already passed are dropped automatically at generation time -- no manual cleanup needed after an event happens.",
+  "_events_example": "{ \"date\": \"YYYY-MM-DD\", \"link\": \"LINK\", \"city\": \"CITY\", \"state\": \"STATE\", \"location\": \"LOCATION\", \"name\": \"NAME\", \"image\": \"IMAGE-URL\", \"color\": \"H, S%, L%\" }",
+  "events": [
+    {
+      "date": "2026-07-07",
+      "link": "https://challonge.com/sgdq2026_deathball",
+      "city": "Minneapolis",
+      "state": "MN",
+      "name": "SGDQ 2026",
+      "image": "https://static0.colliderimages.com/wordpress/wp-content/uploads/2020/07/sgdq-2020-slice.png",
+      "color": "205, 80%, 55%"
+    }
+  ]
+}
