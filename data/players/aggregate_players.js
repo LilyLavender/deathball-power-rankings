@@ -330,6 +330,10 @@ function resolveDate(url, builtIn) {
   return tournamentLocations[url]?.date || builtIn;
 }
 
+function resolveName(url, builtIn) {
+  return tournamentLocations[url]?.name || builtIn;
+}
+
 // Returns months elapsed between two YYYY-MM-DD strings. Returns 0 if either is missing.
 function monthsBetween(dateA, dateB) {
   if (!dateA || !dateB) return 0;
@@ -374,7 +378,7 @@ function collectChallonge() {
   for (const [url, rec] of Object.entries(store)) {
     if (!rec.tournament) continue;
     const t = rec.tournament;
-    const label = t.name.trim();
+    const label = resolveName(url, t.name.trim());
     const nameById = new Map(t.participants.map((p) => [p.participant.id, resolveParticipantName(p.participant)]));
     // Group-stage matches (round-robin pools ahead of a playoff bracket)
     // reference a separate per-group participant id, mapped back to the
@@ -484,7 +488,7 @@ function collectStartgg() {
 
   for (const [url, rec] of Object.entries(store)) {
     if (!rec.entrants || !rec.sets) continue;
-    const label = rec.tournament.name.trim();
+    const label = resolveName(url, rec.tournament.name.trim());
     const nameByEntrantId = new Map(rec.entrants.map((e) => [e.id, e.participants[0]?.gamerTag || e.name || undefined]));
 
     const matches = [];
