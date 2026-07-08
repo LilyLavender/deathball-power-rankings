@@ -2370,12 +2370,51 @@ function writeJs() {
     document.fonts.ready.then(() => fitCardNames(panel));
   }
 
+  // Both the Events tab grid and the pr-square's "Next Tournament" callout
+  // are baked at generation time using the build machine's today (see
+  // sortedUpcomingEvents() / buildEventsTabHtml() in aggregate_players.js).
+  // If the site isn't regenerated the same day an event's date passes, the
+  // static HTML still shows it as upcoming. Re-filter both against the
+  // *visitor's* today here so a stale build still self-corrects in the
+  // browser instead of waiting on a rebuild.
+  function setupLiveEventFiltering() {
+    // Built from local date parts, not toISOString(), for the same reason
+    // as todayIso() server-side: UTC parsing can read as tomorrow/yesterday
+    // depending on the visitor's timezone.
+    const d = new Date();
+    const today = \`\${d.getFullYear()}-\${String(d.getMonth() + 1).padStart(2, '0')}-\${String(d.getDate()).padStart(2, '0')}\`;
+
+    const grid = document.getElementById('events-grid');
+    if (grid) {
+      const cards = [...grid.querySelectorAll('.event-card[data-date]')];
+      cards.forEach((card) => { card.hidden = card.dataset.date < today; });
+      const anyVisible = cards.some((card) => !card.hidden);
+      grid.hidden = !anyVisible;
+      const empty = document.getElementById('events-empty');
+      const footer = document.getElementById('events-footer');
+      if (empty) empty.hidden = anyVisible;
+      if (footer) footer.hidden = !anyVisible;
+    }
+
+    const candidatesWrap = document.getElementById('pr-square-next-candidates');
+    if (candidatesWrap) {
+      const candidates = [...candidatesWrap.querySelectorAll('.next-event-candidate[data-date]')];
+      const chosen = candidates.find((c) => c.dataset.date >= today);
+      candidates.forEach((c) => { c.hidden = c !== chosen; });
+      const single = document.getElementById('pr-square-latest-single');
+      const plural = document.getElementById('pr-square-latest-plural');
+      if (single) single.hidden = !chosen;
+      if (plural) plural.hidden = !!chosen;
+    }
+  }
+
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
   initPanel('players-tab');
   initPanel('rankings-tab');
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));
+  setupLiveEventFiltering();
 })();
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), js);
@@ -2388,6 +2427,14 @@ function writeJs() {
 // need manual cleanup from upcoming-events.json.
 // Shared by the Upcoming Events tab and the pr-square's "Next Tournament"
 // callout so both agree on what counts as upcoming and in what order.
+//
+// This filters against the *build machine's* today, which goes stale the
+// moment a real-world date crosses an event's date without a regeneration
+// in between -- the site is static and may not get rebuilt same-day. Each
+// event card still carries its own data-date so client-side JS (see
+// setupLiveEventFiltering() in writeJs()) can re-filter against the
+// *visitor's* today at page-load time and hide anything that's since
+// passed, without needing a rebuild.
 function sortedUpcomingEvents(events) {
   const today = todayIso();
   return events
@@ -2397,10 +2444,7 @@ function sortedUpcomingEvents(events) {
 
 function buildEventsTabHtml(events) {
   const upcoming = sortedUpcomingEvents(events);
-
-  if (upcoming.length === 0) {
-    return '<div class="events-empty">No future events&hellip; try scheduling one!</div>';
-  }
+  const isEmpty = upcoming.length === 0;
 
   const cards = upcoming.map((e) => {
     const cityState = [e.city, e.state].filter(Boolean).join(', ');
@@ -2416,7 +2460,11 @@ function buildEventsTabHtml(events) {
     const hsl = parseHsl(e.color);
     const styleAttr = hsl ? ` style="--eh:${hsl.h};--es:${hsl.s};--el:${hsl.l}"` : '';
     const imageImg = e.image ? `<div class="event-image-wrap"><img class="event-image" src="${escapeHtml(e.image)}" alt=""></div>` : '';
-    return `<a class="event-card${e.image ? ' has-image' : ''}" href="${escapeHtml(e.link || '')}" target="_blank" rel="noopener"${styleAttr}>
+    // data-date lets client-side JS (setupLiveEventFiltering() in writeJs())
+    // re-check this card against the *visitor's* today at page-load time --
+    // the server-side filter above only reflects the build machine's today,
+    // which goes stale between rebuilds.
+    return `<a class="event-card${e.image ? ' has-image' : ''}" data-date="${escapeHtml(e.date || '')}" href="${escapeHtml(e.link || '')}" target="_blank" rel="noopener"${styleAttr}>
   <div class="event-body">
     <div class="event-date">${escapeHtml(formatDateHuman(e.date))}</div>
     <div class="event-name">${escapeHtml(e.name || '')}</div>
@@ -2426,10 +2474,14 @@ function buildEventsTabHtml(events) {
 </a>`;
   }).join('\n');
 
-  return `<div class="events-grid">
+  // Grid/footer/empty-message are all always emitted (rather than one or
+  // the other) so setupLiveEventFiltering() can toggle their [hidden] state
+  // after re-filtering client-side, instead of needing to rebuild markup.
+  return `<div class="events-grid"${isEmpty ? ' hidden' : ''} id="events-grid">
 ${cards}
 </div>
-<div class="events-footer">That's all for now, try scheduling an event!</div>`;
+<div class="events-empty"${isEmpty ? '' : ' hidden'} id="events-empty">No future events&hellip; try scheduling one!</div>
+<div class="events-footer"${isEmpty ? ' hidden' : ''} id="events-footer">That's all for now, try scheduling an event!</div>`;
 }
 
 function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments) {
@@ -2502,32 +2554,40 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
   // tournaments" list for two small groups -- a single-item "Latest
   // Tournament" above a "Next Tournament" callout (soonest upcoming.json
   // entry) -- instead of a third stale result nobody asked for.
-  const nextEvent = sortedUpcomingEvents(upcomingEvents)[0];
-  let latestSectionHtml;
-  if (nextEvent) {
-    const latestTournament = allTournaments[allTournaments.length - 1];
-    const latestGroupHtml = latestTournament
-      ? `<div class="pr-square-latest-group">
+  //
+  // All three groups below are always emitted, tagged with data-date where
+  // relevant, and toggled via [hidden] by setupLiveEventFiltering() in
+  // writeJs() at page-load time against the *visitor's* today -- like the
+  // Events tab, this is baked at build time using the build machine's today
+  // (sortedUpcomingEvents), which goes stale once a real-world date crosses
+  // the chosen event's date without a rebuild in between.
+  const upcomingSorted = sortedUpcomingEvents(upcomingEvents);
+  const nextEvent = upcomingSorted[0];
+  const latestTournament = allTournaments[allTournaments.length - 1];
+  const latestSingleHtml = latestTournament
+    ? `<div class="pr-square-latest-group" id="pr-square-latest-single"${nextEvent ? '' : ' hidden'}>
   <div class="pr-square-label">Latest Tournament</div>
   <div class="pr-square-latest-item">${escapeHtml(latestTournament.label)} &mdash; ${formatDateHuman(latestTournament.date)}</div>
-</div>
-`
-      : '';
-    latestSectionHtml = `${latestGroupHtml}<div class="pr-square-latest-group">
+</div>`
+    : '';
+  const nextCandidatesHtml = upcomingSorted.map((e, i) => `<div class="pr-square-latest-group next-event-candidate" data-date="${escapeHtml(e.date || '')}"${i === 0 ? '' : ' hidden'}>
   <div class="pr-square-label">Next Tournament</div>
-  <div class="pr-square-latest-item">${escapeHtml(nextEvent.name || '')} &mdash; ${escapeHtml(formatDateHuman(nextEvent.date))}</div>
-</div>`;
-  } else {
-    // allTournaments is sorted ascending by date (see main()), so the last
-    // entries are the most recent; reverse so newest shows first.
-    const recentTournamentsHtml = allTournaments.slice(-3).reverse()
-      .map((t) => `<div class="pr-square-latest-item">${escapeHtml(t.label)} &mdash; ${formatDateHuman(t.date)}</div>`)
-      .join('\n');
-    latestSectionHtml = `<div class="pr-square-latest-group">
+  <div class="pr-square-latest-item">${escapeHtml(e.name || '')} &mdash; ${escapeHtml(formatDateHuman(e.date))}</div>
+</div>`).join('\n');
+  // allTournaments is sorted ascending by date (see main()), so the last
+  // entries are the most recent; reverse so newest shows first.
+  const recentTournamentsHtml = allTournaments.slice(-3).reverse()
+    .map((t) => `<div class="pr-square-latest-item">${escapeHtml(t.label)} &mdash; ${formatDateHuman(t.date)}</div>`)
+    .join('\n');
+  const latestPluralHtml = `<div class="pr-square-latest-group" id="pr-square-latest-plural"${nextEvent ? ' hidden' : ''}>
   <div class="pr-square-label">Latest Tournaments</div>
 ${recentTournamentsHtml}
 </div>`;
-  }
+  const latestSectionHtml = `${latestSingleHtml}
+<div id="pr-square-next-candidates">
+${nextCandidatesHtml}
+</div>
+${latestPluralHtml}`;
   const prSquareHtml = `<div class="pr-square">
   <div class="pr-square-title"><img class="pr-square-logo" src="https://images.squarespace-cdn.com/content/v1/5a6facad12abd9a8e6582589/1533013208287-LWVLCI0D9HZTELC7P0KT/LogoTextOnly.png?format=1500w" alt="DeathBall"> Power Rankings &mdash; ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}</div>
   <div class="pr-square-row">

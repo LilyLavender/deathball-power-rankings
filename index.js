@@ -640,10 +640,49 @@
     document.fonts.ready.then(() => fitCardNames(panel));
   }
 
+  // Both the Events tab grid and the pr-square's "Next Tournament" callout
+  // are baked at generation time using the build machine's today (see
+  // sortedUpcomingEvents() / buildEventsTabHtml() in aggregate_players.js).
+  // If the site isn't regenerated the same day an event's date passes, the
+  // static HTML still shows it as upcoming. Re-filter both against the
+  // *visitor's* today here so a stale build still self-corrects in the
+  // browser instead of waiting on a rebuild.
+  function setupLiveEventFiltering() {
+    // Built from local date parts, not toISOString(), for the same reason
+    // as todayIso() server-side: UTC parsing can read as tomorrow/yesterday
+    // depending on the visitor's timezone.
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    const grid = document.getElementById('events-grid');
+    if (grid) {
+      const cards = [...grid.querySelectorAll('.event-card[data-date]')];
+      cards.forEach((card) => { card.hidden = card.dataset.date < today; });
+      const anyVisible = cards.some((card) => !card.hidden);
+      grid.hidden = !anyVisible;
+      const empty = document.getElementById('events-empty');
+      const footer = document.getElementById('events-footer');
+      if (empty) empty.hidden = anyVisible;
+      if (footer) footer.hidden = !anyVisible;
+    }
+
+    const candidatesWrap = document.getElementById('pr-square-next-candidates');
+    if (candidatesWrap) {
+      const candidates = [...candidatesWrap.querySelectorAll('.next-event-candidate[data-date]')];
+      const chosen = candidates.find((c) => c.dataset.date >= today);
+      candidates.forEach((c) => { c.hidden = c !== chosen; });
+      const single = document.getElementById('pr-square-latest-single');
+      const plural = document.getElementById('pr-square-latest-plural');
+      if (single) single.hidden = !chosen;
+      if (plural) plural.hidden = !!chosen;
+    }
+  }
+
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
   initPanel('players-tab');
   initPanel('rankings-tab');
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));
+  setupLiveEventFiltering();
 })();
