@@ -65,7 +65,7 @@
     { "names": ["Bryan M", "#1TechBryan"], "canonical": "Bryan M", "id": "bryan-2024-2026" },
     { "names": ["Jake Lawall", "jake"], "canonical": "Jake Lawall" },
     { "names": ["James Matthews"], "canonical": "James Matthews", "id": "james-freeplay" },
-    { "names": ["Jaq3", "Jaq"], "canonical": "Jaq" },
+    { "names": ["Jaq3", "Jaq"], "canonical": "Jaq3" },
     { "names": ["Jeremy Mulhaney", "jeremy"], "canonical": "Jeremy Mulhaney" },
     { "names": ["John Ryan", "john"], "canonical": "John Ryan" },
     { "names": ["Josh Freeman", "Josh F", "podcastboy69", "Joshua Wade Freeman", "Joshua F"], "canonical": "Josh Freeman", "id": "josh-1203-keg" },
@@ -98,7 +98,8 @@
     { "names": ["KristianAndrewson", "Kristian"], "canonical": "Kristian Andrewson" },
     { "names": ["Steve Halili", "Steve"], "canonical": "Steve Halili" },
     { "names": ["Anthony", "Anthony2"], "canonical": "Anthony", "id": "anthony-2019-league" },
-    { "names": ["Logan", "Logan2"], "canonical": "Logan", "id": "logan-2019-league" }
+    { "names": ["Logan", "Logan2"], "canonical": "Logan", "id": "logan-2019-league" },
+    { "names": ["Ellie", "something_dumber", "something dumber"], "canonical": "something_dumber" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
