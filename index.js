@@ -83,11 +83,11 @@
         fitCardNames(panel);
         // Same story for any view-toggle pill(s) inside this panel (e.g. the
         // Map tab's Players/Tournaments switch, or the Rankings tab's
-        // Grid/Table and Rank/Change switches) — indicators were positioned
-        // against a zero-width rect while hidden.
+        // Grid/Table and rank-delta Hide/Show switches) — indicators were
+        // positioned against a zero-width rect while hidden.
         for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
           const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
-          const innerActive = innerToggle.querySelector('.view-btn.active, .rc-btn.active');
+          const innerActive = innerToggle.querySelector('.view-btn.active, .delta-btn.active');
           if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
         }
       });
@@ -175,7 +175,7 @@
           row.classList.remove('filter-dim');
         }
         if (show) {
-          const rankCell = row.querySelector('.rank-num .rank-plain');
+          const rankCell = row.querySelector('.rank-num');
           if (rankCell) rankCell.textContent = rank++;
         }
       }
@@ -456,6 +456,42 @@
     }));
   }
 
+  // html2canvas doesn't honor object-fit on <img> (a longstanding upstream
+  // limitation) -- it just stretches the source bitmap to fill the element's
+  // full box, ignoring .prc-flag's object-fit: contain. Live, that CSS
+  // letterboxes each flag to its own real aspect ratio inside the 1.5em x
+  // 1.15em box (so e.g. the UK flag's wider ~2:1 shape renders smaller than
+  // the box rather than stretched to fill it); in the export every flag was
+  // instead coming out uniformly squashed to the box's own ~1.3:1 shape.
+  // Bake the same contain math into real pixels instead: draw each flag
+  // (already same-origin after inlineImages) onto a canvas sized to the
+  // box's own rendered dimensions, scaled/centered exactly like
+  // object-fit: contain would, and swap the <img> src for that -- so the
+  // stretch has nothing left to distort. Must run after inlineImages (needs
+  // a decodable same-origin/data: src) and after the clone is attached with
+  // its final layout (needs real getBoundingClientRect() sizes).
+  async function bakeFlagAspect(root) {
+    const imgs = [...root.querySelectorAll('img.prc-flag')];
+    await Promise.all(imgs.map(async (img) => {
+      if (!img.complete) await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      if (!iw || !ih) return;
+      const rect = img.getBoundingClientRect();
+      const boxW = Math.max(1, Math.round(rect.width * 2));
+      const boxH = Math.max(1, Math.round(rect.height * 2));
+      const scale = Math.min(boxW / iw, boxH / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      const canvas = document.createElement('canvas');
+      canvas.width = boxW;
+      canvas.height = boxH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, (boxW - dw) / 2, (boxH - dh) / 2, dw, dh);
+      img.src = canvas.toDataURL('image/png');
+    }));
+  }
+
   // Captures the top 100 ranked cards passing the default min-games/max-RD
   // filter (same 5+/<=150 thresholds as the default view, regardless of
   // whatever the live min-games/max-RD/state selects are currently set to)
@@ -464,7 +500,7 @@
   // of the current viewport width or filter state.
   async function downloadRankingsImage(panel) {
     const grid = panel.querySelector('.pr-grid');
-    if (!grid || !window.html2canvas) return;
+    if (!grid || !window.html2canvas) throw new Error('Power Ranking grid or html2canvas unavailable');
     // Custom fonts may not have finished loading yet, and this also ensures
     // the metrics fitCardNames() measures below are accurate.
     await document.fonts.ready;
@@ -476,7 +512,10 @@
     });
     const cards = qualifying.slice(0, 100);
     const clone = document.createElement('div');
-    clone.className = 'pr-grid pr-export-grid';
+    // Carries the live rank-delta toggle state along into the export --
+    // .show-rank-delta isn't #rankings-tab-scoped specifically so this plain
+    // <body> child can match it too (see the CSS rule for why).
+    clone.className = 'pr-grid pr-export-grid' + (panel.classList.contains('show-rank-delta') ? ' show-rank-delta' : '');
     clone.style.gridTemplateColumns = 'repeat(8, 1fr)';
     // Pinned to this specific width (rather than the live grid's current
     // width) so every download comes out identically sized -- this is
@@ -505,6 +544,10 @@
       const cardClone = c.cloneNode(true);
       cardClone.hidden = false;
       cardClone.classList.remove('filter-dim', 'uncertain');
+      // Only the numeral, not the whole .prc-rank -- that would also wipe
+      // out the sibling .rank-delta badge (and rank-plain's color class),
+      // which should survive the renumbering since the rating-point change
+      // it shows isn't tied to rank position.
       const rankEl = cardClone.querySelector('.prc-rank .rank-plain');
       if (rankEl) rankEl.textContent = idx + 1;
       clone.appendChild(cardClone);
@@ -582,24 +625,29 @@
     // now that it's attached to the DOM.
     fitCardNames(clone);
     await inlineImages(clone);
-    html2canvas(clone, {
-      backgroundColor: '#050505',
-      scale: 2,
-      useCORS: true,
-      ignoreElements: (node) => node.tagName === 'IMG' && !node.src.startsWith('data:'),
-    }).then((canvas) => {
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'deathball-power-rankings-top100.png';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+    await bakeFlagAspect(clone);
+    // Not wrapped in try/finally -- the caller (the download button's click
+    // handler) needs a genuine rejection on failure so it knows to flip back
+    // to a clickable, non-"loading" state rather than staying stuck.
+    try {
+      const canvas = await html2canvas(clone, {
+        backgroundColor: '#050505',
+        scale: 2,
+        useCORS: true,
+        ignoreElements: (node) => node.tagName === 'IMG' && !node.src.startsWith('data:'),
       });
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'deathball-power-rankings-top100.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
       clone.remove();
-    }).catch(() => clone.remove());
+    }
   }
 
   function enableViewToggle(panel) {
@@ -610,7 +658,34 @@
     const toggleEl = panel.querySelector('.view-toggle');
     const indicator = panel.querySelector('.view-toggle-indicator');
     const downloadBtn = panel.querySelector('.download-btn');
-    if (downloadBtn) downloadBtn.addEventListener('click', () => downloadRankingsImage(panel));
+    // The rank-delta badge only ever exists in the card markup (see
+    // rankDeltaHtml's call sites), so its show/hide pill is meaningless --
+    // and would sit there inert -- once the Table view is active.
+    const rankDeltaToggle = panel.querySelector('.rank-delta-toggle');
+    // Loading state disables the button entirely (so a second click can't
+    // start a second concurrent export mid-generation, which is otherwise
+    // easy to trigger since generation takes a couple of seconds and gave
+    // no visible feedback before this). A failed attempt clears back to the
+    // normal enabled state (not "loading") so the button is clickable again
+    // to retry, rather than getting stuck disabled forever.
+    const downloadLabel = downloadBtn ? downloadBtn.querySelector('.download-btn-label') : null;
+    if (downloadBtn) downloadBtn.addEventListener('click', async () => {
+      if (downloadBtn.disabled) return;
+      downloadBtn.disabled = true;
+      downloadBtn.classList.remove('failed');
+      downloadBtn.classList.add('loading');
+      if (downloadLabel) downloadLabel.textContent = 'Preparing…';
+      try {
+        await downloadRankingsImage(panel);
+        if (downloadLabel) downloadLabel.textContent = 'Download Power Ranking';
+      } catch (err) {
+        downloadBtn.classList.add('failed');
+        if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.classList.remove('loading');
+      }
+    });
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -619,6 +694,7 @@
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
         if (downloadBtn) downloadBtn.hidden = view !== 'grid';
+        if (rankDeltaToggle) rankDeltaToggle.hidden = view !== 'grid';
         moveIndicator(indicator, toggleEl, btn);
         // Also refreshes the "Click a column header to sort." hint for the
         // view just switched to.
@@ -627,23 +703,25 @@
     });
     const activeBtn = buttons.find((b) => b.classList.contains('active'));
     if (downloadBtn) downloadBtn.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
+    if (rankDeltaToggle) rankDeltaToggle.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
     moveIndicator(indicator, toggleEl, activeBtn);
   }
 
-  // Rank/Change toggle: swaps the rank-num/prc-rank slot between the plain
-  // rank number and a badge showing movement since the previous
-  // tournament's standings (see rankChangeBadgeHtml in aggregate_players.js
-  // for how the badge markup was baked at generation time).
-  function enableRankChangeToggle(panel) {
-    const toggleEl = panel.querySelector('.rank-change-toggle');
+  // Show/Hide pill for the rank-delta (up/down/new) badge on Power Ranking
+  // cards -- see #rankings-tab.show-rank-delta in the generated CSS, which
+  // is the only thing that actually reveals .rank-delta. Off by default
+  // (see the "hide" button's initial "active" class in writeHtml()) so the
+  // badge doesn't compete for attention on the grid every time.
+  function enableRankDeltaToggle(panel) {
+    const toggleEl = panel.querySelector('.rank-delta-toggle');
     if (!toggleEl) return;
-    const buttons = [...toggleEl.querySelectorAll('.rc-btn')];
+    const buttons = [...toggleEl.querySelectorAll('.delta-btn')];
     const indicator = toggleEl.querySelector('.view-toggle-indicator');
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        panel.classList.toggle('show-rank-change', btn.dataset.mode === 'change');
+        panel.classList.toggle('show-rank-delta', btn.dataset.delta === 'show');
         moveIndicator(indicator, toggleEl, btn);
       });
     });
@@ -660,7 +738,7 @@
       el.addEventListener('change', () => applyFilters(panel));
     });
     enableViewToggle(panel);
-    enableRankChangeToggle(panel);
+    enableRankDeltaToggle(panel);
     document.fonts.ready.then(() => fitCardNames(panel));
   }
 
@@ -721,7 +799,7 @@
     document.querySelectorAll('.view-toggle').forEach((toggleEl) => {
       if (!toggleEl.offsetWidth) return; // hidden panel — its own tab click handler will fix this when it opens
       const indicator = toggleEl.querySelector('.view-toggle-indicator');
-      const active = toggleEl.querySelector('.view-btn.active, .rc-btn.active');
+      const active = toggleEl.querySelector('.view-btn.active, .delta-btn.active');
       if (indicator && active) moveIndicator(indicator, toggleEl, active);
     });
   });

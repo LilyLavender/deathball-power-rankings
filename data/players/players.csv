@@ -49,7 +49,7 @@ Roger,3,1,4,75.0,"Dallas/Fort Worth, TX",2,"DeathBall @ Free Play 2021-08-25; De
 Sodah,3,1,4,75.0,"Fort Lauderdale, FL",1,DeathBall SFL 2023-02-25
 Logan,3,1,4,75.0,"Jacksonville, FL",1,DeathBall @ Keg and Coin 2024-11-05
 Michael,8,3,11,72.7,"Dallas/Fort Worth, TX",2,"DeathBall 7/30; DeathBall real 7/30"
-Nathan,23,9,32,71.9,"Jacksonville, FL",8,"DBJAX League Trial Run 1; DBJAX League Trial Run 1; DBJAX League Week 1; DBJAX League Week 2; DBJAX League Week 3; DBJAX League Week 4; DBJAX League Week 5; Fall Harvest 2023"
+Nathan,23,9,32,71.9,"Jacksonville, FL",8,"DBJAX League Trial Run 1; DBJAX League Trial Run 2; DBJAX League Week 1; DBJAX League Week 2; DBJAX League Week 3; DBJAX League Week 4; DBJAX League Week 5; Fall Harvest 2023"
 Vernon,15,6,21,71.4,"Dallas/Fort Worth, TX",5,"DeathBall 9/24/2025; DeathBall 10/16; The one and only Death; DeathBall @ Fort Brewery 2026-03-12; DeathBall @ Fort Brewery 2026-04-09"
 Courtney,5,2,7,71.4,,2,"DeathBall #1 : Battle of CQ; CQ Holiday Party DeathBall"
 Dan Recht,5,2,7,71.4,,1,GDC 2018
@@ -165,12 +165,12 @@ Enickma,3,2,5,60.0,"Orange, CA",1,Combo Breaker 2026
 esoterics,3,2,5,60.0,"Westminster, CO",1,Combo Breaker 2026
 LilyLambda,3,2,5,60.0,"Milwaukee, WI",1,Combo Breaker 2026
 Andenubs,13,9,22,59.1,"Dallas/Fort Worth, TX",7,"DeathBall @ Free Play 2019-12-18; DeathBall @ Free Play 2020-01-09; DeathBall @ Free Play 2020-02-13; DeathBall @ Free Play 2021-08-18; DeathBall @ Free Play 2021-09-01; Wednesday Unwind 03/15; The one and only Death"
-Vivvian,10,7,17,58.8,"Jacksonville, FL",5,"DBJAX League Trial Run 1; DBJAX League Trial Run 1; DBJAX League Week 1; DBJAX League Week 2; DBJAX League Week 3"
+Vivvian,10,7,17,58.8,"Jacksonville, FL",5,"DBJAX League Trial Run 1; DBJAX League Trial Run 2; DBJAX League Week 1; DBJAX League Week 2; DBJAX League Week 3"
 Josh k,62,45,107,57.9,"Chattanooga, TN",22,"DeathBall PopUp tournament; 2019 August League Week 1; 2019 August League Week 2; 2019 August League Week 3; 2019 August League Week 4; DBC 3; 2019 September League Week 1; 2019 September League Week 4; DBC 4; 2019 October League Week 1; BB4 Swiss; 2019 October League Week 2; 2019 October League Week 3; DBC 5; 2019 Holiday Season League Week 1; 2019 Holiday Season League Week 2; 2019 Holiday Season League Week 3; 2019 Holiday Season Week 5; DBC 6; llglory; DBC 8; DBC9"
 marcy,8,6,14,57.1,,3,"SGDQ 2024 2; SGDQ 2024 3; SGDQ 2025 Buddy Bracket"
 John Ryan,8,6,14,57.1,"Jacksonville, FL",3,"DeathBall @ Keg and Coin 2024-11-19; DeathBall @ Keg and Coin 2024-12-03; Fall Harvest 2024"
 Elena,8,6,14,57.1,"Dallas/Fort Worth, TX",3,"DeathBall 9/24/2025; DeathBall 10/16; DeathBall Tourney"
-Tim,4,3,7,57.1,"Jacksonville, FL",2,"DBJAX League Trial Run 1; Leaderboard Shad #5"
+Tim,4,3,7,57.1,"Jacksonville, FL",2,"DBJAX League Trial Run 2; Leaderboard Shad #5"
 Francis S,4,3,7,57.1,"Chattanooga, TN",2,"BB4 Swiss; BB4 Finals"
 Matt,4,3,7,57.1,"Dallas/Fort Worth, TX",2,"DeathBall @ Free Play 2020-02-13; DeathBall @ Free Play 2021-03-24"
 Jessie Kennedy,4,3,7,57.1,,2,"DeathBall @ Free Play 2020-02-13; QuakeCon 2025"
@@ -333,7 +333,7 @@ Kenny,8,14,22,36.4,,4,"2019 May League Tournament; 2019 June League Week 4; 2019
 Romaine lettuce,4,7,11,36.4,"Chattanooga, TN",2,"2019 July League Week 1; 2019 October League Week 1"
 Lawrence,13,26,39,33.3,"Chattanooga, TN",10,"2019 October League Week 2; 2019 October League Week 3; DBC 5; 2019 Holiday Season League Week 1; 2019 Holiday Season Week 5; DBC 6; llglory; llglory; DBC 7; you know"
 Jeremy Mulhaney,5,10,15,33.3,"Jacksonville, FL",5,"DeathBall @ Keg and Coin 2024-11-05; DeathBall @ Keg and Coin 2024-11-19; DeathBall @ Keg and Coin 2024-11-26; DeathBall @ Keg and Coin 2024-12-03; Fall Harvest 2024"
-Kristen,4,8,12,33.3,"Jacksonville, FL",4,"DBJAX League Trial Run 1; DBJAX League Week 1; DBJAX League Week 2; DBJAX League Week 5"
+Kristen,4,8,12,33.3,"Jacksonville, FL",4,"DBJAX League Trial Run 2; DBJAX League Week 1; DBJAX League Week 2; DBJAX League Week 5"
 Eli,4,8,12,33.3,"Houston, TX",3,"DB HTX - 09/27/22; DBHTX - 12/20/22; DBHTX - 01/31/23"
 Steve Halili,3,6,9,33.3,"Portland, OR",4,"Camp KQ 2017; GDC 2018; GDC 2019; Camp KQ 2019"
 kamal,2,4,6,33.3,"Chattanooga, TN",1,2019 September League Week 4
@@ -453,7 +453,7 @@ Jen,4,16,20,20.0,"Chattanooga, TN",6,"DeathBall PopUp tournament; 2019 May Leagu
 Grace,2,8,10,20.0,"Chattanooga, TN",2,"2019 May League Week 1; 2019 May League Week 3"
 Cloverbugged,2,8,10,20.0,Ontario,4,"SGDQ 2024 3; SGDQ 2024 4: The Sendoff; SGDQ 2025; SGDQ 2025 Buddy Bracket"
 Nicolo Fusato,2,8,10,20.0,"Jacksonville, FL",4,"DeathBall @ Keg and Coin 2024-11-19; DeathBall @ Keg and Coin 2024-11-26; DeathBall @ Keg and Coin 2024-12-03; Fall Harvest 2024"
-Bella,1,4,5,20.0,"Jacksonville, FL",2,"DBJAX League Trial Run 1; DBJAX League Week 3"
+Bella,1,4,5,20.0,"Jacksonville, FL",2,"DBJAX League Trial Run 2; DBJAX League Week 3"
 Jay,1,4,5,20.0,"Chattanooga, TN",1,Preseason May League
 Dan f,1,4,5,20.0,"Chattanooga, TN",1,BB4 Swiss
 Kelsi,1,4,5,20.0,"Dallas/Fort Worth, TX",2,"Breaking Brew Meadery 2/29/24; Breaking Brew Meadery 2/29/24 Round 2"

@@ -39,13 +39,28 @@ a:hover { text-decoration: underline; }
    pill behind the buttons rather than a line under them (positioned/sized
    by JS in enableViewToggle). */
 .view-toggle-indicator { position: absolute; top: 2px; bottom: 2px; background: #3eff8b; border-radius: 2px; transition: left 200ms ease, width 200ms ease; }
-.view-btn, .rc-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
-.view-btn.active, .rc-btn.active { color: #000; }
-.view-btn:not(.active):hover, .rc-btn:not(.active):hover { color: #bbb; }
+.view-btn, .delta-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
+.view-btn.active, .delta-btn.active { color: #000; }
+.view-btn:not(.active):hover, .delta-btn:not(.active):hover { color: #bbb; }
+/* Grid-only toggle -- the up/down/new badge never renders in the table
+   view at all (see rankingTableRows), so this pill itself is hidden
+   whenever the Grid/Table switch is on Table. */
+.rank-delta-toggle[hidden] { display: none; }
 .download-btn { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
 .download-btn:hover { border-color: #3eff8b; color: #3eff8b; }
 .download-btn[hidden] { display: none; }
+.download-btn:disabled { cursor: default; opacity: 0.85; }
+.download-btn.failed { border-color: #ff5c5c; color: #ff5c5c; }
 .download-icon { width: 14px; height: 14px; flex-shrink: 0; }
+/* Spinner swaps in for .download-icon while generating -- see the
+   downloadBtn click handler in initPanel/enableViewToggle, which toggles
+   .loading and disables the button for the duration so a second click
+   can't kick off a concurrent export mid-generation. Path is a ~300 degree
+   open ring (not a full circle) so the rotation itself reads as motion. */
+.download-spinner { display: none; width: 14px; height: 14px; flex-shrink: 0; animation: download-spin 0.7s linear infinite; }
+.download-btn.loading .download-icon { display: none; }
+.download-btn.loading .download-spinner { display: block; }
+@keyframes download-spin { to { transform: rotate(360deg); } }
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -85,7 +100,11 @@ a:hover { text-decoration: underline; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
-th { cursor: pointer; user-select: none; position: sticky; top: 0; background: #111; color: #666; font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid #222; }
+/* z-index needed now that .rank-delta badges (absolutely positioned,
+   protruding above their row) exist in tbody -- without it, a sticky th
+   (DOM-order stacking, no z-index of its own) paints *behind* a scrolled-up
+   row's overflowing content instead of covering it. */
+th { cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 1; background: #111; color: #666; font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid #222; }
 th:hover { background: #181818; color: #f0f0f0; }
 th.no-sort { cursor: default; }
 th.no-sort:hover { background: #111; color: #666; }
@@ -94,19 +113,51 @@ th.sorted-desc::after { content: " \25BC"; }
 tbody tr { transition: background 150ms; }
 tbody tr:hover td { background: rgba(62,255,139,0.04); }
 tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
-.rank-num { font-family: 'Orbitron', monospace; color: #666; text-align: right; min-width: 2rem; font-size: 0.85rem; font-weight: 900; }
-/* Rank/Change toggle: rank-plain (the absolute #) and rank-badge (movement
-   since the previous tournament) sit in the same cell/rank slot; only one
-   shows at a time, flipped by #rankings-tab.show-rank-change. Cards cloned
-   for the PNG export live outside #rankings-tab, so they always fall back
-   to the plain-rank default regardless of the live toggle state. */
-.rank-badge { display: none; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.8rem; }
-#rankings-tab.show-rank-change .rank-plain { display: none; }
-#rankings-tab.show-rank-change .rank-badge { display: inline-block; }
-.rank-badge.rank-up { color: #3eff8b; }
-.rank-badge.rank-down { color: #ff5c5c; }
-.rank-badge.rank-new { color: #b04fff; }
-.rank-badge.rank-flat { color: #666; }
+.rank-num { position: relative; font-family: 'Orbitron', monospace; color: #666; text-align: right; min-width: 2rem; font-size: 0.85rem; font-weight: 900; }
+/* Rating-change corner badge: grid-cards only (see rankDeltaHtml's call
+   sites — the table row never even emits this markup). Shown by default
+   (see the "show" button's initial "active" class + #rankings-tab's
+   initial show-rank-delta class in writeHtml()); the rank-delta-toggle pill
+   can still switch it off. left: max(1em, 50%) + translateX(-50%) centers
+   the badge directly above the rank number's own box for wide (multi-digit)
+   ranks, same as plain left:50% would -- but for a narrow single-digit rank
+   whose own box is well under 2em wide, 50% alone would let the badge
+   drift left almost to the card's edge, so the max() floors the anchor at
+   1em from .prc-rank's own left edge (~= the card's left edge, since
+   .prc-rank sits right at the card's padded content start) instead of
+   letting it keep shrinking with the digit. Both sides are resolved against
+   the positioned ancestor's own box, so this stays correct no matter how
+   wide the rank digits render in whatever font is active at paint time
+   (fallback vs. Orbitron), with no JS remeasurement needed. Deliberately
+   overflowing (absolute, off the top) rather than reserving space, so it
+   never changes a card's size. background is kept at 0 opacity rather than
+   removed outright -- easy to dial back up if bare colored text over a
+   card's own background turns out to be hard to read. All three variants
+   (up/down/new) sit at the same top offset -- a down badge floating below
+   the number instead just read as detached from it, so direction is
+   conveyed by the arrow glyph/color alone, not position. rank-plain holds
+   just the numeral so JS renumbering (filtering/sorting) can overwrite it
+   without clobbering the badge above it — see the .prc-rank query
+   selectors in writeJs(). Zero rating change (or no prior snapshot to
+   compare against) renders nothing at all. */
+.rank-delta { display: none; position: absolute; left: max(1em, 50%); top: calc(-0.8em - 4px); transform: translateX(-50%); background: rgba(0,0,0,0); border-radius: 2px; padding: 0 3px; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.66em; line-height: 1.5; white-space: nowrap; }
+/* .show-rank-delta is not scoped to #rankings-tab specifically -- the same
+   class is stamped directly onto downloadRankingsImage's offscreen export
+   clone (a plain child of <body>, not a descendant of #rankings-tab) when
+   the live toggle is on, so an exported PR image matches whatever the
+   on-page toggle was showing at click time. */
+.show-rank-delta .rank-delta { display: block; }
+.rank-delta-up { color: #3eff8b; }
+.rank-delta-down { color: #ff5c5c; }
+.rank-delta-new { color: #b04fff; }
+/* The rank number itself picks up the same up/down/new color as its badge
+   (rank-plain-<state>, set alongside rankDeltaHtml's call in writeHtml() --
+   both read rankDeltaState so they can never disagree), but only while the
+   toggle actually has badges showing; otherwise the number would silently
+   keep broadcasting direction even after the delta's been hidden. */
+.show-rank-delta .rank-plain-up { color: #3eff8b; }
+.show-rank-delta .rank-plain-down { color: #ff5c5c; }
+.show-rank-delta .rank-plain-new { color: #b04fff; }
 .numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .col-location { white-space: nowrap; }
 .loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 1px; }
@@ -128,9 +179,13 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .pr-card.uncertain.card-green, .pr-card.uncertain.card-purple { background: #000; }
 .pr-card.filter-dim.card-green:hover, .pr-card.filter-dim.card-purple:hover,
 .pr-card.uncertain.card-green:hover, .pr-card.uncertain.card-purple:hover { background: #0a0a0a; border-color: #333; }
+/* .prc-rank sits directly in this flex row (not wrapped with the name in a
+   sub-container) specifically so .rank-delta, which pokes up/down past
+   .prc-rank's own box, isn't clipped by an ancestor's overflow:hidden --
+   .prc-name carries its own overflow/min-width for ellipsis truncation, so
+   the old wrapper wasn't needed for that either. */
 .prc-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; }
-.prc-top-left { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1; overflow: hidden; }
-.prc-rank { font-family: 'Orbitron', monospace; font-size: 1.2rem; color: #888; font-weight: 900; flex-shrink: 0; line-height: 1; }
+.prc-rank { position: relative; font-family: 'Orbitron', monospace; font-size: 1.2rem; color: #888; font-weight: 900; flex-shrink: 0; line-height: 1; }
 /* flex: 1 1 0 (not the default 0 1 auto) so this box's width comes purely
    from available flex-row space, not from its own text's content width —
    otherwise shrinking the font also shrinks the box being measured against,

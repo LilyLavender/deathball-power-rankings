@@ -171,6 +171,10 @@ function lookupPlayerInfo(id, name) {
     || {};
 }
 const tournamentLocations = readJson(path.join(DATA_ROOT, 'tournament-locations.json'), { locations: {} }).locations || {};
+// Flat map of tournament URL -> group id, for collapsing a cluster of
+// same-event tournaments (e.g. SGDQ 2024's several side brackets) into one
+// point for rating-change/history purposes -- see groupIdFor() below.
+const tournamentGroups = readJson(path.join(DATA_ROOT, 'tournament-groups.json'), {});
 // Manually maintained list for the "Upcoming Events" tab -- each entry is
 // { date, link, city, state, location, name }, keyed by nothing (just an
 // array) since these aren't cross-referenced against scraped tournament
@@ -179,6 +183,13 @@ const upcomingEvents = readJson(path.join(DATA_ROOT, 'upcoming-events.json'), { 
 
 function normName(name) {
   return (name || '').trim();
+}
+
+// A tournament with no entry in tournament-groups.json is its own
+// singleton group (keyed by its own URL), so ungrouped tournaments behave
+// exactly as before -- one snapshot each.
+function groupIdFor(url) {
+  return tournamentGroups[url] || url;
 }
 
 function resolveIdentity(rawName, tournamentUrl) {
@@ -1013,7 +1024,12 @@ function loadManualMatches(knownUrls) {
 // this tournament's participants — so the whole field's standings at that
 // moment in time can be reconstructed later. participantIds marks who
 // actually played this specific tournament (ratings alone can't tell you
-// that, since it carries everyone's running total).
+// that, since it carries everyone's running total). Tournament grouping
+// (groupIdFor/tournament-groups.json) deliberately has no bearing here — it
+// only affects which prior snapshot the Rankings tab's up/down badge
+// compares against (see previousRatings in main()), not the per-tournament
+// snapshot list itself, so it can't leak into anything keyed off snapshots
+// (the rating-history chart on player pages, rank-at-the-time, etc).
 function processChronologically(allTournaments, players, glicko, preTournamentRatings, snapshots) {
   for (const tournament of allTournaments) {
     // Compute pre-tournament states with lazy decay — fixed across all passes.
@@ -1314,7 +1330,7 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
     .sort((a, b) => b.winPct - a.winPct || b.games - a.games);
 }
 
-function buildRankingRows(players, glicko, previousRanks) {
+function buildRankingRows(players, glicko, previousRatings) {
   const rows = [...players.entries()]
     .map(([id, p]) => {
       const name = displayName(p);
@@ -1346,15 +1362,15 @@ function buildRankingRows(players, glicko, previousRanks) {
     .filter((r) => r.games > 0)
     .sort((a, b) => b.conservativeRating - a.conservativeRating);
 
-  // rankChange is "places moved since the last tournament" — positive means
-  // climbed the standings. previousRanks reflects the field as it stood
-  // right before the most recent tournament, so a player missing from it
-  // hadn't played yet (isNew) rather than having moved from some rank.
-  if (previousRanks) {
-    for (const [i, r] of rows.entries()) {
-      const prev = previousRanks.get(r.id);
+  // ratingChange is rounded-rating points gained/lost since the previous
+  // tournament (grouped — see groupIdFor). previousRatings reflects the
+  // field as it stood right before the most recent group, so a player
+  // missing from it hadn't played yet (isNew) rather than having a real 0.
+  if (previousRatings) {
+    for (const r of rows) {
+      const prev = previousRatings.get(r.id);
       r.isNew = prev == null;
-      r.rankChange = prev == null ? null : prev - (i + 1);
+      r.ratingChange = prev == null ? null : Math.round(r.r) - Math.round(prev);
     }
   }
   return rows;
@@ -1400,13 +1416,25 @@ function h2hIcon(key, flip) {
   return `<svg class="h2h-icon${flip ? ' icon-flip' : ''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 }
 
-// Badge shown by the Rankings tab's Rank/Change toggle in place of the
-// plain rank number — movement since the previous tournament's standings.
-function rankChangeBadgeHtml(p) {
-  if (p.isNew) return `<span class="rank-badge rank-new">NEW</span>`;
-  if (p.rankChange > 0) return `<span class="rank-badge rank-up">&#9650;${p.rankChange}</span>`;
-  if (p.rankChange < 0) return `<span class="rank-badge rank-down">&#9660;${Math.abs(p.rankChange)}</span>`;
-  return `<span class="rank-badge rank-flat">&mdash;</span>`;
+// 'up' / 'down' / 'new' / null (no prior snapshot to compare against, or a
+// genuinely flat 0 change) — shared by rankDeltaHtml (the corner badge) and
+// the rank number itself (writeHtml colors .rank-plain to match via a
+// rank-plain-<state> class), so both always agree on which of the three
+// states a player is in.
+function rankDeltaState(p) {
+  if (p.isNew) return 'new';
+  if (!p.ratingChange) return null;
+  return p.ratingChange > 0 ? 'up' : 'down';
+}
+
+// Small corner badge riding off the rank number showing the rating-point
+// change since the previous tournament (grouped — see groupIdFor).
+function rankDeltaHtml(p) {
+  const state = rankDeltaState(p);
+  if (state === 'new') return `<span class="rank-delta rank-delta-new">NEW</span>`;
+  if (state === 'up') return `<span class="rank-delta rank-delta-up">&#9650;${p.ratingChange}</span>`;
+  if (state === 'down') return `<span class="rank-delta rank-delta-down">&#9660;${Math.abs(p.ratingChange)}</span>`;
+  return '';
 }
 
 function escapeHtml(str) {
@@ -1534,13 +1562,28 @@ a:hover { text-decoration: underline; }
    pill behind the buttons rather than a line under them (positioned/sized
    by JS in enableViewToggle). */
 .view-toggle-indicator { position: absolute; top: 2px; bottom: 2px; background: #3eff8b; border-radius: 2px; transition: left 200ms ease, width 200ms ease; }
-.view-btn, .rc-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
-.view-btn.active, .rc-btn.active { color: #000; }
-.view-btn:not(.active):hover, .rc-btn:not(.active):hover { color: #bbb; }
+.view-btn, .delta-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
+.view-btn.active, .delta-btn.active { color: #000; }
+.view-btn:not(.active):hover, .delta-btn:not(.active):hover { color: #bbb; }
+/* Grid-only toggle -- the up/down/new badge never renders in the table
+   view at all (see rankingTableRows), so this pill itself is hidden
+   whenever the Grid/Table switch is on Table. */
+.rank-delta-toggle[hidden] { display: none; }
 .download-btn { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
 .download-btn:hover { border-color: #3eff8b; color: #3eff8b; }
 .download-btn[hidden] { display: none; }
+.download-btn:disabled { cursor: default; opacity: 0.85; }
+.download-btn.failed { border-color: #ff5c5c; color: #ff5c5c; }
 .download-icon { width: 14px; height: 14px; flex-shrink: 0; }
+/* Spinner swaps in for .download-icon while generating -- see the
+   downloadBtn click handler in initPanel/enableViewToggle, which toggles
+   .loading and disables the button for the duration so a second click
+   can't kick off a concurrent export mid-generation. Path is a ~300 degree
+   open ring (not a full circle) so the rotation itself reads as motion. */
+.download-spinner { display: none; width: 14px; height: 14px; flex-shrink: 0; animation: download-spin 0.7s linear infinite; }
+.download-btn.loading .download-icon { display: none; }
+.download-btn.loading .download-spinner { display: block; }
+@keyframes download-spin { to { transform: rotate(360deg); } }
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -1580,7 +1623,11 @@ a:hover { text-decoration: underline; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
-th { cursor: pointer; user-select: none; position: sticky; top: 0; background: #111; color: #666; font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid #222; }
+/* z-index needed now that .rank-delta badges (absolutely positioned,
+   protruding above their row) exist in tbody -- without it, a sticky th
+   (DOM-order stacking, no z-index of its own) paints *behind* a scrolled-up
+   row's overflowing content instead of covering it. */
+th { cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 1; background: #111; color: #666; font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid #222; }
 th:hover { background: #181818; color: #f0f0f0; }
 th.no-sort { cursor: default; }
 th.no-sort:hover { background: #111; color: #666; }
@@ -1589,19 +1636,51 @@ th.sorted-desc::after { content: " \\25BC"; }
 tbody tr { transition: background 150ms; }
 tbody tr:hover td { background: rgba(62,255,139,0.04); }
 tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
-.rank-num { font-family: 'Orbitron', monospace; color: #666; text-align: right; min-width: 2rem; font-size: 0.85rem; font-weight: 900; }
-/* Rank/Change toggle: rank-plain (the absolute #) and rank-badge (movement
-   since the previous tournament) sit in the same cell/rank slot; only one
-   shows at a time, flipped by #rankings-tab.show-rank-change. Cards cloned
-   for the PNG export live outside #rankings-tab, so they always fall back
-   to the plain-rank default regardless of the live toggle state. */
-.rank-badge { display: none; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.8rem; }
-#rankings-tab.show-rank-change .rank-plain { display: none; }
-#rankings-tab.show-rank-change .rank-badge { display: inline-block; }
-.rank-badge.rank-up { color: #3eff8b; }
-.rank-badge.rank-down { color: #ff5c5c; }
-.rank-badge.rank-new { color: #b04fff; }
-.rank-badge.rank-flat { color: #666; }
+.rank-num { position: relative; font-family: 'Orbitron', monospace; color: #666; text-align: right; min-width: 2rem; font-size: 0.85rem; font-weight: 900; }
+/* Rating-change corner badge: grid-cards only (see rankDeltaHtml's call
+   sites — the table row never even emits this markup). Shown by default
+   (see the "show" button's initial "active" class + #rankings-tab's
+   initial show-rank-delta class in writeHtml()); the rank-delta-toggle pill
+   can still switch it off. left: max(1em, 50%) + translateX(-50%) centers
+   the badge directly above the rank number's own box for wide (multi-digit)
+   ranks, same as plain left:50% would -- but for a narrow single-digit rank
+   whose own box is well under 2em wide, 50% alone would let the badge
+   drift left almost to the card's edge, so the max() floors the anchor at
+   1em from .prc-rank's own left edge (~= the card's left edge, since
+   .prc-rank sits right at the card's padded content start) instead of
+   letting it keep shrinking with the digit. Both sides are resolved against
+   the positioned ancestor's own box, so this stays correct no matter how
+   wide the rank digits render in whatever font is active at paint time
+   (fallback vs. Orbitron), with no JS remeasurement needed. Deliberately
+   overflowing (absolute, off the top) rather than reserving space, so it
+   never changes a card's size. background is kept at 0 opacity rather than
+   removed outright -- easy to dial back up if bare colored text over a
+   card's own background turns out to be hard to read. All three variants
+   (up/down/new) sit at the same top offset -- a down badge floating below
+   the number instead just read as detached from it, so direction is
+   conveyed by the arrow glyph/color alone, not position. rank-plain holds
+   just the numeral so JS renumbering (filtering/sorting) can overwrite it
+   without clobbering the badge above it — see the .prc-rank query
+   selectors in writeJs(). Zero rating change (or no prior snapshot to
+   compare against) renders nothing at all. */
+.rank-delta { display: none; position: absolute; left: max(1em, 50%); top: calc(-0.8em - 4px); transform: translateX(-50%); background: rgba(0,0,0,0); border-radius: 2px; padding: 0 3px; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.66em; line-height: 1.5; white-space: nowrap; }
+/* .show-rank-delta is not scoped to #rankings-tab specifically -- the same
+   class is stamped directly onto downloadRankingsImage's offscreen export
+   clone (a plain child of <body>, not a descendant of #rankings-tab) when
+   the live toggle is on, so an exported PR image matches whatever the
+   on-page toggle was showing at click time. */
+.show-rank-delta .rank-delta { display: block; }
+.rank-delta-up { color: #3eff8b; }
+.rank-delta-down { color: #ff5c5c; }
+.rank-delta-new { color: #b04fff; }
+/* The rank number itself picks up the same up/down/new color as its badge
+   (rank-plain-<state>, set alongside rankDeltaHtml's call in writeHtml() --
+   both read rankDeltaState so they can never disagree), but only while the
+   toggle actually has badges showing; otherwise the number would silently
+   keep broadcasting direction even after the delta's been hidden. */
+.show-rank-delta .rank-plain-up { color: #3eff8b; }
+.show-rank-delta .rank-plain-down { color: #ff5c5c; }
+.show-rank-delta .rank-plain-new { color: #b04fff; }
 .numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .col-location { white-space: nowrap; }
 .loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 1px; }
@@ -1623,9 +1702,13 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .pr-card.uncertain.card-green, .pr-card.uncertain.card-purple { background: #000; }
 .pr-card.filter-dim.card-green:hover, .pr-card.filter-dim.card-purple:hover,
 .pr-card.uncertain.card-green:hover, .pr-card.uncertain.card-purple:hover { background: #0a0a0a; border-color: #333; }
+/* .prc-rank sits directly in this flex row (not wrapped with the name in a
+   sub-container) specifically so .rank-delta, which pokes up/down past
+   .prc-rank's own box, isn't clipped by an ancestor's overflow:hidden --
+   .prc-name carries its own overflow/min-width for ellipsis truncation, so
+   the old wrapper wasn't needed for that either. */
 .prc-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; }
-.prc-top-left { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1; overflow: hidden; }
-.prc-rank { font-family: 'Orbitron', monospace; font-size: 1.2rem; color: #888; font-weight: 900; flex-shrink: 0; line-height: 1; }
+.prc-rank { position: relative; font-family: 'Orbitron', monospace; font-size: 1.2rem; color: #888; font-weight: 900; flex-shrink: 0; line-height: 1; }
 /* flex: 1 1 0 (not the default 0 1 auto) so this box's width comes purely
    from available flex-row space, not from its own text's content width —
    otherwise shrinking the font also shrinks the box being measured against,
@@ -2034,11 +2117,11 @@ function writeJs() {
         fitCardNames(panel);
         // Same story for any view-toggle pill(s) inside this panel (e.g. the
         // Map tab's Players/Tournaments switch, or the Rankings tab's
-        // Grid/Table and Rank/Change switches) — indicators were positioned
-        // against a zero-width rect while hidden.
+        // Grid/Table and rank-delta Hide/Show switches) — indicators were
+        // positioned against a zero-width rect while hidden.
         for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
           const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
-          const innerActive = innerToggle.querySelector('.view-btn.active, .rc-btn.active');
+          const innerActive = innerToggle.querySelector('.view-btn.active, .delta-btn.active');
           if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
         }
       });
@@ -2126,7 +2209,7 @@ function writeJs() {
           row.classList.remove('filter-dim');
         }
         if (show) {
-          const rankCell = row.querySelector('.rank-num .rank-plain');
+          const rankCell = row.querySelector('.rank-num');
           if (rankCell) rankCell.textContent = rank++;
         }
       }
@@ -2407,6 +2490,42 @@ function writeJs() {
     }));
   }
 
+  // html2canvas doesn't honor object-fit on <img> (a longstanding upstream
+  // limitation) -- it just stretches the source bitmap to fill the element's
+  // full box, ignoring .prc-flag's object-fit: contain. Live, that CSS
+  // letterboxes each flag to its own real aspect ratio inside the 1.5em x
+  // 1.15em box (so e.g. the UK flag's wider ~2:1 shape renders smaller than
+  // the box rather than stretched to fill it); in the export every flag was
+  // instead coming out uniformly squashed to the box's own ~1.3:1 shape.
+  // Bake the same contain math into real pixels instead: draw each flag
+  // (already same-origin after inlineImages) onto a canvas sized to the
+  // box's own rendered dimensions, scaled/centered exactly like
+  // object-fit: contain would, and swap the <img> src for that -- so the
+  // stretch has nothing left to distort. Must run after inlineImages (needs
+  // a decodable same-origin/data: src) and after the clone is attached with
+  // its final layout (needs real getBoundingClientRect() sizes).
+  async function bakeFlagAspect(root) {
+    const imgs = [...root.querySelectorAll('img.prc-flag')];
+    await Promise.all(imgs.map(async (img) => {
+      if (!img.complete) await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      if (!iw || !ih) return;
+      const rect = img.getBoundingClientRect();
+      const boxW = Math.max(1, Math.round(rect.width * 2));
+      const boxH = Math.max(1, Math.round(rect.height * 2));
+      const scale = Math.min(boxW / iw, boxH / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      const canvas = document.createElement('canvas');
+      canvas.width = boxW;
+      canvas.height = boxH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, (boxW - dw) / 2, (boxH - dh) / 2, dw, dh);
+      img.src = canvas.toDataURL('image/png');
+    }));
+  }
+
   // Captures the top 100 ranked cards passing the default min-games/max-RD
   // filter (same 5+/<=150 thresholds as the default view, regardless of
   // whatever the live min-games/max-RD/state selects are currently set to)
@@ -2415,7 +2534,7 @@ function writeJs() {
   // of the current viewport width or filter state.
   async function downloadRankingsImage(panel) {
     const grid = panel.querySelector('.pr-grid');
-    if (!grid || !window.html2canvas) return;
+    if (!grid || !window.html2canvas) throw new Error('Power Ranking grid or html2canvas unavailable');
     // Custom fonts may not have finished loading yet, and this also ensures
     // the metrics fitCardNames() measures below are accurate.
     await document.fonts.ready;
@@ -2427,7 +2546,10 @@ function writeJs() {
     });
     const cards = qualifying.slice(0, 100);
     const clone = document.createElement('div');
-    clone.className = 'pr-grid pr-export-grid';
+    // Carries the live rank-delta toggle state along into the export --
+    // .show-rank-delta isn't #rankings-tab-scoped specifically so this plain
+    // <body> child can match it too (see the CSS rule for why).
+    clone.className = 'pr-grid pr-export-grid' + (panel.classList.contains('show-rank-delta') ? ' show-rank-delta' : '');
     clone.style.gridTemplateColumns = 'repeat(8, 1fr)';
     // Pinned to this specific width (rather than the live grid's current
     // width) so every download comes out identically sized -- this is
@@ -2456,6 +2578,10 @@ function writeJs() {
       const cardClone = c.cloneNode(true);
       cardClone.hidden = false;
       cardClone.classList.remove('filter-dim', 'uncertain');
+      // Only the numeral, not the whole .prc-rank -- that would also wipe
+      // out the sibling .rank-delta badge (and rank-plain's color class),
+      // which should survive the renumbering since the rating-point change
+      // it shows isn't tied to rank position.
       const rankEl = cardClone.querySelector('.prc-rank .rank-plain');
       if (rankEl) rankEl.textContent = idx + 1;
       clone.appendChild(cardClone);
@@ -2533,24 +2659,29 @@ function writeJs() {
     // now that it's attached to the DOM.
     fitCardNames(clone);
     await inlineImages(clone);
-    html2canvas(clone, {
-      backgroundColor: '#050505',
-      scale: 2,
-      useCORS: true,
-      ignoreElements: (node) => node.tagName === 'IMG' && !node.src.startsWith('data:'),
-    }).then((canvas) => {
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'deathball-power-rankings-top100.png';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+    await bakeFlagAspect(clone);
+    // Not wrapped in try/finally -- the caller (the download button's click
+    // handler) needs a genuine rejection on failure so it knows to flip back
+    // to a clickable, non-"loading" state rather than staying stuck.
+    try {
+      const canvas = await html2canvas(clone, {
+        backgroundColor: '#050505',
+        scale: 2,
+        useCORS: true,
+        ignoreElements: (node) => node.tagName === 'IMG' && !node.src.startsWith('data:'),
       });
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'deathball-power-rankings-top100.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
       clone.remove();
-    }).catch(() => clone.remove());
+    }
   }
 
   function enableViewToggle(panel) {
@@ -2561,7 +2692,34 @@ function writeJs() {
     const toggleEl = panel.querySelector('.view-toggle');
     const indicator = panel.querySelector('.view-toggle-indicator');
     const downloadBtn = panel.querySelector('.download-btn');
-    if (downloadBtn) downloadBtn.addEventListener('click', () => downloadRankingsImage(panel));
+    // The rank-delta badge only ever exists in the card markup (see
+    // rankDeltaHtml's call sites), so its show/hide pill is meaningless --
+    // and would sit there inert -- once the Table view is active.
+    const rankDeltaToggle = panel.querySelector('.rank-delta-toggle');
+    // Loading state disables the button entirely (so a second click can't
+    // start a second concurrent export mid-generation, which is otherwise
+    // easy to trigger since generation takes a couple of seconds and gave
+    // no visible feedback before this). A failed attempt clears back to the
+    // normal enabled state (not "loading") so the button is clickable again
+    // to retry, rather than getting stuck disabled forever.
+    const downloadLabel = downloadBtn ? downloadBtn.querySelector('.download-btn-label') : null;
+    if (downloadBtn) downloadBtn.addEventListener('click', async () => {
+      if (downloadBtn.disabled) return;
+      downloadBtn.disabled = true;
+      downloadBtn.classList.remove('failed');
+      downloadBtn.classList.add('loading');
+      if (downloadLabel) downloadLabel.textContent = 'Preparing…';
+      try {
+        await downloadRankingsImage(panel);
+        if (downloadLabel) downloadLabel.textContent = 'Download Power Ranking';
+      } catch (err) {
+        downloadBtn.classList.add('failed');
+        if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.classList.remove('loading');
+      }
+    });
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
@@ -2570,6 +2728,7 @@ function writeJs() {
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
         if (downloadBtn) downloadBtn.hidden = view !== 'grid';
+        if (rankDeltaToggle) rankDeltaToggle.hidden = view !== 'grid';
         moveIndicator(indicator, toggleEl, btn);
         // Also refreshes the "Click a column header to sort." hint for the
         // view just switched to.
@@ -2578,23 +2737,25 @@ function writeJs() {
     });
     const activeBtn = buttons.find((b) => b.classList.contains('active'));
     if (downloadBtn) downloadBtn.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
+    if (rankDeltaToggle) rankDeltaToggle.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
     moveIndicator(indicator, toggleEl, activeBtn);
   }
 
-  // Rank/Change toggle: swaps the rank-num/prc-rank slot between the plain
-  // rank number and a badge showing movement since the previous
-  // tournament's standings (see rankChangeBadgeHtml in aggregate_players.js
-  // for how the badge markup was baked at generation time).
-  function enableRankChangeToggle(panel) {
-    const toggleEl = panel.querySelector('.rank-change-toggle');
+  // Show/Hide pill for the rank-delta (up/down/new) badge on Power Ranking
+  // cards -- see #rankings-tab.show-rank-delta in the generated CSS, which
+  // is the only thing that actually reveals .rank-delta. Off by default
+  // (see the "hide" button's initial "active" class in writeHtml()) so the
+  // badge doesn't compete for attention on the grid every time.
+  function enableRankDeltaToggle(panel) {
+    const toggleEl = panel.querySelector('.rank-delta-toggle');
     if (!toggleEl) return;
-    const buttons = [...toggleEl.querySelectorAll('.rc-btn')];
+    const buttons = [...toggleEl.querySelectorAll('.delta-btn')];
     const indicator = toggleEl.querySelector('.view-toggle-indicator');
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
         buttons.forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        panel.classList.toggle('show-rank-change', btn.dataset.mode === 'change');
+        panel.classList.toggle('show-rank-delta', btn.dataset.delta === 'show');
         moveIndicator(indicator, toggleEl, btn);
       });
     });
@@ -2611,7 +2772,7 @@ function writeJs() {
       el.addEventListener('change', () => applyFilters(panel));
     });
     enableViewToggle(panel);
-    enableRankChangeToggle(panel);
+    enableRankDeltaToggle(panel);
     document.fonts.ready.then(() => fitCardNames(panel));
   }
 
@@ -2672,7 +2833,7 @@ function writeJs() {
     document.querySelectorAll('.view-toggle').forEach((toggleEl) => {
       if (!toggleEl.offsetWidth) return; // hidden panel — its own tab click handler will fix this when it opens
       const indicator = toggleEl.querySelector('.view-toggle-indicator');
-      const active = toggleEl.querySelector('.view-btn.active, .rc-btn.active');
+      const active = toggleEl.querySelector('.view-btn.active, .delta-btn.active');
       if (indicator && active) moveIndicator(indicator, toggleEl, active);
     });
   });
@@ -2777,7 +2938,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
   const rankingTableRows = rankingRows.map((p, i) => {
     const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
     return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}${p.uncertain ? ' class="uncertain"' : ''}>
-      <td class="rank-num"><span class="rank-plain">${i + 1}</span>${rankChangeBadgeHtml(p)}</td>
+      <td class="rank-num">${i + 1}</td>
       <td>${nameCell}</td>
       <td class="numeric">${Math.round(p.r)}</td>
       <td class="numeric" data-sort="${p.rd.toFixed(4)}">&#xB1;${Math.round(p.rd)}</td>
@@ -2798,7 +2959,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       : `<span class="prc-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>`;
     return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
 <div class="prc-top">
-  <div class="prc-top-left"><span class="prc-rank"><span class="rank-plain">${i + 1}</span>${rankChangeBadgeHtml(p)}</span>${nameSpan}</div>
+  <span class="prc-rank"><span class="rank-plain${rankDeltaState(p) ? ` rank-plain-${rankDeltaState(p)}` : ''}">${i + 1}</span>${rankDeltaHtml(p)}</span>${nameSpan}
   ${flagImg}
 </div>
 <div class="prc-stats"><span class="prc-val">${Math.round(p.r)}</span><span class="prc-dim">&#xB1;</span><span class="prc-val">${Math.round(p.rd)}</span><span class="prc-sep">|</span><span class="prc-val">${Math.round(p.winPct * 100)}</span><span class="prc-dim">W%</span><span class="prc-sep">|</span><span class="prc-val">${p.games}</span><span class="prc-dim">gp</span>${abbrSpan}</div>
@@ -2856,7 +3017,7 @@ ${latestPluralHtml}`;
       <div class="pr-square-label">How to read player information</div>
       <div class="pr-card card-green pr-square-example">
         <div class="prc-top">
-          <div class="prc-top-left"><span class="prc-rank">1</span><span class="prc-name">Player Name</span></div>
+          <span class="prc-rank">1</span><span class="prc-name">Player Name</span>
         </div>
         <div class="prc-stats"><span class="prc-val">1850</span><span class="prc-dim">&#xB1;</span><span class="prc-val">45</span><span class="prc-sep">|</span><span class="prc-val">68</span><span class="prc-dim">W%</span><span class="prc-sep">|</span><span class="prc-val">32</span><span class="prc-dim">gp</span></div>
       </div>
@@ -3026,17 +3187,17 @@ ${mapLabels}
 </div>
 <script type="application/json" id="map-region-data">${JSON.stringify(mapRegionData)}</script>
 
-<div id="rankings-tab" class="tab-panel active">
+<div id="rankings-tab" class="tab-panel active show-rank-delta">
   <div class="tab-controls">
     <div class="view-toggle">
       <span class="view-toggle-indicator"></span>
       <button class="view-btn active" data-view="grid">Grid</button>
       <button class="view-btn" data-view="table">Table</button>
     </div>
-    <div class="view-toggle rank-change-toggle">
+    <div class="view-toggle rank-delta-toggle">
       <span class="view-toggle-indicator"></span>
-      <button class="rc-btn active" data-mode="rank">Rank</button>
-      <button class="rc-btn" data-mode="change">Change</button>
+      <button class="delta-btn" data-delta="hide">Hide &#916;</button>
+      <button class="delta-btn active" data-delta="show">Show &#916;</button>
     </div>
     <label>Min games:
       <select class="min-games-select">
@@ -3062,7 +3223,7 @@ ${mapLabels}
       </select>
     </label>
     <span class="filter-count"></span>
-    <button class="download-btn" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg>Download Power Ranking</button>
+    <button class="download-btn" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download Power Ranking</span></button>
   </div>
   <div class="pr-grid">
 ${prSquareHtml}
@@ -4185,13 +4346,25 @@ async function main() {
       .sort((a, b) => b[1] - a[1]);
     return new Map(sorted.map(([id], i) => [id, i + 1]));
   });
-  // "Since the last tournament" = comparing the current (final) standings to
-  // how they stood right after the second-to-last tournament — i.e. before
-  // the most recent one was played. A player absent from that prior
-  // snapshot hadn't debuted yet (isNew), rather than having "moved."
-  const previousRanks = snapshotRanks.length >= 2 ? snapshotRanks[snapshotRanks.length - 2] : new Map();
+  // "Since the last tournament" for the Rankings tab's up/down badge = comparing
+  // current standings to how they stood right before the most recent *group*
+  // of tournaments (tournament-groups.json; a group defaults to just its own
+  // tournament) was played — so a multi-bracket event like SGDQ reads as one
+  // step, not several. This walk only decides which prior snapshot the badge
+  // compares against; snapshots/snapshotRanks themselves stay one-per-tournament
+  // (see processChronologically) so nothing else -- the rating-history chart,
+  // tournament participation, rankings math -- is affected by grouping.
+  let groupStart = snapshots.length - 1;
+  if (groupStart >= 0) {
+    const lastGroupId = groupIdFor(snapshots[groupStart].url);
+    while (groupStart > 0 && groupIdFor(snapshots[groupStart - 1].url) === lastGroupId) groupStart--;
+  }
+  const previousSnapshot = groupStart > 0 ? snapshots[groupStart - 1] : null;
+  const previousRatings = previousSnapshot
+    ? new Map([...previousSnapshot.ratings.entries()].map(([id, g]) => [id, g.r]))
+    : new Map();
 
-  const rankingRows = buildRankingRows(players, glicko, previousRanks);
+  const rankingRows = buildRankingRows(players, glicko, previousRatings);
 
   // Must run before writeHtml/writeTournamentPages/writePlayerPages — they
   // all link player names via playerHref(), which reads this.
