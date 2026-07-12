@@ -39,12 +39,13 @@ a:hover { text-decoration: underline; }
    pill behind the buttons rather than a line under them (positioned/sized
    by JS in enableViewToggle). */
 .view-toggle-indicator { position: absolute; top: 2px; bottom: 2px; background: #3eff8b; border-radius: 2px; transition: left 200ms ease, width 200ms ease; }
-.view-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
-.view-btn.active { color: #000; }
-.view-btn:not(.active):hover { color: #bbb; }
-.download-btn { margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
+.view-btn, .rc-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
+.view-btn.active, .rc-btn.active { color: #000; }
+.view-btn:not(.active):hover, .rc-btn:not(.active):hover { color: #bbb; }
+.download-btn { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
 .download-btn:hover { border-color: #3eff8b; color: #3eff8b; }
 .download-btn[hidden] { display: none; }
+.download-icon { width: 14px; height: 14px; flex-shrink: 0; }
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -94,6 +95,18 @@ tbody tr { transition: background 150ms; }
 tbody tr:hover td { background: rgba(62,255,139,0.04); }
 tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .rank-num { font-family: 'Orbitron', monospace; color: #666; text-align: right; min-width: 2rem; font-size: 0.85rem; font-weight: 900; }
+/* Rank/Change toggle: rank-plain (the absolute #) and rank-badge (movement
+   since the previous tournament) sit in the same cell/rank slot; only one
+   shows at a time, flipped by #rankings-tab.show-rank-change. Cards cloned
+   for the PNG export live outside #rankings-tab, so they always fall back
+   to the plain-rank default regardless of the live toggle state. */
+.rank-badge { display: none; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.8rem; }
+#rankings-tab.show-rank-change .rank-plain { display: none; }
+#rankings-tab.show-rank-change .rank-badge { display: inline-block; }
+.rank-badge.rank-up { color: #3eff8b; }
+.rank-badge.rank-down { color: #ff5c5c; }
+.rank-badge.rank-new { color: #b04fff; }
+.rank-badge.rank-flat { color: #666; }
 .numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .col-location { white-space: nowrap; }
 .loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 1px; }
@@ -236,6 +249,48 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .ext-link { font-size: 0.8rem; margin-left: 0.4rem; opacity: 0.7; }
 .tourney-section { margin-bottom: 2rem; }
 .tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
+/* Rating-over-time chart (player pages). Fixed pixel height with a
+   viewBox-scaled SVG, same "never resize the plot itself" approach as the
+   map's .map-svg — only the wrap's width flexes with the page. */
+/* Chart gets the same "mostly opaque" translucent card look as the
+   stat-tile/h2h-tile cards elsewhere on the page — see those for the same
+   background/border/blur values. */
+.rating-chart-wrap { width: 100%; background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 1.5rem 1.5rem 0.75rem; box-sizing: border-box; }
+/* The svg and its label/tooltip overlays are positioned as siblings inside
+   this unpadded inner box, not directly inside .rating-chart-wrap — every
+   label's top/left is a percentage of the SVG's own H/W, and percentage
+   offsets on an absolutely-positioned element resolve against its
+   containing block's padding box, so that only lines up if this box has no
+   padding of its own. .rating-chart-wrap's padding is what actually keeps
+   the chart from butting up against the card edges. */
+.rating-chart-inner { position: relative; width: 100%; height: 220px; }
+.rating-chart { width: 100%; height: 100%; display: block; overflow: visible; }
+.chart-grid { stroke: #1a1a1a; stroke-width: 1; }
+.chart-line { fill: none; stroke: #3eff8b; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: #3eff8b; stroke: #050505; stroke-width: 1.5; pointer-events: none; transition: r 120ms ease; }
+.chart-hit { fill: transparent; cursor: pointer; }
+/* Axis/date/current-value labels are HTML overlays (not SVG <text>), pinned
+   to the inner box's edges via CSS percentages — the SVG itself uses
+   preserveAspectRatio="none" so the plot fills the column's full width
+   without side letterboxing, and non-uniform x/y scaling of embedded SVG
+   text would visibly stretch it. Sizing these as HTML instead keeps the
+   labels crisp and lets them be sized larger independent of that scaling. */
+.chart-label { position: absolute; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 600; color: #888; pointer-events: none; white-space: nowrap; }
+.chart-label-y { left: 0; transform: translateY(-50%); }
+.chart-label-date-start { left: 0; bottom: -0.6rem; }
+.chart-label-date-end { right: 0; bottom: -0.6rem; }
+/* Anchored via "right" (not "left") so the label grows leftward off the
+   last point instead of rightward past the edge of the chart. Nudged up an
+   extra few px past the plain -100% flip so it doesn't sit flush against
+   the point/line it's labeling. */
+.chart-label-current { font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700; color: #3eff8b; transform: translateY(calc(-100% - 5px)); }
+.chart-point:focus { outline: none; }
+.chart-point:focus .chart-dot, .chart-point:hover .chart-dot { r: 5.5; }
+/* Positioned in JS against the inner box's own rect (not the viewport), so
+   it tracks correctly regardless of how the SVG's preserveAspectRatio scales
+   the underlying viewBox coordinates to the box's actual rendered size. */
+.chart-tooltip { position: absolute; transform: translate(-50%, -100%) translateY(-10px); background: #111; border: 1px solid #333; border-radius: 3px; padding: 0.4rem 0.6rem; font-size: 0.8rem; line-height: 1.4; color: #ddd; white-space: nowrap; pointer-events: none; z-index: 2; }
+.chart-tooltip strong { color: #3eff8b; }
 /* Standings and the bracket/round list side by side — a narrow standings
    list otherwise leaves most of the page empty next to it. The bracket
    column has no fixed width (min-width:0 lets it shrink below its content's
@@ -304,10 +359,30 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .rank-ordinal { display: inline-block; width: 2.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
 .player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
 .player-col { flex: 1 1 300px; min-width: 0; }
+/* Used instead of .player-columns when a rating chart is present: the chart
+   takes the width of two columns (same as Matches+Tournaments together)
+   with Match Statistics beside it, then Matches/Tournaments fill the row below
+   — Match Statistics spans both rows so it "extends into" that lower row
+   whenever its own content runs taller than the chart. */
+.player-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "chart chart h2h" "matches tournaments h2h"; gap: 2.5rem; }
+.chart-col { grid-area: chart; min-width: 0; }
+.h2h-col { grid-area: h2h; min-width: 0; }
+.matches-col { grid-area: matches; min-width: 0; }
+.tournaments-col { grid-area: tournaments; min-width: 0; }
+@media (max-width: 900px) {
+  .player-grid { grid-template-columns: 1fr; grid-template-areas: "chart" "h2h" "matches" "tournaments"; }
+}
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
 .h2h-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
-.h2h-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
+.h2h-label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .h2h-value { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; font-weight: 700; }
+/* Line-art glyphs distinguishing each Match Statistics tile at a glance — see
+   H2H_ICONS in aggregate_players.js. stroke: currentColor picks up the
+   label's own muted color for free; icon-flip mirrors one path for its
+   opposite-meaning pair (trend up/down, giant-killer/upset-victim) instead
+   of hand-drawing an inverse shape. */
+.h2h-icon { width: 14px; height: 14px; flex-shrink: 0; }
+.icon-flip { transform: scaleY(-1); }
 .h2h-count { font-family: 'Orbitron', monospace; font-size: 1.05rem; font-weight: 900; color: #f0f0f0; }
 .h2h-record-dim { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 600; color: #666; }
 .standings-rank { white-space: nowrap; }

@@ -81,13 +81,15 @@
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
         fitCardNames(panel);
-        // Same story for any view-toggle pill inside this panel (e.g. the
-        // Map tab's Players/Tournaments switch) — its indicator was
-        // positioned against a zero-width rect while hidden.
-        const innerToggle = panel.querySelector('.view-toggle');
-        const innerIndicator = panel.querySelector('.view-toggle-indicator');
-        const innerActive = panel.querySelector('.view-btn.active');
-        if (innerToggle && innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
+        // Same story for any view-toggle pill(s) inside this panel (e.g. the
+        // Map tab's Players/Tournaments switch, or the Rankings tab's
+        // Grid/Table and Rank/Change switches) — indicators were positioned
+        // against a zero-width rect while hidden.
+        for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
+          const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
+          const innerActive = innerToggle.querySelector('.view-btn.active, .rc-btn.active');
+          if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
+        }
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
@@ -173,7 +175,7 @@
           row.classList.remove('filter-dim');
         }
         if (show) {
-          const rankCell = row.querySelector('.rank-num');
+          const rankCell = row.querySelector('.rank-num .rank-plain');
           if (rankCell) rankCell.textContent = rank++;
         }
       }
@@ -194,7 +196,7 @@
         const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
         card.classList.toggle('filter-dim', show && !meetsDefaults);
         if (show) {
-          const rankEl = card.querySelector('.prc-rank');
+          const rankEl = card.querySelector('.prc-rank .rank-plain');
           if (rankEl) rankEl.textContent = rank;
           rank++;
           visible++;
@@ -503,7 +505,7 @@
       const cardClone = c.cloneNode(true);
       cardClone.hidden = false;
       cardClone.classList.remove('filter-dim', 'uncertain');
-      const rankEl = cardClone.querySelector('.prc-rank');
+      const rankEl = cardClone.querySelector('.prc-rank .rank-plain');
       if (rankEl) rankEl.textContent = idx + 1;
       clone.appendChild(cardClone);
     });
@@ -628,6 +630,27 @@
     moveIndicator(indicator, toggleEl, activeBtn);
   }
 
+  // Rank/Change toggle: swaps the rank-num/prc-rank slot between the plain
+  // rank number and a badge showing movement since the previous
+  // tournament's standings (see rankChangeBadgeHtml in aggregate_players.js
+  // for how the badge markup was baked at generation time).
+  function enableRankChangeToggle(panel) {
+    const toggleEl = panel.querySelector('.rank-change-toggle');
+    if (!toggleEl) return;
+    const buttons = [...toggleEl.querySelectorAll('.rc-btn')];
+    const indicator = toggleEl.querySelector('.view-toggle-indicator');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        panel.classList.toggle('show-rank-change', btn.dataset.mode === 'change');
+        moveIndicator(indicator, toggleEl, btn);
+      });
+    });
+    const activeBtn = buttons.find((b) => b.classList.contains('active'));
+    moveIndicator(indicator, toggleEl, activeBtn);
+  }
+
   function initPanel(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -637,6 +660,7 @@
       el.addEventListener('change', () => applyFilters(panel));
     });
     enableViewToggle(panel);
+    enableRankChangeToggle(panel);
     document.fonts.ready.then(() => fitCardNames(panel));
   }
 
@@ -685,4 +709,20 @@
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));
   setupLiveEventFiltering();
+
+  // Every indicator above was positioned/sized against whatever font was
+  // rendering at that moment — on first paint that's often the fallback
+  // font, since Rajdhani/Orbitron load async, so the underline/pill can end
+  // up too wide or narrow until something else (a click) recomputes it.
+  // Re-measure the tab underline and any currently-visible view-toggle pill
+  // once the real fonts are in so page load always lands on the right size.
+  document.fonts.ready.then(() => {
+    moveIndicator(document.querySelector('.tab-underline'), document.querySelector('.tabs'), document.querySelector('.tab-button.active'));
+    document.querySelectorAll('.view-toggle').forEach((toggleEl) => {
+      if (!toggleEl.offsetWidth) return; // hidden panel — its own tab click handler will fix this when it opens
+      const indicator = toggleEl.querySelector('.view-toggle-indicator');
+      const active = toggleEl.querySelector('.view-btn.active, .rc-btn.active');
+      if (indicator && active) moveIndicator(indicator, toggleEl, active);
+    });
+  });
 })();

@@ -43,6 +43,8 @@ const GLICKO_UNCERTAIN_RD_THRESHOLD = 150; // rows above this RD are dimmed
 const GLICKO_CLOSE_GAME_SCORE = 0.86;   // win score for a game won by 1 goal  (3-2)
 const GLICKO_NEAR_GAME_SCORE  = 0.94;   // win score for a game won by 2 goals (3-1)
 const GLICKO_WITHIN_TOURNAMENT_PASSES = 4; // iterative passes per tournament to correct new-player bias
+const GIANT_KILLER_GAP = 150;   // rating gap (opponent minus self) for a "giant killer" win / "upset victim" loss
+const GIANT_KILLER_GAP_MAJOR = 200; // larger gap tier shown alongside the base one
 
 // Location flag/abbreviation data (city flags, state/province flags, country
 // flags, state name lookups) lives in data/location-flags.json for easy editing.
@@ -1003,7 +1005,16 @@ function loadManualMatches(knownUrls) {
 // tournament, before any of its matches were applied. Used to answer
 // "what was this opponent rated at the time of the match" (e.g. a
 // player's best win) without conflating it with their current rating.
-function processChronologically(allTournaments, players, glicko, preTournamentRatings) {
+// snapshots, if passed, is filled with one entry per tournament (in
+// chronological order): { url, date, participantIds: Set<playerId>,
+// ratings: Map<playerId, glickoState> }. ratings is a full clone of the
+// glicko map as it stood right after that tournament's results were locked
+// in — i.e. every player's rating as of that point in history, not just
+// this tournament's participants — so the whole field's standings at that
+// moment in time can be reconstructed later. participantIds marks who
+// actually played this specific tournament (ratings alone can't tell you
+// that, since it carries everyone's running total).
+function processChronologically(allTournaments, players, glicko, preTournamentRatings, snapshots) {
   for (const tournament of allTournaments) {
     // Compute pre-tournament states with lazy decay — fixed across all passes.
     const originalPreStates = new Map();
@@ -1073,6 +1084,17 @@ function processChronologically(allTournaments, players, glicko, preTournamentRa
     // Lock in converged ratings for this tournament's participants.
     for (const id of originalPreStates.keys()) {
       glicko.set(id, currentStates.get(id));
+    }
+
+    if (snapshots) {
+      snapshots.push({
+        url: tournament.url,
+        date: tournament.date,
+        label: tournament.label,
+        slug: tournament.slug,
+        participantIds: new Set(originalPreStates.keys()),
+        ratings: new Map(glicko),
+      });
     }
   }
 }
@@ -1161,11 +1183,15 @@ function buildPlayerHistories(allTournaments, preTournamentRatings) {
       // date alone ties every match in the same tournament together, so this
       // is needed as a same-day tiebreaker for "most recent match" ordering.
       const shared = { date: t.date, order: m.order != null ? m.order : 0, tournamentUrl: t.url, tournamentSlug: t.slug, tournamentLabel: t.label, isDQ: m.isDQ };
+      // Both sides' pre-tournament rating (held constant across the whole
+      // event, same as opponentRatingAtMatch) — own rating alongside the
+      // opponent's lets a match's rating gap be computed later (giant-killer
+      // wins / upset-victim losses), not just "who was this opponent."
       const ratingsForT = preTournamentRatings ? preTournamentRatings.get(t.url) : null;
-      const winnerOppRating = ratingsForT ? ratingsForT.get(loser.id)?.r : null;
-      const loserOppRating = ratingsForT ? ratingsForT.get(winner.id)?.r : null;
-      ensure(winner.id).matches.push({ ...shared, opponentId: loser.id, opponentName: loser.name, won: true, stocksFor: winnerGoals, stocksAgainst: loserGoals, scoreFor: winnerSets, scoreAgainst: loserSets, opponentRatingAtMatch: winnerOppRating ?? null });
-      ensure(loser.id).matches.push({ ...shared, opponentId: winner.id, opponentName: winner.name, won: false, stocksFor: loserGoals, stocksAgainst: winnerGoals, scoreFor: loserSets, scoreAgainst: winnerSets, opponentRatingAtMatch: loserOppRating ?? null });
+      const winnerOwnRating = ratingsForT ? ratingsForT.get(winner.id)?.r : null;
+      const loserOwnRating = ratingsForT ? ratingsForT.get(loser.id)?.r : null;
+      ensure(winner.id).matches.push({ ...shared, opponentId: loser.id, opponentName: loser.name, won: true, stocksFor: winnerGoals, stocksAgainst: loserGoals, scoreFor: winnerSets, scoreAgainst: loserSets, opponentRatingAtMatch: loserOwnRating ?? null, ownRatingAtMatch: winnerOwnRating ?? null });
+      ensure(loser.id).matches.push({ ...shared, opponentId: winner.id, opponentName: winner.name, won: false, stocksFor: loserGoals, stocksAgainst: winnerGoals, scoreFor: loserSets, scoreAgainst: winnerSets, opponentRatingAtMatch: winnerOwnRating ?? null, ownRatingAtMatch: loserOwnRating ?? null });
     }
   }
 
@@ -1190,10 +1216,54 @@ function buildHeadToHead(matches) {
   const maxBy = (arr, key) => arr.reduce((best, o) => (!best || o[key] > best[key] ? o : best), null);
   const minBy = (arr, key) => arr.reduce((best, o) => (!best || o[key] < best[key] ? o : best), null);
 
-  // Closest to an even 50/50 record (min. 3 matches, ties broken by whichever
-  // rivalry has the larger sample size) — the "well-matched" opponent, as
-  // opposed to bestWinRate/worstWinRate which single out the lopsided ends.
-  const rival = [...eligible].sort((a, b) => Math.abs(a.winPct - 0.5) - Math.abs(b.winPct - 0.5) || b.total - a.total)[0] || null;
+  // Most-played opponent (min. 3 matches), with a secondary nudge toward an
+  // even 50/50 record — the "well-matched" opponent, as opposed to
+  // bestWinRate/worstWinRate which single out the lopsided ends. Sample size
+  // is the dominant factor (a 20-match 60/40 rivalry beats a 3-match 50/50
+  // one); closeness to 50/50 only breaks near-ties in games played, via a
+  // score that multiplies total games by a 0.7-1.0 factor based on closeness.
+  const rivalScore = (o) => {
+    const closeness = 1 - Math.abs(o.winPct - 0.5) * 2; // 1 = even 50/50, 0 = all-wins/all-losses
+    return o.total * (0.7 + 0.3 * closeness);
+  };
+  const rival = [...eligible].sort((a, b) => rivalScore(b) - rivalScore(a))[0] || null;
+
+  // Longest win/loss streaks: matches aren't stored in strict global
+  // chronological order (they're appended tournament-by-tournament, and
+  // allTournaments is date-sorted, but same-day/same-tournament matches only
+  // have their source platform's "order" as a tiebreaker) — re-sort here
+  // rather than assume the incoming order is already chronological.
+  const chronological = [...matches].sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.order - b.order));
+  let curWin = 0;
+  let curLoss = 0;
+  let longestWinStreak = 0;
+  let longestLossStreak = 0;
+  for (const m of chronological) {
+    if (m.won) { curWin++; curLoss = 0; } else { curLoss++; curWin = 0; }
+    if (curWin > longestWinStreak) longestWinStreak = curWin;
+    if (curLoss > longestLossStreak) longestLossStreak = curLoss;
+  }
+
+  // Giant-killer wins / upset-victim losses: compares each side's own
+  // pre-tournament rating (ownRatingAtMatch/opponentRatingAtMatch), not
+  // either player's current rating, so a win that was a genuine upset at
+  // the time still counts even if the ratings have since converged.
+  // DQs are excluded — a walkover isn't a real result.
+  let giantKiller = 0;
+  let giantKillerMajor = 0;
+  let upsetVictim = 0;
+  let upsetVictimMajor = 0;
+  for (const m of matches) {
+    if (m.isDQ || m.ownRatingAtMatch == null || m.opponentRatingAtMatch == null) continue;
+    const gap = m.opponentRatingAtMatch - m.ownRatingAtMatch; // positive = opponent was rated higher
+    if (m.won) {
+      if (gap >= GIANT_KILLER_GAP) giantKiller++;
+      if (gap >= GIANT_KILLER_GAP_MAJOR) giantKillerMajor++;
+    } else {
+      if (-gap >= GIANT_KILLER_GAP) upsetVictim++;
+      if (-gap >= GIANT_KILLER_GAP_MAJOR) upsetVictimMajor++;
+    }
+  }
 
   return {
     mostPlayed: maxBy(opponents, 'total'),
@@ -1202,6 +1272,12 @@ function buildHeadToHead(matches) {
     bestWinRate: maxBy(eligible, 'winPct'),
     worstWinRate: minBy(eligible, 'winPct'),
     rival,
+    longestWinStreak,
+    longestLossStreak,
+    giantKiller,
+    giantKillerMajor,
+    upsetVictim,
+    upsetVictimMajor,
   };
 }
 
@@ -1238,8 +1314,8 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
     .sort((a, b) => b.winPct - a.winPct || b.games - a.games);
 }
 
-function buildRankingRows(players, glicko) {
-  return [...players.entries()]
+function buildRankingRows(players, glicko, previousRanks) {
+  const rows = [...players.entries()]
     .map(([id, p]) => {
       const name = displayName(p);
       const info = lookupPlayerInfo(id, name);
@@ -1269,9 +1345,69 @@ function buildRankingRows(players, glicko) {
     })
     .filter((r) => r.games > 0)
     .sort((a, b) => b.conservativeRating - a.conservativeRating);
+
+  // rankChange is "places moved since the last tournament" — positive means
+  // climbed the standings. previousRanks reflects the field as it stood
+  // right before the most recent tournament, so a player missing from it
+  // hadn't played yet (isNew) rather than having moved from some rank.
+  if (previousRanks) {
+    for (const [i, r] of rows.entries()) {
+      const prev = previousRanks.get(r.id);
+      r.isNew = prev == null;
+      r.rankChange = prev == null ? null : prev - (i + 1);
+    }
+  }
+  return rows;
 }
 
 // --- Writers ---
+
+// Small line-art glyphs (16x16, single stroke, no fill) that distinguish the
+// Match Statistics grid's tiles at a glance — otherwise every tile is just a
+// muted all-caps label over a value, and with 14 of them the section reads
+// as a wall of same-looking boxes. Two pairs share one path via CSS mirroring
+// (icon-flip) instead of hand-drawing an inverse shape: trend up/down, and
+// the giant-killer/upset-victim "breakout" arrow.
+const H2H_ICONS = {
+  // Lucide/Feather's "trending-up" glyph (rescaled from its native 24x24 to
+  // this set's 16x16) — flipping it via icon-flip (scaleY(-1) about the
+  // viewBox's own vertical center) lands exactly on "trending-down", since
+  // the two are themselves vertical mirrors of each other around that axis.
+  trendUp: '<polyline points="15.3,4 9,10.3 5.7,7 0.7,12"/><polyline points="11.3,4 15.3,4 15.3,8"/>',
+  swords: '<circle cx="8" cy="8" r="6"/><path d="M5.3 8.2l1.8 1.8 3.6-4"/>', // "swords" name is stale — used for Most Wins Against, now a check-circle glyph
+  shield: '<circle cx="8" cy="8" r="6"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4"/>', // "shield" name is stale — used for Most Losses Against, now an x-circle glyph
+  loop: '<circle cx="8" cy="8.7" r="5.3"/><path d="M8 5.7v3l2.4 1.4"/><path d="M4.2 2.3L2.7 3.8"/>', // "loop" name is stale — used for Most Played, now a history-clock glyph
+  vs: '<path d="M8 2v11"/><path d="M3 5h10"/><path d="M3 5l-1.7 4.2a2 2 0 0 0 3.9 0L3 5z"/><path d="M13 5l-1.7 4.2a2 2 0 0 0 3.9 0L13 5z"/><path d="M6 13h4"/>', // "vs" name is stale — used for Rival, now a balance-scale glyph
+  star: '<path d="M8 2l1.8 3.8 4.2.4-3.2 2.9.9 4.1L8 11.2 4.3 13.2l.9-4.1L2 6.2l4.2-.4L8 2z"/>',
+  mountain: '<path d="M2 13L6 5l2.5 4L11 5l3 8H2z"/>',
+  flame: '<path d="M8 14c-3 0-4.5-2-4.5-4.2C3.5 7 5 5.5 5.5 3c1 1.5 1 3 2 3 .5-2 2-3 2-4.5 2 2 3.5 4 3.5 6.5C13 12 11 14 8 14z"/>',
+  snowflake: '<path d="M8 2v12M3 5l10 6M13 5L3 11"/>',
+  podium: '<rect x="2" y="9" width="3" height="5"/><rect x="6.5" y="5" width="3" height="9"/><rect x="11" y="7" width="3" height="7"/>',
+  // "brackets" name is stale — used for Top 8 Rate, now an ascending
+  // step-ladder glyph (four rising bars, like ranked tiers).
+  brackets: '<path d="M2 13h2v-2.5H2zM5 13h2V8H5zM8 13h2V5H8zM11 13h2V2h-2z"/>',
+  // Giant Killer / Upset Victim: a shield (always upright) with an arrow
+  // inside pointing up or down — kept as two separate full glyphs rather
+  // than one path shared via icon-flip, since flipping the shield itself
+  // upside down would look wrong; only the arrow direction should change.
+  breakout: '<path d="M8 2l5 2v4c0 4-2.5 6-5 7-2.5-1-5-3-5-7V4l5-2z"/><path d="M8 10V5M6 7l2-2 2 2"/>',
+  breakoutDown: '<path d="M8 2l5 2v4c0 4-2.5 6-5 7-2.5-1-5-3-5-7V4l5-2z"/><path d="M8 5V10M6 8l2 2 2-2"/>',
+};
+
+function h2hIcon(key, flip) {
+  const inner = H2H_ICONS[key];
+  if (!inner) return '';
+  return `<svg class="h2h-icon${flip ? ' icon-flip' : ''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+
+// Badge shown by the Rankings tab's Rank/Change toggle in place of the
+// plain rank number — movement since the previous tournament's standings.
+function rankChangeBadgeHtml(p) {
+  if (p.isNew) return `<span class="rank-badge rank-new">NEW</span>`;
+  if (p.rankChange > 0) return `<span class="rank-badge rank-up">&#9650;${p.rankChange}</span>`;
+  if (p.rankChange < 0) return `<span class="rank-badge rank-down">&#9660;${Math.abs(p.rankChange)}</span>`;
+  return `<span class="rank-badge rank-flat">&mdash;</span>`;
+}
 
 function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1302,6 +1438,16 @@ function formatDateHuman(iso) {
   if (!m) return iso || '';
   const [, y, mo, d] = m;
   return `${MONTH_NAMES[parseInt(mo, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
+}
+
+// "Month YYYY" ("July 2025") — used for the Historical Rating chart's start/
+// end axis labels, where the exact day isn't meaningful but the month still
+// is (unlike formatMonthYearHuman below, which drops the month entirely).
+function formatMonthYearHumanFull(iso) {
+  const m = /^(\d{4})-(\d{2})-\d{2}$/.exec(iso || '');
+  if (!m) return iso || '';
+  const [, y, mo] = m;
+  return `${MONTH_NAMES[parseInt(mo, 10) - 1]} ${y}`;
 }
 
 // Year only ("2025") — used for "Last Active" on the Map tab, where the
@@ -1388,12 +1534,13 @@ a:hover { text-decoration: underline; }
    pill behind the buttons rather than a line under them (positioned/sized
    by JS in enableViewToggle). */
 .view-toggle-indicator { position: absolute; top: 2px; bottom: 2px; background: #3eff8b; border-radius: 2px; transition: left 200ms ease, width 200ms ease; }
-.view-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
-.view-btn.active { color: #000; }
-.view-btn:not(.active):hover { color: #bbb; }
-.download-btn { margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
+.view-btn, .rc-btn { position: relative; z-index: 1; background: none; border: none; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 2px; cursor: pointer; transition: color 150ms; }
+.view-btn.active, .rc-btn.active { color: #000; }
+.view-btn:not(.active):hover, .rc-btn:not(.active):hover { color: #bbb; }
+.download-btn { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
 .download-btn:hover { border-color: #3eff8b; color: #3eff8b; }
 .download-btn[hidden] { display: none; }
+.download-icon { width: 14px; height: 14px; flex-shrink: 0; }
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -1443,6 +1590,18 @@ tbody tr { transition: background 150ms; }
 tbody tr:hover td { background: rgba(62,255,139,0.04); }
 tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .rank-num { font-family: 'Orbitron', monospace; color: #666; text-align: right; min-width: 2rem; font-size: 0.85rem; font-weight: 900; }
+/* Rank/Change toggle: rank-plain (the absolute #) and rank-badge (movement
+   since the previous tournament) sit in the same cell/rank slot; only one
+   shows at a time, flipped by #rankings-tab.show-rank-change. Cards cloned
+   for the PNG export live outside #rankings-tab, so they always fall back
+   to the plain-rank default regardless of the live toggle state. */
+.rank-badge { display: none; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.8rem; }
+#rankings-tab.show-rank-change .rank-plain { display: none; }
+#rankings-tab.show-rank-change .rank-badge { display: inline-block; }
+.rank-badge.rank-up { color: #3eff8b; }
+.rank-badge.rank-down { color: #ff5c5c; }
+.rank-badge.rank-new { color: #b04fff; }
+.rank-badge.rank-flat { color: #666; }
 .numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .col-location { white-space: nowrap; }
 .loc-flag { height: 1em; vertical-align: middle; margin-right: 0.35em; border-radius: 1px; }
@@ -1585,6 +1744,48 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .ext-link { font-size: 0.8rem; margin-left: 0.4rem; opacity: 0.7; }
 .tourney-section { margin-bottom: 2rem; }
 .tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
+/* Rating-over-time chart (player pages). Fixed pixel height with a
+   viewBox-scaled SVG, same "never resize the plot itself" approach as the
+   map's .map-svg — only the wrap's width flexes with the page. */
+/* Chart gets the same "mostly opaque" translucent card look as the
+   stat-tile/h2h-tile cards elsewhere on the page — see those for the same
+   background/border/blur values. */
+.rating-chart-wrap { width: 100%; background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 1.5rem 1.5rem 0.75rem; box-sizing: border-box; }
+/* The svg and its label/tooltip overlays are positioned as siblings inside
+   this unpadded inner box, not directly inside .rating-chart-wrap — every
+   label's top/left is a percentage of the SVG's own H/W, and percentage
+   offsets on an absolutely-positioned element resolve against its
+   containing block's padding box, so that only lines up if this box has no
+   padding of its own. .rating-chart-wrap's padding is what actually keeps
+   the chart from butting up against the card edges. */
+.rating-chart-inner { position: relative; width: 100%; height: 220px; }
+.rating-chart { width: 100%; height: 100%; display: block; overflow: visible; }
+.chart-grid { stroke: #1a1a1a; stroke-width: 1; }
+.chart-line { fill: none; stroke: #3eff8b; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: #3eff8b; stroke: #050505; stroke-width: 1.5; pointer-events: none; transition: r 120ms ease; }
+.chart-hit { fill: transparent; cursor: pointer; }
+/* Axis/date/current-value labels are HTML overlays (not SVG <text>), pinned
+   to the inner box's edges via CSS percentages — the SVG itself uses
+   preserveAspectRatio="none" so the plot fills the column's full width
+   without side letterboxing, and non-uniform x/y scaling of embedded SVG
+   text would visibly stretch it. Sizing these as HTML instead keeps the
+   labels crisp and lets them be sized larger independent of that scaling. */
+.chart-label { position: absolute; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 600; color: #888; pointer-events: none; white-space: nowrap; }
+.chart-label-y { left: 0; transform: translateY(-50%); }
+.chart-label-date-start { left: 0; bottom: -0.6rem; }
+.chart-label-date-end { right: 0; bottom: -0.6rem; }
+/* Anchored via "right" (not "left") so the label grows leftward off the
+   last point instead of rightward past the edge of the chart. Nudged up an
+   extra few px past the plain -100% flip so it doesn't sit flush against
+   the point/line it's labeling. */
+.chart-label-current { font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700; color: #3eff8b; transform: translateY(calc(-100% - 5px)); }
+.chart-point:focus { outline: none; }
+.chart-point:focus .chart-dot, .chart-point:hover .chart-dot { r: 5.5; }
+/* Positioned in JS against the inner box's own rect (not the viewport), so
+   it tracks correctly regardless of how the SVG's preserveAspectRatio scales
+   the underlying viewBox coordinates to the box's actual rendered size. */
+.chart-tooltip { position: absolute; transform: translate(-50%, -100%) translateY(-10px); background: #111; border: 1px solid #333; border-radius: 3px; padding: 0.4rem 0.6rem; font-size: 0.8rem; line-height: 1.4; color: #ddd; white-space: nowrap; pointer-events: none; z-index: 2; }
+.chart-tooltip strong { color: #3eff8b; }
 /* Standings and the bracket/round list side by side — a narrow standings
    list otherwise leaves most of the page empty next to it. The bracket
    column has no fixed width (min-width:0 lets it shrink below its content's
@@ -1653,10 +1854,30 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .rank-ordinal { display: inline-block; width: 2.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
 .player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
 .player-col { flex: 1 1 300px; min-width: 0; }
+/* Used instead of .player-columns when a rating chart is present: the chart
+   takes the width of two columns (same as Matches+Tournaments together)
+   with Match Statistics beside it, then Matches/Tournaments fill the row below
+   — Match Statistics spans both rows so it "extends into" that lower row
+   whenever its own content runs taller than the chart. */
+.player-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "chart chart h2h" "matches tournaments h2h"; gap: 2.5rem; }
+.chart-col { grid-area: chart; min-width: 0; }
+.h2h-col { grid-area: h2h; min-width: 0; }
+.matches-col { grid-area: matches; min-width: 0; }
+.tournaments-col { grid-area: tournaments; min-width: 0; }
+@media (max-width: 900px) {
+  .player-grid { grid-template-columns: 1fr; grid-template-areas: "chart" "h2h" "matches" "tournaments"; }
+}
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
 .h2h-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
-.h2h-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
+.h2h-label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .h2h-value { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; font-weight: 700; }
+/* Line-art glyphs distinguishing each Match Statistics tile at a glance — see
+   H2H_ICONS in aggregate_players.js. stroke: currentColor picks up the
+   label's own muted color for free; icon-flip mirrors one path for its
+   opposite-meaning pair (trend up/down, giant-killer/upset-victim) instead
+   of hand-drawing an inverse shape. */
+.h2h-icon { width: 14px; height: 14px; flex-shrink: 0; }
+.icon-flip { transform: scaleY(-1); }
 .h2h-count { font-family: 'Orbitron', monospace; font-size: 1.05rem; font-weight: 900; color: #f0f0f0; }
 .h2h-record-dim { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 600; color: #666; }
 .standings-rank { white-space: nowrap; }
@@ -1811,13 +2032,15 @@ function writeJs() {
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
         fitCardNames(panel);
-        // Same story for any view-toggle pill inside this panel (e.g. the
-        // Map tab's Players/Tournaments switch) — its indicator was
-        // positioned against a zero-width rect while hidden.
-        const innerToggle = panel.querySelector('.view-toggle');
-        const innerIndicator = panel.querySelector('.view-toggle-indicator');
-        const innerActive = panel.querySelector('.view-btn.active');
-        if (innerToggle && innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
+        // Same story for any view-toggle pill(s) inside this panel (e.g. the
+        // Map tab's Players/Tournaments switch, or the Rankings tab's
+        // Grid/Table and Rank/Change switches) — indicators were positioned
+        // against a zero-width rect while hidden.
+        for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
+          const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
+          const innerActive = innerToggle.querySelector('.view-btn.active, .rc-btn.active');
+          if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
+        }
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
@@ -1903,7 +2126,7 @@ function writeJs() {
           row.classList.remove('filter-dim');
         }
         if (show) {
-          const rankCell = row.querySelector('.rank-num');
+          const rankCell = row.querySelector('.rank-num .rank-plain');
           if (rankCell) rankCell.textContent = rank++;
         }
       }
@@ -1924,7 +2147,7 @@ function writeJs() {
         const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
         card.classList.toggle('filter-dim', show && !meetsDefaults);
         if (show) {
-          const rankEl = card.querySelector('.prc-rank');
+          const rankEl = card.querySelector('.prc-rank .rank-plain');
           if (rankEl) rankEl.textContent = rank;
           rank++;
           visible++;
@@ -2233,7 +2456,7 @@ function writeJs() {
       const cardClone = c.cloneNode(true);
       cardClone.hidden = false;
       cardClone.classList.remove('filter-dim', 'uncertain');
-      const rankEl = cardClone.querySelector('.prc-rank');
+      const rankEl = cardClone.querySelector('.prc-rank .rank-plain');
       if (rankEl) rankEl.textContent = idx + 1;
       clone.appendChild(cardClone);
     });
@@ -2358,6 +2581,27 @@ function writeJs() {
     moveIndicator(indicator, toggleEl, activeBtn);
   }
 
+  // Rank/Change toggle: swaps the rank-num/prc-rank slot between the plain
+  // rank number and a badge showing movement since the previous
+  // tournament's standings (see rankChangeBadgeHtml in aggregate_players.js
+  // for how the badge markup was baked at generation time).
+  function enableRankChangeToggle(panel) {
+    const toggleEl = panel.querySelector('.rank-change-toggle');
+    if (!toggleEl) return;
+    const buttons = [...toggleEl.querySelectorAll('.rc-btn')];
+    const indicator = toggleEl.querySelector('.view-toggle-indicator');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        panel.classList.toggle('show-rank-change', btn.dataset.mode === 'change');
+        moveIndicator(indicator, toggleEl, btn);
+      });
+    });
+    const activeBtn = buttons.find((b) => b.classList.contains('active'));
+    moveIndicator(indicator, toggleEl, activeBtn);
+  }
+
   function initPanel(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -2367,6 +2611,7 @@ function writeJs() {
       el.addEventListener('change', () => applyFilters(panel));
     });
     enableViewToggle(panel);
+    enableRankChangeToggle(panel);
     document.fonts.ready.then(() => fitCardNames(panel));
   }
 
@@ -2415,6 +2660,22 @@ function writeJs() {
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));
   setupLiveEventFiltering();
+
+  // Every indicator above was positioned/sized against whatever font was
+  // rendering at that moment — on first paint that's often the fallback
+  // font, since Rajdhani/Orbitron load async, so the underline/pill can end
+  // up too wide or narrow until something else (a click) recomputes it.
+  // Re-measure the tab underline and any currently-visible view-toggle pill
+  // once the real fonts are in so page load always lands on the right size.
+  document.fonts.ready.then(() => {
+    moveIndicator(document.querySelector('.tab-underline'), document.querySelector('.tabs'), document.querySelector('.tab-button.active'));
+    document.querySelectorAll('.view-toggle').forEach((toggleEl) => {
+      if (!toggleEl.offsetWidth) return; // hidden panel — its own tab click handler will fix this when it opens
+      const indicator = toggleEl.querySelector('.view-toggle-indicator');
+      const active = toggleEl.querySelector('.view-btn.active, .rc-btn.active');
+      if (indicator && active) moveIndicator(indicator, toggleEl, active);
+    });
+  });
 })();
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), js);
@@ -2516,7 +2777,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
   const rankingTableRows = rankingRows.map((p, i) => {
     const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
     return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}${p.uncertain ? ' class="uncertain"' : ''}>
-      <td class="rank-num">${i + 1}</td>
+      <td class="rank-num"><span class="rank-plain">${i + 1}</span>${rankChangeBadgeHtml(p)}</td>
       <td>${nameCell}</td>
       <td class="numeric">${Math.round(p.r)}</td>
       <td class="numeric" data-sort="${p.rd.toFixed(4)}">&#xB1;${Math.round(p.rd)}</td>
@@ -2537,7 +2798,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       : `<span class="prc-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>`;
     return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
 <div class="prc-top">
-  <div class="prc-top-left"><span class="prc-rank">${i + 1}</span>${nameSpan}</div>
+  <div class="prc-top-left"><span class="prc-rank"><span class="rank-plain">${i + 1}</span>${rankChangeBadgeHtml(p)}</span>${nameSpan}</div>
   ${flagImg}
 </div>
 <div class="prc-stats"><span class="prc-val">${Math.round(p.r)}</span><span class="prc-dim">&#xB1;</span><span class="prc-val">${Math.round(p.rd)}</span><span class="prc-sep">|</span><span class="prc-val">${Math.round(p.winPct * 100)}</span><span class="prc-dim">W%</span><span class="prc-sep">|</span><span class="prc-val">${p.games}</span><span class="prc-dim">gp</span>${abbrSpan}</div>
@@ -2772,6 +3033,11 @@ ${mapLabels}
       <button class="view-btn active" data-view="grid">Grid</button>
       <button class="view-btn" data-view="table">Table</button>
     </div>
+    <div class="view-toggle rank-change-toggle">
+      <span class="view-toggle-indicator"></span>
+      <button class="rc-btn active" data-mode="rank">Rank</button>
+      <button class="rc-btn" data-mode="change">Change</button>
+    </div>
     <label>Min games:
       <select class="min-games-select">
         <option value="1">All</option>
@@ -2796,7 +3062,7 @@ ${mapLabels}
       </select>
     </label>
     <span class="filter-count"></span>
-    <button class="download-btn" type="button">Download Top 100</button>
+    <button class="download-btn" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg>Download Power Ranking</button>
   </div>
   <div class="pr-grid">
 ${prSquareHtml}
@@ -3454,7 +3720,81 @@ ${lis}
 // standings/crosstables/round-lists (nameHtml) and the Players/Rankings tabs
 // (writeHtml) — but deliberately not from the brackets-viewer bracket itself,
 // which renders participant names as opaque JSON text with no HTML hook.
-function writePlayerPages(players, glicko, histories, rankingRows) {
+// Renders the "Historical Rating" line chart for a player page: one point per
+// tournament they actually competed in (chronological), y-axis is Glicko-2
+// conservative rating. Rank-at-the-time and the tournament name/date ride
+// along as data attributes for the hover tooltip rather than a second axis —
+// a player's rank moves for reasons that have nothing to do with their own
+// rating (opponents joining/leaving the field), so charting it as a second
+// line would invite a two-axis reading of one trend. history must have 2+
+// points; the caller is responsible for the "not enough history yet" case.
+function buildRatingChartSvg(history) {
+  const W = 720;
+  const H = 220;
+  // Small fixed padding just enough that point circles/stroke at the
+  // extremes aren't clipped — the plot otherwise runs edge-to-edge, since
+  // axis/date labels now live outside the SVG as HTML overlays (see
+  // preserveAspectRatio="none" below and the .chart-label rules).
+  const padL = 6;
+  const padR = 6;
+  const padT = 24; // extra headroom so the floating current-rating label (anchored above the last point) never crowds the top edge
+  const padB = 10;
+  const n = history.length;
+  const ratings = history.map((h) => h.rating);
+  let minR = Math.min(...ratings);
+  let maxR = Math.max(...ratings);
+  if (minR === maxR) { minR -= 50; maxR += 50; }
+  const span = maxR - minR;
+  minR -= span * 0.1;
+  maxR += span * 0.1;
+
+  const x = (i) => padL + (n === 1 ? 0 : (i / (n - 1)) * (W - padL - padR));
+  const y = (r) => padT + (1 - (r - minR) / (maxR - minR)) * (H - padT - padB);
+
+  const gridTicks = [0, 0.5, 1].map((t) => {
+    const gy = padT + t * (H - padT - padB);
+    const val = Math.round(maxR - t * (maxR - minR));
+    return { gy, val };
+  });
+  const gridLines = gridTicks.map(({ gy }) => `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${W - padR}" y2="${gy.toFixed(1)}" class="chart-grid"/>`).join('\n');
+  const yLabels = gridTicks.map(({ gy, val }) => `<div class="chart-label chart-label-y" style="top:${((gy / H) * 100).toFixed(2)}%">${val}</div>`).join('\n');
+
+  const points = history.map((h, i) => [x(i), y(h.rating)]);
+  const polyline = `<polyline points="${points.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ')}" class="chart-line"/>`;
+
+  const markers = history.map((h, i) => {
+    const [px, py] = points[i];
+    const label = `${h.label}, ${formatDateHuman(h.date)} — Rating ${h.rating}, Rank #${h.rank || '?'}`;
+    return `<a href="../tournaments/${escapeHtml(h.slug)}.html" class="chart-point" tabindex="0" aria-label="${escapeHtml(label)}" data-date="${escapeHtml(formatDateHuman(h.date))}" data-label="${escapeHtml(h.label)}" data-rating="${h.rating}" data-rank="${h.rank || ''}">
+  <circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="10" class="chart-hit"/>
+  <circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.5" class="chart-dot"/>
+</a>`;
+  }).join('\n');
+
+  const first = history[0];
+  const last = history[n - 1];
+  const dateLabels = `<div class="chart-label chart-label-date-start">${escapeHtml(formatMonthYearHumanFull(first.date))}</div>
+<div class="chart-label chart-label-date-end">${escapeHtml(formatMonthYearHumanFull(last.date))}</div>`;
+
+  const lastPoint = points[n - 1];
+  const currentLabel = `<div class="chart-label chart-label-current" style="right:${(((W - lastPoint[0]) / W) * 100).toFixed(2)}%; top:${((lastPoint[1] / H) * 100).toFixed(2)}%">${last.rating}</div>`;
+
+  return `<div class="rating-chart-wrap">
+  <div class="rating-chart-inner">
+    <svg viewBox="0 0 ${W} ${H}" class="rating-chart" preserveAspectRatio="none">
+      ${gridLines}
+      ${polyline}
+      ${markers}
+    </svg>
+    ${yLabels}
+    ${dateLabels}
+    ${currentLabel}
+    <div class="chart-tooltip" hidden></div>
+  </div>
+</div>`;
+}
+
+function writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById) {
   const dir = path.join(REPO_ROOT, 'players');
   fs.mkdirSync(dir, { recursive: true });
   const keep = new Set();
@@ -3486,6 +3826,7 @@ function writePlayerPages(players, glicko, histories, rankingRows) {
     const matchesDesc = [...hist.matches].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.order - a.order));
 
     const h2h = buildHeadToHead(hist.matches);
+    const ratingHistory = ratingHistoryById.get(id) || [];
 
     const rankIdx = rankingRows.findIndex((r) => r.id === id);
     const rankingRow = rankIdx >= 0 ? rankingRows[rankIdx] : null;
@@ -3570,23 +3911,53 @@ function writePlayerPages(players, glicko, histories, rankingRows) {
       `      <li${hidden ? ' hidden' : ''}><span class="standings-rank ${m.won ? 'result-win' : 'result-loss'}"><span class="result-letter">${m.won ? 'W' : 'L'}</span> <span class="match-score-mini">${m.isDQ ? 'DQ' : `${m.scoreFor}-${m.scoreAgainst}`}</span></span><span>vs ${opponentLinkHtml(m.opponentId, m.opponentName)} <span class="match-tourney-name">(<a href="../tournaments/${escapeHtml(m.tournamentSlug)}.html">${escapeHtml(m.tournamentLabel)}</a>)</span></span><span class="standings-record">${escapeHtml(formatDateHuman(m.date))}</span></li>`,
       'No matches on record.');
 
-    const h2hRow = (label, entry, formatMetric) => {
-      if (!entry) return `<div class="h2h-tile"><span class="h2h-label">${escapeHtml(label)}</span><span class="h2h-value">&mdash;</span></div>`;
-      return `<div class="h2h-tile"><span class="h2h-label">${escapeHtml(label)}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
+    const h2hRow = (label, entry, formatMetric, iconKey, flip) => {
+      const icon = h2hIcon(iconKey, flip);
+      if (!entry) return `<div class="h2h-tile"><span class="h2h-label">${icon}${escapeHtml(label)}</span><span class="h2h-value">&mdash;</span></div>`;
+      return `<div class="h2h-tile"><span class="h2h-label">${icon}${escapeHtml(label)}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
     };
     const bestWinMetric = (e) => {
       const rankLabel = e.oppRank != null ? `#${e.oppRank}` : 'Unranked';
       const spotsLabel = e.spots != null ? (e.spots > 0 ? `+${e.spots}` : `${e.spots}`) : '';
       return `${rankLabel}${spotsLabel ? ` <span class="h2h-record-dim">(${spotsLabel})</span>` : ''}`;
     };
+    // For tiles that aren't "vs. an opponent" (streaks, podium rate, rating
+    // milestones) — same .h2h-tile shell as h2hRow, just a plain value.
+    const statTile = (label, valueHtml, iconKey, flip) => `<div class="h2h-tile"><span class="h2h-label">${h2hIcon(iconKey, flip)}${escapeHtml(label)}</span><span class="h2h-value">${valueHtml}</span></div>`;
+
+    const totalPlacements = hist.placements.length;
+    const podiumCount = hist.placements.filter((pl) => pl.rank <= 3).length;
+    const top8Count = hist.placements.filter((pl) => pl.rank <= 8).length;
+    const rateValue = (count) => totalPlacements
+      ? `${count}/${totalPlacements} <span class="h2h-record-dim">(${((count / totalPlacements) * 100).toFixed(0)}%)</span>`
+      : '&mdash;';
+
+    // Giant-killer/upset-victim counts show the 150+ tier as the headline
+    // number, with the rarer 200+ tier called out alongside it when there
+    // are any — a player with zero 200+ wins doesn't need "0 (200+)" noise.
+    const gapTierValue = (count, majorCount) => count
+      ? `&times;${count} <span class="h2h-record-dim">(150+)</span>${majorCount ? ` <span class="h2h-record-dim">&middot; ${majorCount} (200+)</span>` : ''}`
+      : '&mdash;';
+
+    const peakRating = ratingHistory.length
+      ? ratingHistory.reduce((best, h) => (!best || h.rating > best.rating ? h : best), null)
+      : null;
+
     const h2hSection = `<div class="h2h-grid">
-${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
-${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
-${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`)}
-${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`)}
-${h2hRow('Most Played', h2h.mostPlayed, (e) => `&times;${e.total}`)}
-${h2hRow('Rival (Min. 3)', h2h.rival, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`)}
-${h2hRow('Best Win', bestWin, bestWinMetric)}
+${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'trendUp')}
+${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'trendUp', true)}
+${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`, 'swords')}
+${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`, 'shield')}
+${h2hRow('Most Played', h2h.mostPlayed, (e) => `&times;${e.total}`, 'loop')}
+${h2hRow('Rival (Min. 3)', h2h.rival, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'vs')}
+${h2hRow('Best Win', bestWin, bestWinMetric, 'star')}
+${statTile('Peak Rating', peakRating ? `<a href="../tournaments/${escapeHtml(peakRating.slug)}.html">${peakRating.rating}</a> <span class="h2h-record-dim">${escapeHtml(formatDateHuman(peakRating.date))}</span>` : '&mdash;', 'mountain')}
+${statTile('Longest Win Streak', `${h2h.longestWinStreak}`, 'flame')}
+${statTile('Longest Loss Streak', `${h2h.longestLossStreak}`, 'snowflake')}
+${statTile('Podium Rate (Top 3)', rateValue(podiumCount), 'podium')}
+${statTile('Top 8 Rate', rateValue(top8Count), 'brackets')}
+${statTile('Giant Killer Wins', gapTierValue(h2h.giantKiller, h2h.giantKillerMajor), 'breakout')}
+${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimMajor), 'breakoutDown')}
 </div>`;
 
     const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) => {
@@ -3594,6 +3965,8 @@ ${h2hRow('Best Win', bestWin, bestWinMetric)}
       return `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name">${histFlagImg}<a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a></span><span class="standings-record">${escapeHtml(formatDateHuman(pl.date))}</span></li>`;
     },
       'No tournaments on record.');
+
+    const hasChart = ratingHistory.length >= 2;
 
     const aliasCaption = aliases.length
       ? `<span class="alias-list">Also known as: ${aliases.map(escapeHtml).join(', ')}</span>`
@@ -3623,7 +3996,29 @@ ${rankingTiles}
   </div>
 </div>
 
-<div class="player-columns">
+${hasChart
+  ? `<div class="player-grid">
+  <div class="tourney-section chart-col">
+    <h2>Historical Rating</h2>
+    ${buildRatingChartSvg(ratingHistory)}
+  </div>
+
+  <div class="tourney-section h2h-col">
+    <h2>Match Statistics</h2>
+    ${h2hSection}
+  </div>
+
+  <div class="tourney-section matches-col">
+    <h2>Matches (${p.games})</h2>
+    ${recentMatchesHtml}
+  </div>
+
+  <div class="tourney-section tournaments-col">
+    <h2>Tournaments (${p.tournaments.size})</h2>
+    ${historyRows}
+  </div>
+</div>`
+  : `<div class="player-columns">
   <div class="tourney-section player-col">
     <h2>Matches (${p.games})</h2>
     ${recentMatchesHtml}
@@ -3635,10 +4030,10 @@ ${rankingTiles}
   </div>
 
   <div class="tourney-section player-col">
-    <h2>Head-to-Head</h2>
+    <h2>Match Statistics</h2>
     ${h2hSection}
   </div>
-</div>
+</div>`}
 <script>
   document.querySelectorAll('.show-more-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -3647,6 +4042,50 @@ ${rankingTiles}
       hiddenItems.forEach((li) => { li.hidden = false; });
       if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
     });
+  });
+
+  // Historical-rating chart: hover/focus a tournament point to show its
+  // tooltip, positioned against the chart's inner box (its actual
+  // containing block, not the viewport or the padded outer card), so it
+  // scales correctly with the SVG's own preserveAspectRatio scaling.
+  document.querySelectorAll('.rating-chart-inner').forEach((wrap) => {
+    const tooltip = wrap.querySelector('.chart-tooltip');
+    const svg = wrap.querySelector('.rating-chart');
+    if (!tooltip || !svg) return;
+    const show = (point) => {
+      const wrapRect = wrap.getBoundingClientRect();
+      const pointRect = point.getBoundingClientRect();
+      tooltip.innerHTML = '<strong>' + point.dataset.label + '</strong><br>' +
+        point.dataset.date + '<br>Rating ' + point.dataset.rating +
+        (point.dataset.rank ? ' &middot; Rank #' + point.dataset.rank : '');
+      tooltip.hidden = false;
+      let left = (pointRect.left - wrapRect.left) + (pointRect.width / 2);
+      left = Math.max(60, Math.min(left, wrapRect.width - 60));
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = (pointRect.top - wrapRect.top) + 'px';
+    };
+    const hide = () => { tooltip.hidden = true; };
+    const points = [...svg.querySelectorAll('.chart-point')];
+    points.forEach((point) => {
+      point.addEventListener('focus', () => show(point));
+      point.addEventListener('blur', hide);
+    });
+    // Nearest-point-by-x detection across the whole chart (not just when
+    // hovering a point's small hit circle) — find the closest marker to the
+    // mouse's x position anywhere over the SVG and show its tooltip.
+    svg.addEventListener('mousemove', (e) => {
+      if (!points.length) return;
+      let nearest = points[0];
+      let nearestDist = Infinity;
+      for (const p of points) {
+        const r = p.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const dist = Math.abs(e.clientX - cx);
+        if (dist < nearestDist) { nearestDist = dist; nearest = p; }
+      }
+      show(nearest);
+    });
+    svg.addEventListener('mouseleave', hide);
   });
 </script>
 ${siteFooter('../')}
@@ -3731,16 +4170,58 @@ async function main() {
   const players = new Map();
   const glicko = new Map();
   const preTournamentRatings = new Map();
-  processChronologically(allTournaments, players, glicko, preTournamentRatings);
+  const snapshots = [];
+  processChronologically(allTournaments, players, glicko, preTournamentRatings, snapshots);
 
   const tournamentMetaByUrl = new Map(allTournaments.map((t) => [t.url, { location: t.location, slug: t.slug }]));
   const playerRows = buildPlayerRows(players, tournamentMetaByUrl);
-  const rankingRows = buildRankingRows(players, glicko);
+
+  // Each snapshot's ratings map covers everyone who'd played by that point,
+  // so ranking it the same way buildRankingRows does (conservative rating,
+  // descending) reconstructs "the leaderboard as of that tournament."
+  const snapshotRanks = snapshots.map((s) => {
+    const sorted = [...s.ratings.entries()]
+      .map(([id, g]) => [id, glicko2.conservativeRating(g)])
+      .sort((a, b) => b[1] - a[1]);
+    return new Map(sorted.map(([id], i) => [id, i + 1]));
+  });
+  // "Since the last tournament" = comparing the current (final) standings to
+  // how they stood right after the second-to-last tournament — i.e. before
+  // the most recent one was played. A player absent from that prior
+  // snapshot hadn't debuted yet (isNew), rather than having "moved."
+  const previousRanks = snapshotRanks.length >= 2 ? snapshotRanks[snapshotRanks.length - 2] : new Map();
+
+  const rankingRows = buildRankingRows(players, glicko, previousRanks);
 
   // Must run before writeHtml/writeTournamentPages/writePlayerPages — they
   // all link player names via playerHref(), which reads this.
   assignPlayerSlugs(players);
   const histories = buildPlayerHistories(allTournaments, preTournamentRatings);
+
+  // Per-player rating history: one point per tournament a player actually
+  // competed in (not every tournament — most players skip most events, and
+  // their rating doesn't move on a tournament they sat out), in chronological
+  // order. Powers the rating-over-time graph on player pages. Rank is the
+  // player's overall standing in that same snapshot (see snapshotRanks
+  // above), i.e. "where they stood right after this tournament," not their
+  // current rank.
+  const ratingHistoryById = new Map();
+  snapshots.forEach((s, i) => {
+    const ranks = snapshotRanks[i];
+    for (const id of s.participantIds) {
+      const g = s.ratings.get(id);
+      if (!g) continue;
+      if (!ratingHistoryById.has(id)) ratingHistoryById.set(id, []);
+      ratingHistoryById.get(id).push({
+        date: s.date,
+        label: s.label,
+        slug: s.slug,
+        rating: Math.round(glicko2.conservativeRating(g)),
+        rd: Math.round(g.rd),
+        rank: ranks.get(id) || null,
+      });
+    }
+  });
 
   // Map sidebar player lists are alphabetical (not rank order) and only
   // include players with a resolved location — even the unfiltered "All
@@ -3829,7 +4310,7 @@ async function main() {
   writeJs();
   writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments);
   writeTournamentPages(allTournaments);
-  writePlayerPages(players, glicko, histories, rankingRows);
+  writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById);
 
   console.log(`Unique players: ${playerRows.length}`);
   console.log(`Tournaments:    ${allTournaments.length}`);
