@@ -1,6 +1,10 @@
 (function () {
   const STATE_NAMES = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"Washington D.C.","AB":"Alberta","BC":"British Columbia","MB":"Manitoba","NB":"New Brunswick","NL":"Newfoundland and Labrador","NS":"Nova Scotia","NT":"Northwest Territories","NU":"Nunavut","ON":"Ontario","PE":"Prince Edward Island","QC":"Quebec","SK":"Saskatchewan","YT":"Yukon"};
   const MAP_REGION_DATA = JSON.parse(document.getElementById('map-region-data')?.textContent || '{}');
+  const PR_HISTORY_DATA = JSON.parse(document.getElementById('pr-history-data')?.textContent || '{}');
+  const PR_META = PR_HISTORY_DATA.players || {};
+  const PR_HISTORY = PR_HISTORY_DATA.checkpoints || [];
+  const PR_UNCERTAIN_RD_THRESHOLD = 150;
 
   function enableSorting(table) {
     const tbody = table.tBodies[0];
@@ -677,7 +681,7 @@
       if (downloadLabel) downloadLabel.textContent = 'Preparing…';
       try {
         await downloadRankingsImage(panel);
-        if (downloadLabel) downloadLabel.textContent = 'Download Power Ranking';
+        if (downloadLabel) downloadLabel.textContent = 'Download PR';
       } catch (err) {
         downloadBtn.classList.add('failed');
         if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
@@ -729,11 +733,221 @@
     moveIndicator(indicator, toggleEl, activeBtn);
   }
 
+  // Rebuilds .pr-card/.pr-card accents and the rank-delta badge from raw
+  // row data -- mirrors cardAccent()/rankDeltaState()/rankDeltaHtml() in
+  // aggregate_players.js. Kept in sync by hand: the "View rankings at"
+  // dropdown (PR_HISTORY, see enablePrHistorySelect below) only ships each
+  // checkpoint's *data*, not pre-rendered HTML, so switching checkpoints
+  // re-renders the grid/table client-side the same way the map tab's
+  // sidebar re-renders from MAP_REGION_DATA.
+  function prCardAccent(id, colorOverride) {
+    if (colorOverride === 'green' || colorOverride === 'purple') return 'card-' + colorOverride;
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
+    return (h & 1) ? 'card-purple' : 'card-green';
+  }
+
+  function prRankDeltaState(row) {
+    if (row.isNew) return 'new';
+    if (!row.placementChange) return null;
+    return row.placementChange > 0 ? 'up' : 'down';
+  }
+
+  function prRankDeltaBadge(row) {
+    const state = prRankDeltaState(row);
+    if (!state) return null;
+    const span = document.createElement('span');
+    if (state === 'new') {
+      span.className = 'rank-delta rank-delta-new';
+      span.textContent = 'NEW';
+    } else if (state === 'up') {
+      span.className = 'rank-delta rank-delta-up';
+      span.textContent = '▲' + row.placementChange;
+    } else {
+      span.className = 'rank-delta rank-delta-down';
+      span.textContent = '▼' + Math.abs(row.placementChange);
+    }
+    return span;
+  }
+
+  function prFlagImg(flag, className) {
+    if (!flag) return null;
+    const img = document.createElement('img');
+    img.className = className;
+    img.src = flag.src;
+    img.title = flag.title;
+    img.alt = flag.title;
+    return img;
+  }
+
+  function buildRankingCard(row, meta, rank) {
+    const card = document.createElement('div');
+    card.className = 'pr-card ' + prCardAccent(row.id, meta.color) + (row.uncertain ? ' uncertain' : '');
+    card.dataset.games = row.games;
+    card.dataset.rd = row.rd;
+    if (meta.state) card.dataset.state = meta.state;
+
+    const top = document.createElement('div');
+    top.className = 'prc-top';
+
+    const rankSpan = document.createElement('span');
+    rankSpan.className = 'prc-rank';
+    const rankPlain = document.createElement('span');
+    const deltaState = prRankDeltaState(row);
+    rankPlain.className = 'rank-plain' + (deltaState ? ' rank-plain-' + deltaState : '');
+    rankPlain.textContent = rank;
+    rankSpan.appendChild(rankPlain);
+    const badge = prRankDeltaBadge(row);
+    if (badge) rankSpan.appendChild(badge);
+    top.appendChild(rankSpan);
+
+    const nameEl = document.createElement(meta.href ? 'a' : 'span');
+    nameEl.className = 'prc-name';
+    nameEl.title = meta.name;
+    nameEl.textContent = meta.name;
+    if (meta.href) nameEl.href = meta.href;
+    top.appendChild(nameEl);
+
+    const flagImg = prFlagImg(meta.flag, 'prc-flag');
+    if (flagImg) top.appendChild(flagImg);
+
+    card.appendChild(top);
+
+    const stats = document.createElement('div');
+    stats.className = 'prc-stats';
+    const addVal = (text, cls) => {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = text;
+      stats.appendChild(span);
+    };
+    addVal(String(row.r), 'prc-val');
+    addVal('±', 'prc-dim');
+    addVal(String(row.rd), 'prc-val');
+    addVal('|', 'prc-sep');
+    addVal(String(Math.round(row.winPct * 100)), 'prc-val');
+    addVal('W%', 'prc-dim');
+    addVal('|', 'prc-sep');
+    addVal(String(row.games), 'prc-val');
+    addVal('gp', 'prc-dim');
+    if (meta.locAbbr) {
+      const abbrSpan = document.createElement('span');
+      abbrSpan.className = 'prc-loc-abbr';
+      abbrSpan.title = meta.location;
+      abbrSpan.textContent = meta.locAbbr;
+      stats.appendChild(abbrSpan);
+    }
+    card.appendChild(stats);
+    return card;
+  }
+
+  function buildRankingTableRow(row, meta, rank) {
+    const tr = document.createElement('tr');
+    tr.dataset.games = row.games;
+    tr.dataset.rd = row.rd;
+    if (meta.state) tr.dataset.state = meta.state;
+    if (row.uncertain) tr.className = 'uncertain';
+
+    const rankTd = document.createElement('td');
+    rankTd.className = 'rank-num';
+    rankTd.textContent = rank;
+    tr.appendChild(rankTd);
+
+    const nameTd = document.createElement('td');
+    const nameEl = document.createElement(meta.href ? 'a' : 'span');
+    if (meta.href) nameEl.href = meta.href;
+    nameEl.textContent = meta.name;
+    nameTd.appendChild(nameEl);
+    tr.appendChild(nameTd);
+
+    const addNumeric = (text, sort) => {
+      const td = document.createElement('td');
+      td.className = 'numeric';
+      if (sort !== undefined) td.dataset.sort = sort;
+      td.textContent = text;
+      tr.appendChild(td);
+    };
+    addNumeric(String(row.r));
+    addNumeric('±' + row.rd, row.rd);
+    addNumeric(String(row.wins), row.wins);
+    addNumeric(String(row.losses), row.losses);
+    addNumeric(String(row.games), row.games);
+    addNumeric((row.winPct * 100).toFixed(1) + '%', row.winPct);
+
+    const locTd = document.createElement('td');
+    locTd.className = 'col-location';
+    locTd.dataset.sort = meta.locationSort;
+    const flagImg = prFlagImg(meta.flag, 'loc-flag');
+    if (flagImg) locTd.appendChild(flagImg);
+    locTd.appendChild(document.createTextNode(meta.location));
+    tr.appendChild(locTd);
+
+    return tr;
+  }
+
+  // Mirrors toClientRow()'s array order in aggregate_players.js:
+  // [id, r, rd, wins, losses, games, isNew, placementChange]. winPct/uncertain
+  // aren't shipped (cheap to recompute) so they're filled back in here.
+  function normalizeRow(arr) {
+    const [id, r, rd, wins, losses, games, isNew, placementChange] = arr;
+    return {
+      id, r, rd, wins, losses, games,
+      winPct: games > 0 ? wins / games : 0,
+      uncertain: rd > PR_UNCERTAIN_RD_THRESHOLD,
+      isNew, placementChange,
+    };
+  }
+
+  function renderRankingHistory(panel, checkpoint) {
+    const grid = panel.querySelector('.pr-grid');
+    const tbody = panel.querySelector('table tbody');
+    const rows = checkpoint.rows.map(normalizeRow);
+    if (grid) {
+      [...grid.querySelectorAll(':scope > .pr-card')].forEach((el) => el.remove());
+      rows.forEach((row, i) => grid.appendChild(buildRankingCard(row, PR_META[row.id] || {}, i + 1)));
+    }
+    if (tbody) {
+      tbody.innerHTML = '';
+      rows.forEach((row, i) => tbody.appendChild(buildRankingTableRow(row, PR_META[row.id] || {}, i + 1)));
+    }
+    applyFilters(panel);
+    fitCardNames(panel);
+  }
+
+  // Populates the Rankings tab's "View rankings at" dropdown from PR_HISTORY
+  // (one entry per tournament group, chronological) -- most-recent first,
+  // with a clock icon marking the current/latest entry. Selecting an older
+  // entry swaps the grid/table to that point-in-time standings; filters and
+  // the download button both operate on whatever's currently rendered, so
+  // they keep working unchanged.
+  function enablePrHistorySelect(panel) {
+    const select = panel.querySelector('.pr-history-select');
+    const label = select ? select.closest('label') : null;
+    if (!select || PR_HISTORY.length < 2) {
+      if (label) label.hidden = true;
+      return;
+    }
+    for (let i = PR_HISTORY.length - 1; i >= 0; i--) {
+      const checkpoint = PR_HISTORY[i];
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      const dateLabel = checkpoint.dateLabel ? checkpoint.dateLabel + ' - ' : '';
+      opt.textContent = (checkpoint.isLatest ? '🕒 ' : '') + dateLabel + checkpoint.label;
+      if (checkpoint.isLatest) opt.selected = true;
+      select.appendChild(opt);
+    }
+    select.addEventListener('change', () => {
+      const checkpoint = PR_HISTORY[parseInt(select.value, 10)];
+      if (checkpoint) renderRankingHistory(panel, checkpoint);
+    });
+  }
+
   function initPanel(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
     populateStateFilter(panel);
     applyFilters(panel);
+    if (panelId === 'rankings-tab') enablePrHistorySelect(panel);
     panel.querySelectorAll('.min-games-select, .max-rd-select, .state-filter-select').forEach((el) => {
       el.addEventListener('change', () => applyFilters(panel));
     });

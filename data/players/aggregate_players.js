@@ -1018,18 +1018,21 @@ function loadManualMatches(knownUrls) {
 // player's best win) without conflating it with their current rating.
 // snapshots, if passed, is filled with one entry per tournament (in
 // chronological order): { url, date, participantIds: Set<playerId>,
-// ratings: Map<playerId, glickoState> }. ratings is a full clone of the
-// glicko map as it stood right after that tournament's results were locked
-// in — i.e. every player's rating as of that point in history, not just
-// this tournament's participants — so the whole field's standings at that
-// moment in time can be reconstructed later. participantIds marks who
-// actually played this specific tournament (ratings alone can't tell you
-// that, since it carries everyone's running total). Tournament grouping
-// (groupIdFor/tournament-groups.json) deliberately has no bearing here — it
-// only affects which prior snapshot the Rankings tab's up/down badge
-// compares against (see previousRatings in main()), not the per-tournament
-// snapshot list itself, so it can't leak into anything keyed off snapshots
-// (the rating-history chart on player pages, rank-at-the-time, etc).
+// ratings: Map<playerId, glickoState>, stats: Map<playerId, { wins, losses,
+// games }> }. ratings/stats are full clones of the glicko/players maps as
+// they stood right after that tournament's results were locked in — i.e.
+// every player's rating and cumulative record as of that point in history,
+// not just this tournament's participants — so the whole field's standings
+// at that moment in time can be reconstructed later (see groupCheckpoints in
+// main(), which powers the Rankings tab's "View rankings at" time-travel
+// dropdown). participantIds marks who actually played this specific
+// tournament (ratings/stats alone can't tell you that, since they carry
+// everyone's running total). Tournament grouping (groupIdFor/tournament-
+// groups.json) deliberately has no bearing here — it only affects which
+// prior snapshot the Rankings tab's up/down badge compares against (see
+// previousRanks in main()), not the per-tournament snapshot list itself,
+// so it can't leak into anything keyed off snapshots (the rating-history
+// chart on player pages, rank-at-the-time, etc).
 function processChronologically(allTournaments, players, glicko, preTournamentRatings, snapshots) {
   for (const tournament of allTournaments) {
     // Compute pre-tournament states with lazy decay — fixed across all passes.
@@ -1110,6 +1113,12 @@ function processChronologically(allTournaments, players, glicko, preTournamentRa
         slug: tournament.slug,
         participantIds: new Set(originalPreStates.keys()),
         ratings: new Map(glicko),
+        // Cumulative wins/losses/games for every player known so far, as of
+        // right after this tournament's matches were recorded (pass 0 of the
+        // loop above already applied them to `players`) -- lets a historical
+        // checkpoint (see groupCheckpoints in main()) reconstruct the full
+        // ranking-card stat line, not just the rating.
+        stats: new Map([...players.entries()].map(([id, p]) => [id, { wins: p.wins, losses: p.losses, games: p.games }])),
       });
     }
   }
@@ -1330,49 +1339,101 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
     .sort((a, b) => b.winPct - a.winPct || b.games - a.games);
 }
 
-function buildRankingRows(players, glicko, previousRatings) {
+// Identity/location fields for a player that don't vary with the point in
+// time being displayed (unlike rating/wins/losses/games) -- split out of
+// buildRankingRow so the Rankings tab's "View rankings at" history payload
+// (see rankingHistory in main()) can ship this once per player instead of
+// once per player per checkpoint, which would otherwise dominate its size.
+function buildPlayerMeta(id, p) {
+  const name = displayName(p);
+  const info = lookupPlayerInfo(id, name);
+  return {
+    name,
+    location: info.city
+      ? [info.city, info.state].filter(Boolean).join(', ')
+      : info.state
+      ? (STATE_NAMES[info.state] || info.state)
+      : (info.country || ''),
+    flag: flagForInfo(info),
+    locAbbr: abbrevForInfo(info),
+    locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
+    state: info.state || '',
+    color: info.color || '',
+  };
+}
+
+// Shared by buildRankingRows (current standings) and buildRankingRowsAt
+// (a historical checkpoint) — everything about a ranking row except which
+// wins/losses/games/rating snapshot it's built from.
+function buildRankingRow(id, p, wins, losses, games, g) {
+  return {
+    id,
+    ...buildPlayerMeta(id, p),
+    r: g.r,
+    rd: g.rd,
+    conservativeRating: glicko2.conservativeRating(g),
+    wins,
+    losses,
+    games,
+    winPct: games > 0 ? wins / games : 0,
+    uncertain: Math.round(g.rd) > GLICKO_UNCERTAIN_RD_THRESHOLD,
+  };
+}
+
+// placementChange is positions gained/lost in the overall standings since
+// the previous tournament (grouped — see groupIdFor) — e.g. +3 means the
+// player climbed 3 spots, not that their rating rose. rows must already be
+// in final rank order (conservativeRating descending) when this runs, since
+// rank is read off as each row's index. previousRanks reflects the field as
+// it stood right before the most recent group, so a player missing from it
+// hadn't played yet (isNew) rather than having a real 0.
+//
+// participantIds, if passed, restricts the badge to players who actually
+// played *this* group's tournament(s) -- everyone else is left with no
+// isNew/placementChange at all (no badge), even though their numeric rank
+// may have shifted. Without this, a couple of new entrants slotting into
+// the top of the field pushes the entire unchanged rest of the field down
+// one spot each, painting most of the board red for players who didn't even
+// compete.
+function applyPlacementChange(rows, previousRanks, participantIds) {
+  if (!previousRanks) return;
+  rows.forEach((r, i) => {
+    if (participantIds && !participantIds.has(r.id)) return;
+    const rank = i + 1;
+    const prevRank = previousRanks.get(r.id);
+    r.isNew = prevRank == null;
+    r.placementChange = prevRank == null ? null : prevRank - rank;
+  });
+}
+
+function buildRankingRows(players, glicko, previousRanks, participantIds) {
   const rows = [...players.entries()]
     .map(([id, p]) => {
-      const name = displayName(p);
-      const info = lookupPlayerInfo(id, name);
       const g = glicko.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
-      return {
-        id,
-        name,
-        r: g.r,
-        rd: g.rd,
-        conservativeRating: glicko2.conservativeRating(g),
-        wins: p.wins,
-        losses: p.losses,
-        games: p.games,
-        winPct: p.games > 0 ? p.wins / p.games : 0,
-        location: info.city
-          ? [info.city, info.state].filter(Boolean).join(', ')
-          : info.state
-          ? (STATE_NAMES[info.state] || info.state)
-          : (info.country || ''),
-        flag: flagForInfo(info),
-        locAbbr: abbrevForInfo(info),
-        locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
-        state: info.state || '',
-        color: info.color || '',
-        uncertain: Math.round(g.rd) > GLICKO_UNCERTAIN_RD_THRESHOLD,
-      };
+      return buildRankingRow(id, p, p.wins, p.losses, p.games, g);
     })
     .filter((r) => r.games > 0)
     .sort((a, b) => b.conservativeRating - a.conservativeRating);
+  applyPlacementChange(rows, previousRanks, participantIds);
+  return rows;
+}
 
-  // ratingChange is rounded-rating points gained/lost since the previous
-  // tournament (grouped — see groupIdFor). previousRatings reflects the
-  // field as it stood right before the most recent group, so a player
-  // missing from it hadn't played yet (isNew) rather than having a real 0.
-  if (previousRatings) {
-    for (const r of rows) {
-      const prev = previousRatings.get(r.id);
-      r.isNew = prev == null;
-      r.ratingChange = prev == null ? null : Math.round(r.r) - Math.round(prev);
-    }
-  }
+// Reconstructs ranking rows as they stood at a past point in history, from
+// a processChronologically snapshot's ratings/stats maps (see groupCheckpoints
+// in main()) instead of the live players/glicko maps. Player identity (name,
+// location, color) still comes from the live `players` map — those don't
+// meaningfully change over time and aren't snapshotted per-tournament.
+function buildRankingRowsAt(players, ratings, stats, previousRanks, participantIds) {
+  const rows = [...stats.entries()]
+    .map(([id, s]) => {
+      const p = players.get(id);
+      if (!p) return null;
+      const g = ratings.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
+      return buildRankingRow(id, p, s.wins, s.losses, s.games, g);
+    })
+    .filter((r) => r && r.games > 0)
+    .sort((a, b) => b.conservativeRating - a.conservativeRating);
+  applyPlacementChange(rows, previousRanks, participantIds);
   return rows;
 }
 
@@ -1423,17 +1484,19 @@ function h2hIcon(key, flip) {
 // states a player is in.
 function rankDeltaState(p) {
   if (p.isNew) return 'new';
-  if (!p.ratingChange) return null;
-  return p.ratingChange > 0 ? 'up' : 'down';
+  if (!p.placementChange) return null;
+  return p.placementChange > 0 ? 'up' : 'down';
 }
 
-// Small corner badge riding off the rank number showing the rating-point
-// change since the previous tournament (grouped — see groupIdFor).
+// Small corner badge riding off the rank number showing how many places
+// (not rating points) the player moved since the previous tournament
+// (grouped — see groupIdFor) — e.g. a player who stayed #1 while gaining
+// rating shows no badge at all, since their placement didn't change.
 function rankDeltaHtml(p) {
   const state = rankDeltaState(p);
   if (state === 'new') return `<span class="rank-delta rank-delta-new">NEW</span>`;
-  if (state === 'up') return `<span class="rank-delta rank-delta-up">&#9650;${p.ratingChange}</span>`;
-  if (state === 'down') return `<span class="rank-delta rank-delta-down">&#9660;${Math.abs(p.ratingChange)}</span>`;
+  if (state === 'up') return `<span class="rank-delta rank-delta-up">&#9650;${p.placementChange}</span>`;
+  if (state === 'down') return `<span class="rank-delta rank-delta-down">&#9660;${Math.abs(p.placementChange)}</span>`;
   return '';
 }
 
@@ -1483,6 +1546,16 @@ function formatMonthYearHumanFull(iso) {
 function formatMonthYearHuman(iso) {
   const m = /^(\d{4})-\d{2}-\d{2}$/.exec(iso || '');
   return m ? m[1] : (iso || '');
+}
+
+// "Month, Year" ("July, 2025") — used for the Rankings tab's "View rankings
+// at" dropdown, which needs to stay short enough to fit its option text on
+// one line.
+function formatMonthCommaYear(iso) {
+  const m = /^(\d{4})-(\d{2})-\d{2}$/.exec(iso || '');
+  if (!m) return iso || '';
+  const [, y, mo] = m;
+  return `${MONTH_NAMES[parseInt(mo, 10) - 1]}, ${y}`;
 }
 
 // Today as a YYYY-MM-DD string, built from local date parts (not
@@ -1555,6 +1628,10 @@ a:hover { text-decoration: underline; }
 .tab-controls select { background: #111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.65rem center; background-size: 0.6rem; color: #f0f0f0; border: 1px solid #333; border-radius: 3px; padding: 0.32rem 1.8rem 0.32rem 0.7rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; transition: border-color 150ms, background-color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; color-scheme: dark; }
 .tab-controls select:hover { border-color: #555; background-color: #161616; }
 .tab-controls select:focus { outline: none; border-color: #3eff8b; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233eff8b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+/* Option text ("July, 2025 - Combo Breaker 2026") can run long -- clip the
+   closed control itself so the whole toolbar row stays on one line; the
+   open dropdown's own option list is unaffected and still shows full text. */
+.pr-history-select { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .filter-count, .ranking-count { color: #555; font-size: 0.9rem; font-weight: 500; }
 #count { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
 .view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; position: relative; }
@@ -2035,6 +2112,10 @@ function writeJs() {
   const js = `(function () {
   const STATE_NAMES = ${stateNamesJson};
   const MAP_REGION_DATA = JSON.parse(document.getElementById('map-region-data')?.textContent || '{}');
+  const PR_HISTORY_DATA = JSON.parse(document.getElementById('pr-history-data')?.textContent || '{}');
+  const PR_META = PR_HISTORY_DATA.players || {};
+  const PR_HISTORY = PR_HISTORY_DATA.checkpoints || [];
+  const PR_UNCERTAIN_RD_THRESHOLD = ${GLICKO_UNCERTAIN_RD_THRESHOLD};
 
   function enableSorting(table) {
     const tbody = table.tBodies[0];
@@ -2711,7 +2792,7 @@ function writeJs() {
       if (downloadLabel) downloadLabel.textContent = 'Preparing…';
       try {
         await downloadRankingsImage(panel);
-        if (downloadLabel) downloadLabel.textContent = 'Download Power Ranking';
+        if (downloadLabel) downloadLabel.textContent = 'Download PR';
       } catch (err) {
         downloadBtn.classList.add('failed');
         if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
@@ -2763,11 +2844,221 @@ function writeJs() {
     moveIndicator(indicator, toggleEl, activeBtn);
   }
 
+  // Rebuilds .pr-card/.pr-card accents and the rank-delta badge from raw
+  // row data -- mirrors cardAccent()/rankDeltaState()/rankDeltaHtml() in
+  // aggregate_players.js. Kept in sync by hand: the "View rankings at"
+  // dropdown (PR_HISTORY, see enablePrHistorySelect below) only ships each
+  // checkpoint's *data*, not pre-rendered HTML, so switching checkpoints
+  // re-renders the grid/table client-side the same way the map tab's
+  // sidebar re-renders from MAP_REGION_DATA.
+  function prCardAccent(id, colorOverride) {
+    if (colorOverride === 'green' || colorOverride === 'purple') return 'card-' + colorOverride;
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
+    return (h & 1) ? 'card-purple' : 'card-green';
+  }
+
+  function prRankDeltaState(row) {
+    if (row.isNew) return 'new';
+    if (!row.placementChange) return null;
+    return row.placementChange > 0 ? 'up' : 'down';
+  }
+
+  function prRankDeltaBadge(row) {
+    const state = prRankDeltaState(row);
+    if (!state) return null;
+    const span = document.createElement('span');
+    if (state === 'new') {
+      span.className = 'rank-delta rank-delta-new';
+      span.textContent = 'NEW';
+    } else if (state === 'up') {
+      span.className = 'rank-delta rank-delta-up';
+      span.textContent = '▲' + row.placementChange;
+    } else {
+      span.className = 'rank-delta rank-delta-down';
+      span.textContent = '▼' + Math.abs(row.placementChange);
+    }
+    return span;
+  }
+
+  function prFlagImg(flag, className) {
+    if (!flag) return null;
+    const img = document.createElement('img');
+    img.className = className;
+    img.src = flag.src;
+    img.title = flag.title;
+    img.alt = flag.title;
+    return img;
+  }
+
+  function buildRankingCard(row, meta, rank) {
+    const card = document.createElement('div');
+    card.className = 'pr-card ' + prCardAccent(row.id, meta.color) + (row.uncertain ? ' uncertain' : '');
+    card.dataset.games = row.games;
+    card.dataset.rd = row.rd;
+    if (meta.state) card.dataset.state = meta.state;
+
+    const top = document.createElement('div');
+    top.className = 'prc-top';
+
+    const rankSpan = document.createElement('span');
+    rankSpan.className = 'prc-rank';
+    const rankPlain = document.createElement('span');
+    const deltaState = prRankDeltaState(row);
+    rankPlain.className = 'rank-plain' + (deltaState ? ' rank-plain-' + deltaState : '');
+    rankPlain.textContent = rank;
+    rankSpan.appendChild(rankPlain);
+    const badge = prRankDeltaBadge(row);
+    if (badge) rankSpan.appendChild(badge);
+    top.appendChild(rankSpan);
+
+    const nameEl = document.createElement(meta.href ? 'a' : 'span');
+    nameEl.className = 'prc-name';
+    nameEl.title = meta.name;
+    nameEl.textContent = meta.name;
+    if (meta.href) nameEl.href = meta.href;
+    top.appendChild(nameEl);
+
+    const flagImg = prFlagImg(meta.flag, 'prc-flag');
+    if (flagImg) top.appendChild(flagImg);
+
+    card.appendChild(top);
+
+    const stats = document.createElement('div');
+    stats.className = 'prc-stats';
+    const addVal = (text, cls) => {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = text;
+      stats.appendChild(span);
+    };
+    addVal(String(row.r), 'prc-val');
+    addVal('±', 'prc-dim');
+    addVal(String(row.rd), 'prc-val');
+    addVal('|', 'prc-sep');
+    addVal(String(Math.round(row.winPct * 100)), 'prc-val');
+    addVal('W%', 'prc-dim');
+    addVal('|', 'prc-sep');
+    addVal(String(row.games), 'prc-val');
+    addVal('gp', 'prc-dim');
+    if (meta.locAbbr) {
+      const abbrSpan = document.createElement('span');
+      abbrSpan.className = 'prc-loc-abbr';
+      abbrSpan.title = meta.location;
+      abbrSpan.textContent = meta.locAbbr;
+      stats.appendChild(abbrSpan);
+    }
+    card.appendChild(stats);
+    return card;
+  }
+
+  function buildRankingTableRow(row, meta, rank) {
+    const tr = document.createElement('tr');
+    tr.dataset.games = row.games;
+    tr.dataset.rd = row.rd;
+    if (meta.state) tr.dataset.state = meta.state;
+    if (row.uncertain) tr.className = 'uncertain';
+
+    const rankTd = document.createElement('td');
+    rankTd.className = 'rank-num';
+    rankTd.textContent = rank;
+    tr.appendChild(rankTd);
+
+    const nameTd = document.createElement('td');
+    const nameEl = document.createElement(meta.href ? 'a' : 'span');
+    if (meta.href) nameEl.href = meta.href;
+    nameEl.textContent = meta.name;
+    nameTd.appendChild(nameEl);
+    tr.appendChild(nameTd);
+
+    const addNumeric = (text, sort) => {
+      const td = document.createElement('td');
+      td.className = 'numeric';
+      if (sort !== undefined) td.dataset.sort = sort;
+      td.textContent = text;
+      tr.appendChild(td);
+    };
+    addNumeric(String(row.r));
+    addNumeric('±' + row.rd, row.rd);
+    addNumeric(String(row.wins), row.wins);
+    addNumeric(String(row.losses), row.losses);
+    addNumeric(String(row.games), row.games);
+    addNumeric((row.winPct * 100).toFixed(1) + '%', row.winPct);
+
+    const locTd = document.createElement('td');
+    locTd.className = 'col-location';
+    locTd.dataset.sort = meta.locationSort;
+    const flagImg = prFlagImg(meta.flag, 'loc-flag');
+    if (flagImg) locTd.appendChild(flagImg);
+    locTd.appendChild(document.createTextNode(meta.location));
+    tr.appendChild(locTd);
+
+    return tr;
+  }
+
+  // Mirrors toClientRow()'s array order in aggregate_players.js:
+  // [id, r, rd, wins, losses, games, isNew, placementChange]. winPct/uncertain
+  // aren't shipped (cheap to recompute) so they're filled back in here.
+  function normalizeRow(arr) {
+    const [id, r, rd, wins, losses, games, isNew, placementChange] = arr;
+    return {
+      id, r, rd, wins, losses, games,
+      winPct: games > 0 ? wins / games : 0,
+      uncertain: rd > PR_UNCERTAIN_RD_THRESHOLD,
+      isNew, placementChange,
+    };
+  }
+
+  function renderRankingHistory(panel, checkpoint) {
+    const grid = panel.querySelector('.pr-grid');
+    const tbody = panel.querySelector('table tbody');
+    const rows = checkpoint.rows.map(normalizeRow);
+    if (grid) {
+      [...grid.querySelectorAll(':scope > .pr-card')].forEach((el) => el.remove());
+      rows.forEach((row, i) => grid.appendChild(buildRankingCard(row, PR_META[row.id] || {}, i + 1)));
+    }
+    if (tbody) {
+      tbody.innerHTML = '';
+      rows.forEach((row, i) => tbody.appendChild(buildRankingTableRow(row, PR_META[row.id] || {}, i + 1)));
+    }
+    applyFilters(panel);
+    fitCardNames(panel);
+  }
+
+  // Populates the Rankings tab's "View rankings at" dropdown from PR_HISTORY
+  // (one entry per tournament group, chronological) -- most-recent first,
+  // with a clock icon marking the current/latest entry. Selecting an older
+  // entry swaps the grid/table to that point-in-time standings; filters and
+  // the download button both operate on whatever's currently rendered, so
+  // they keep working unchanged.
+  function enablePrHistorySelect(panel) {
+    const select = panel.querySelector('.pr-history-select');
+    const label = select ? select.closest('label') : null;
+    if (!select || PR_HISTORY.length < 2) {
+      if (label) label.hidden = true;
+      return;
+    }
+    for (let i = PR_HISTORY.length - 1; i >= 0; i--) {
+      const checkpoint = PR_HISTORY[i];
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      const dateLabel = checkpoint.dateLabel ? checkpoint.dateLabel + ' - ' : '';
+      opt.textContent = (checkpoint.isLatest ? '🕒 ' : '') + dateLabel + checkpoint.label;
+      if (checkpoint.isLatest) opt.selected = true;
+      select.appendChild(opt);
+    }
+    select.addEventListener('change', () => {
+      const checkpoint = PR_HISTORY[parseInt(select.value, 10)];
+      if (checkpoint) renderRankingHistory(panel, checkpoint);
+    });
+  }
+
   function initPanel(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
     populateStateFilter(panel);
     applyFilters(panel);
+    if (panelId === 'rankings-tab') enablePrHistorySelect(panel);
     panel.querySelectorAll('.min-games-select, .max-rd-select, .state-filter-select').forEach((el) => {
       el.addEventListener('change', () => applyFilters(panel));
     });
@@ -2906,7 +3197,7 @@ ${cards}
 <div class="events-footer"${isEmpty ? ' hidden' : ''} id="events-footer">That's all for now, try scheduling an event!</div>`;
 }
 
-function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments) {
+function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments, rankingHistory) {
   const playerTableRows = playerRows.map((p) => {
     const tournamentLinks = p.tournaments
       .map((t) => `<a href="tournaments/${escapeHtml(t.slug)}.html"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
@@ -3106,7 +3397,7 @@ ${buildEventsTabHtml(upcomingEvents)}
 
 <div id="players-tab" class="tab-panel">
   <div class="tab-controls">
-    <label>State/Province:
+    <label>Location:
       <select class="state-filter-select">
         <option value="">All locations</option>
       </select>
@@ -3217,13 +3508,15 @@ ${mapLabels}
         <option value="50">50</option>
       </select>
     </label>
-    <label>State/Province:
+    <label>Location:
       <select class="state-filter-select">
         <option value="">All locations</option>
       </select>
     </label>
-    <span class="filter-count"></span>
-    <button class="download-btn" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download Power Ranking</span></button>
+    <label>Rankings at:
+      <select class="pr-history-select"></select>
+    </label>
+    <button class="download-btn" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download PR</span></button>
   </div>
   <div class="pr-grid">
 ${prSquareHtml}
@@ -3248,6 +3541,7 @@ ${rankingTableRows}
     </tbody>
   </table>
 </div>
+<script type="application/json" id="pr-history-data">${JSON.stringify(rankingHistory)}</script>
 
 ${siteFooter('')}
 <script src="index.js"></script>
@@ -4346,30 +4640,110 @@ async function main() {
       .sort((a, b) => b[1] - a[1]);
     return new Map(sorted.map(([id], i) => [id, i + 1]));
   });
-  // "Since the last tournament" for the Rankings tab's up/down badge = comparing
-  // current standings to how they stood right before the most recent *group*
-  // of tournaments (tournament-groups.json; a group defaults to just its own
-  // tournament) was played — so a multi-bracket event like SGDQ reads as one
-  // step, not several. This walk only decides which prior snapshot the badge
-  // compares against; snapshots/snapshotRanks themselves stay one-per-tournament
-  // (see processChronologically) so nothing else -- the rating-history chart,
-  // tournament participation, rankings math -- is affected by grouping.
-  let groupStart = snapshots.length - 1;
-  if (groupStart >= 0) {
-    const lastGroupId = groupIdFor(snapshots[groupStart].url);
-    while (groupStart > 0 && groupIdFor(snapshots[groupStart - 1].url) === lastGroupId) groupStart--;
-  }
-  const previousSnapshot = groupStart > 0 ? snapshots[groupStart - 1] : null;
-  const previousRatings = previousSnapshot
-    ? new Map([...previousSnapshot.ratings.entries()].map(([id, g]) => [id, g.r]))
-    : new Map();
 
-  const rankingRows = buildRankingRows(players, glicko, previousRatings);
+  // One checkpoint per tournament *group* (groupIdFor/tournament-groups.json
+  // — a multi-bracket event collapses to one point), in chronological order.
+  // participantIds is the union of everyone who actually played *any*
+  // tournament in that group (not just the last one) -- used below to gate
+  // the rank-delta badge so a player who sat out the most recent group
+  // doesn't get an artificial ▼ badge just because a couple of new entrants
+  // slotted in above them and pushed the whole unchanged field down a spot.
+  const groupSnapshotIndices = new Map();
+  snapshots.forEach((s, i) => {
+    const gid = groupIdFor(s.url);
+    if (!groupSnapshotIndices.has(gid)) groupSnapshotIndices.set(gid, []);
+    groupSnapshotIndices.get(gid).push(i);
+  });
+  const groupCheckpoints = [...groupSnapshotIndices.entries()]
+    .map(([groupId, indices]) => {
+      const participantIds = new Set();
+      for (const idx of indices) for (const id of snapshots[idx].participantIds) participantIds.add(id);
+      return { groupId, index: indices[indices.length - 1], participantIds };
+    })
+    .sort((a, b) => a.index - b.index);
+
+  // "Since the last tournament" for the Rankings tab's up/down badge = comparing
+  // current standings to how they stood right before the most recent group
+  // played (tournament-groups.json; a group defaults to just its own
+  // tournament) — so a multi-bracket event like SGDQ reads as one step, not
+  // several, and the badge is gated to that group's own participants (see
+  // groupCheckpoints above).
+  const currentGroup = groupCheckpoints[groupCheckpoints.length - 1];
+  const previousGroup = groupCheckpoints[groupCheckpoints.length - 2];
+  const previousRanks = previousGroup ? snapshotRanks[previousGroup.index] : new Map();
+
+  const rankingRows = buildRankingRows(players, glicko, previousRanks, currentGroup ? currentGroup.participantIds : new Set());
 
   // Must run before writeHtml/writeTournamentPages/writePlayerPages — they
   // all link player names via playerHref(), which reads this.
   assignPlayerSlugs(players);
   const histories = buildPlayerHistories(allTournaments, preTournamentRatings);
+
+  // Identity/location fields never vary with the checkpoint, so they're
+  // shipped once per player (keyed by id) instead of once per player per
+  // checkpoint -- with 100+ checkpoints that repetition would otherwise
+  // dominate the payload's size for no benefit.
+  const playerMetaById = {};
+  for (const [id, p] of players.entries()) {
+    const meta = buildPlayerMeta(id, p);
+    playerMetaById[id] = {
+      name: meta.name,
+      href: playerHref(id, ''),
+      location: meta.location,
+      locationSort: meta.locationSort,
+      flag: meta.flag,
+      locAbbr: meta.locAbbr,
+      state: meta.state,
+      color: meta.color,
+    };
+  }
+
+  // Positional array, not an object -- with 100+ checkpoints, repeating full
+  // key names ("winPct", "placementChange", ...) on every row of every
+  // checkpoint was most of this payload's weight. winPct/uncertain are
+  // cheap to recompute client-side (wins/games, rd > threshold) so they
+  // aren't shipped at all. Order: [id, r, rd, wins, losses, games, isNew,
+  // placementChange] -- keep normalizeRow() in writeJs() in sync with this.
+  const toClientRow = (r) => [
+    r.id,
+    Math.round(r.r),
+    Math.round(r.rd),
+    r.wins,
+    r.losses,
+    r.games,
+    !!r.isNew,
+    r.placementChange == null ? null : r.placementChange,
+  ];
+
+  // The final checkpoint always reuses the already-computed live rankingRows
+  // (same data, same previousRanks boundary) instead of recomputing it, so
+  // the default "current" view in the dropdown matches the page's default
+  // render exactly.
+  const rankingCheckpoints = groupCheckpoints.map(({ groupId, index, participantIds }, i) => {
+    const snap = snapshots[index];
+    const isLatest = i === groupCheckpoints.length - 1;
+    let rows;
+    if (isLatest) {
+      rows = rankingRows;
+    } else {
+      const checkpointPreviousRanks = i > 0 ? snapshotRanks[groupCheckpoints[i - 1].index] : new Map();
+      rows = buildRankingRowsAt(players, snap.ratings, snap.stats, checkpointPreviousRanks, participantIds);
+    }
+    return {
+      groupId,
+      // tournamentGroups[snap.url] is the human-edited group name
+      // (tournament-groups.json) when this checkpoint's last tournament
+      // belongs to a real group (e.g. "SGDQ 2024" instead of that one
+      // bracket's own individual label) -- falls back to the tournament's
+      // own label when it's a singleton group.
+      label: tournamentGroups[snap.url] || snap.label,
+      date: snap.date,
+      dateLabel: formatMonthCommaYear(snap.date),
+      isLatest,
+      rows: rows.map(toClientRow),
+    };
+  });
+  const rankingHistory = { players: playerMetaById, checkpoints: rankingCheckpoints };
 
   // Per-player rating history: one point per tournament a player actually
   // competed in (not every tournament — most players skip most events, and
@@ -4481,7 +4855,7 @@ async function main() {
   writeCsv(playerRows);
   writeCss();
   writeJs();
-  writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments);
+  writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments, rankingHistory);
   writeTournamentPages(allTournaments);
   writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById);
 

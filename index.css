@@ -32,6 +32,10 @@ a:hover { text-decoration: underline; }
 .tab-controls select { background: #111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.65rem center; background-size: 0.6rem; color: #f0f0f0; border: 1px solid #333; border-radius: 3px; padding: 0.32rem 1.8rem 0.32rem 0.7rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; transition: border-color 150ms, background-color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; color-scheme: dark; }
 .tab-controls select:hover { border-color: #555; background-color: #161616; }
 .tab-controls select:focus { outline: none; border-color: #3eff8b; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233eff8b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+/* Option text ("July, 2025 - Combo Breaker 2026") can run long -- clip the
+   closed control itself so the whole toolbar row stays on one line; the
+   open dropdown's own option list is unaffected and still shows full text. */
+.pr-history-select { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .filter-count, .ranking-count { color: #555; font-size: 0.9rem; font-weight: 500; }
 #count { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
 .view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; position: relative; }
