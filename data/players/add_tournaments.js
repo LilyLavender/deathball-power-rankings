@@ -8,16 +8,21 @@
 //      half of a team is resolved as its own individual player.
 //   3. Finds tournaments that were newly fetched this run and walks through
 //      their unique raw player names one at a time, asking you to confirm
-//      merges/collisions only where the existing auto-resolution logic in
-//      aggregate_players.js can't already resolve them safely:
+//      every name that isn't already pinned to a specific person by an
+//      alias or an already-decided split resolution:
 //        - a name that exactly matches a KNOWN-AMBIGUOUS name (an existing
 //          entry in player-identities.json's `splits`) with no resolution or
 //          default covering this tournament yet
+//        - a name that exactly matches an existing UNambiguous player is
+//          still confirmed ("same player?") rather than silently merged --
+//          a name having only ever belonged to one person so far doesn't
+//          mean a new appearance of it is that same person. Saying "no"
+//          turns it into a split on the spot.
 //        - a name that doesn't exactly match anything seen before, but is a
 //          close spelling match to an existing player (possible alias)
-//      Everything else (exact repeats of an unambiguous name, names already
-//      covered by an alias or split resolution) is left to auto-resolve
-//      exactly as it does today — no prompt.
+//      Only names already covered by an alias or a split resolution that
+//      already lists this tournament are left to auto-resolve without a
+//      prompt.
 //   4. For each new tournament, asks for city/state/venue (blank = skip) and
 //      writes them to tournament-locations.json.
 //   5. For genuinely new players, asks for city/state/country (blank = skip)
@@ -362,6 +367,32 @@ async function handleSplitCollision(rl, splitEntry, rawName, tournament, knownBy
   saveIdentities();
 }
 
+// Even an exact match to an existing UNambiguous name still gets confirmed --
+// "Ron" having only ever been one person so far doesn't mean a new "Ron" who
+// shows up later is that same person. A "no" here converts the name into a
+// split: prior history keeps resolving to the existing player via `default`,
+// while this (and any future confirmed-different) occurrence gets a fresh id.
+async function handleExactMatchConfirmation(rl, rawName, tournament, existing) {
+  console.log(`\n"${rawName}" (${tournament.label}, ${tournament.date}) matches an existing player:`);
+  console.log(`  ${describeCandidate(existing)}`);
+  const answer = (await ask(rl, 'Same player? [Y/n] (default y): ')).trim().toLowerCase();
+  if (answer === '' || answer === 'y' || answer === 'yes') return;
+
+  const newId = generateId(rawName, tournament.date);
+  identities.splits = identities.splits || [];
+  identities.splits.push({
+    name: rawName.trim(),
+    resolutions: [{ id: newId, canonical: rawName.trim(), tournaments: [tournament.url] }],
+    default: { id: existing.id, canonical: existing.displayName },
+  });
+  saveIdentities();
+  const info = await askLocationAndColor(rl, `${rawName.trim()} (${newId})`);
+  if (Object.keys(info).length) {
+    playerInfoFile.players[newId] = info;
+    savePlayerInfo();
+  }
+}
+
 async function handleUnresolvedName(rl, rawName, tournament, knownById) {
   const candidates = fuzzyCandidates(rawName, knownById);
   if (candidates.length === 0) {
@@ -487,7 +518,10 @@ async function main() {
           continue;
         }
 
-        if (knownById.has(lower)) continue; // exact repeat of an unambiguous existing player
+        if (knownById.has(lower)) {
+          await handleExactMatchConfirmation(rl, rawName, t, knownById.get(lower));
+          continue;
+        }
 
         await handleUnresolvedName(rl, rawName, t, knownById);
         // Register this decision so later tournaments in this batch see it.
