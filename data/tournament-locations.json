@@ -125,6 +125,8 @@
     "https://challonge.com/yfp3t2ck": { "city": "Minneapolis", "state": "MN", "location": "SGDQ", "name": "SGDQ 2024 2" },
     "https://challonge.com/xxjsm86b": { "city": "Minneapolis", "state": "MN", "location": "SGDQ", "name": "SGDQ 2024 3" },
     "https://challonge.com/y8tnqlcs": { "city": "Minneapolis", "state": "MN", "location": "SGDQ", "name": "SGDQ 2024 4: The Sendoff" },
-    "https://challonge.com/nd1zz0xn": { "city": "Minneapolis", "state": "MN", "location": "SGDQ", "date": "2024-07-07", "name": "SGDQ 2024 5: The Platinum Platter" }
+    "https://challonge.com/nd1zz0xn": { "city": "Minneapolis", "state": "MN", "location": "SGDQ", "date": "2024-07-07", "name": "SGDQ 2024 5: The Platinum Platter" },
+    "https://challonge.com/sgdq2026_deathball": { "name": "SGDQ 2026", "date": "2026-07-07", "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
+    "https://challonge.com/fb7fg5mo": { "name": "SGDQ 2026 Doubles", "city": "Minneapolis", "state": "MN", "location": "SGDQ" }
   }
 }

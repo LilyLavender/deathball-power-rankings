@@ -114,3 +114,5 @@ https://challonge.com/y8tnqlcs
 https://challonge.com/iyejfqft
 https://challonge.com/yfp3t2ck
 https://challonge.com/xxjsm86b
+https://challonge.com/sgdq2026_deathball
+https://challonge.com/fb7fg5mo

@@ -1,0 +1,25 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,,1,,,false,,,0,,,false
+B,,,1,,,false,,,0,,,false
+C,,,0,,,false,,,1,,,false
+D,,,0,,,false,,,1,,,false
+E,,,0,,,false,,,1,,,false
+F,,,0,,,false,,,1,,,false
+G,,,1,,,false,,,0,,,false
+H,,,0,,,false,,,1,,,false
+I,,,0,,,false,,,1,,,false
+J,,,0,,,false,,,1,,,false
+K,,,1,,,false,,,0,,,false
+L,,,0,,,false,,,1,,,false
+M,,,0,,,false,,,1,,,false
+N,,,1,,,false,,,0,,,false
+O,,,1,,,false,,,0,,,false
+P,,,0,,,false,,,1,,,false
+Q,,,0,,,false,,,1,,,false
+R,,,0,,,false,,,1,,,false
+S,,,0,,,false,,,1,,,false
+T,,,0,,,false,,,1,,,false
+U,,,0,,,false,,,1,,,false
+A,,Link + Ellie,2,,,false,,Goobz + Eddy,0,,,false
+B,,Willy + Sam,0,,,false,,Danny + Rhea,2,,,false
+C,,Link + Ellie,0,,,false,,Danny + Rhea,2,,,false

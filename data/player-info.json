@@ -139,7 +139,7 @@
     "Darian": { "city": "Dallas/Fort Worth", "state": "TX", "country": "United States" },
     "Darnell Thinmints": { "city": "Dallas/Fort Worth", "state": "TX", "country": "United States" },
     "Darth Jose": { "city": "Dallas/Fort Worth", "state": "TX", "country": "United States" },
-    "Dave": { "state": "MI", "country": "United States" },
+    "legacy_dave": { "city": "Warren", "state": "MI", "country": "United States" },
     "David Pavao": { "city": "Jacksonville", "state": "FL", "country": "United States" },
     "David Garzon": { "city": "Chicago", "state": "IL", "country": "United States" },
     "Dawn": { "city": "Jacksonville", "state": "FL", "country": "United States" },
@@ -517,6 +517,16 @@
     "Jerry": { "city": "Jacksonville", "state": "FL", "country": "United States" },
     "Bradley0104": { "state": "GA", "country": "United States" },
     "TempestMask": { "state": "NJ", "country": "United States" },
-    "justanolive": { "state": "OH", "country": "United States" }
+    "justanolive": { "state": "OH", "country": "United States" },
+    "FlammableFlowMC": { "state": "WA", "country": "United States" },
+    "DylCat_": { "state": "OH", "country": "United States" },
+    "Goodguy3": { "state": "NC", "country": "United States" },
+    "Elipsis": { "state": "PA", "country": "United States" },
+    "Quoshi": { "state": "AZ", "country": "United States" },
+    "SorcererSeige": { "state": "FL", "country": "United States" },
+    "Boyo003": { "state": "MI", "country": "United States" },
+    "jukatox": { "state": "OH", "country": "United States" },
+    "zGamuT": { "state": "MO", "country": "United States" },
+    "cabbage72": { "state": "MN", "country": "United States" }
   }
 }

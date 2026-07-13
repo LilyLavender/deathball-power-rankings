@@ -23,7 +23,7 @@
     { "names": ["Acnorris0", "Amanda"], "canonical": "Acnorris0" },
     { "names": ["quantumpotato", "qp"], "canonical": "quantumpotato" },
     { "names": ["somewes", "wes", "wesmess", "Wess Mess", "Westley", "Mario boii", "Wizley", "we s", "Wes2"], "canonical": "somewes" },
-    { "names": ["SkitsSkoots", "Skoots", "TC$"], "canonical": "SkitsSkoots" },
+    { "names": ["SkitsSkoots", "Skoots", "TC$", "Mr_Skoots"], "canonical": "SkitsSkoots" },
     { "names": ["Chan", "Chayan", "KQHTX", "DBHTX FOUNDER"], "canonical": "Chan" },
     { "names": ["Eduardo2332", "Eduardo Gabriel Martinez Banda", "Eduardo"], "canonical": "Eduardo" },
     { "names": ["Mosspassion", "nickyD"], "canonical": "Mosspassion" },
@@ -99,7 +99,14 @@
     { "names": ["Steve Halili", "Steve"], "canonical": "Steve Halili" },
     { "names": ["Anthony", "Anthony2"], "canonical": "Anthony", "id": "anthony-2019-league" },
     { "names": ["Logan", "Logan2"], "canonical": "Logan", "id": "logan-2019-league" },
-    { "names": ["Ellie", "something_dumber", "something dumber"], "canonical": "something_dumber" }
+    { "names": ["Ellie", "something_dumber", "something dumber", "something_dumber (ellie)"], "canonical": "something_dumber" },
+    { "names": ["typedef_sorbet", "_sorbet"], "canonical": "typedef_sorbet" },
+    { "names": ["Dave", "legacy_dave"], "canonical": "legacy_dave" },
+    { "names": ["Mrlink2k", "Link"], "canonical": "Mrlink2k" },
+    { "names": ["Dmt Goobz", "Goobz"], "canonical": "Dmt Goobz" },
+    { "names": ["Queen_Magnolia", "Magnolia"], "canonical": "Queen_Magnolia" },
+    { "names": ["Nambo_", "Nambo"], "canonical": "Nambo_" },
+    { "names": ["SamuelJH", "Sam"], "canonical": "SamuelJH", "id": "samueljh" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -423,7 +430,8 @@
       "resolutions": [
         { "id": "sam-beerandball", "canonical": "Sam", "tournaments": ["https://challonge.com/beerandball"] },
         { "id": "sam-gdc", "canonical": "Sam", "tournaments": ["https://challonge.com/dbgdc"] },
-        { "id": "sam-shad5", "canonical": "Sam", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview"] }
+        { "id": "sam-shad5", "canonical": "Sam", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview"] },
+        { "id": "samueljh", "canonical": "SamuelJH", "tournaments": ["https://challonge.com/fb7fg5mo"] }
       ]
     },
     {

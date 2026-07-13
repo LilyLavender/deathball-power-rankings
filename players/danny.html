@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Danny — DeathBall Power Rankings</title>
+<link rel="stylesheet" href="../index.css">
+</head>
+<body class="card-green">
+<h1>Danny</h1>
+<div class="tourney-meta"><span class="alias-list">Active 2026</span></div>
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
+
+<div class="player-grid doubles-only-grid">
+  <div class="tourney-section tournaments-col">
+    <h2>Tournaments (1)</h2>
+    <ol class="standings-list" id="tournament-history-list">
+      <li><span class="standings-rank"><span class="rank-ordinal">1st<span class="rank-total">/7</span></span> <span class="hist-record">6-2</span></span><span class="hist-tourney-name"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Flag_of_Minneapolis.svg" title="Minneapolis" alt="Minneapolis"><a href="../tournaments/sgdq-2026-doubles-2026-07-10.html">SGDQ 2026 Doubles</a> <span class="doubles-pill doubles-pill-plain">w/ <a href="../players/rheastargirl.html">RheaStarGirl</a></span></span><span class="standings-record">July 10, 2026</span></li>
+    </ol>
+    
+  </div>
+<div class="tourney-section doubles-col">
+  <h2>Doubles Teams</h2>
+  <div class="doubles-grid">
+    <div class="doubles-card card-green">
+      <div class="doubles-card-names">Danny <span class="doubles-amp">&amp;</span> <a href="../players/rheastargirl.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Flag_of_Chicago%2C_Illinois.svg" title="Chicago" alt="Chicago">RheaStarGirl</a></div>
+      <div class="doubles-card-stats"><span>1 tournament</span><span class="doubles-sep">&middot;</span><span>6-2 (75%)</span></div>
+      <ol class="standings-list">
+      <li><span class="standings-rank"><span class="rank-ordinal">1st<span class="rank-total">/7</span></span> <span class="hist-record">6-2</span></span><span class="hist-tourney-name"><a href="../tournaments/sgdq-2026-doubles-2026-07-10.html">SGDQ 2026 Doubles</a></span><span class="standings-record">July 10, 2026</span></li>
+      </ol>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+  document.querySelectorAll('.show-more-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const list = document.getElementById(btn.dataset.list);
+      const hiddenItems = [...list.children].filter((li) => li.hidden).slice(0, 10);
+      hiddenItems.forEach((li) => { li.hidden = false; });
+      if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
+    });
+  });
+
+  // Historical-rating chart: hover/focus a tournament point to show its
+  // tooltip, positioned against the chart's inner box (its actual
+  // containing block, not the viewport or the padded outer card), so it
+  // scales correctly with the SVG's own preserveAspectRatio scaling.
+  document.querySelectorAll('.rating-chart-inner').forEach((wrap) => {
+    const tooltip = wrap.querySelector('.chart-tooltip');
+    const svg = wrap.querySelector('.rating-chart');
+    if (!tooltip || !svg) return;
+    const show = (point) => {
+      const wrapRect = wrap.getBoundingClientRect();
+      const pointRect = point.getBoundingClientRect();
+      tooltip.innerHTML = '<strong>' + point.dataset.label + '</strong><br>' +
+        point.dataset.date + '<br>Rating ' + point.dataset.rating +
+        (point.dataset.rank ? ' &middot; Rank #' + point.dataset.rank : '');
+      tooltip.hidden = false;
+      let left = (pointRect.left - wrapRect.left) + (pointRect.width / 2);
+      left = Math.max(60, Math.min(left, wrapRect.width - 60));
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = (pointRect.top - wrapRect.top) + 'px';
+    };
+    const hide = () => { tooltip.hidden = true; };
+    const points = [...svg.querySelectorAll('.chart-point')];
+    points.forEach((point) => {
+      point.addEventListener('focus', () => show(point));
+      point.addEventListener('blur', hide);
+    });
+    // Nearest-point-by-x detection across the whole chart (not just when
+    // hovering a point's small hit circle) — find the closest marker to the
+    // mouse's x position anywhere over the SVG and show its tooltip.
+    svg.addEventListener('mousemove', (e) => {
+      if (!points.length) return;
+      let nearest = points[0];
+      let nearestDist = Infinity;
+      for (const p of points) {
+        const r = p.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const dist = Math.abs(e.clientX - cx);
+        if (dist < nearestDist) { nearestDist = dist; nearest = p; }
+      }
+      show(nearest);
+    });
+    svg.addEventListener('mouseleave', hide);
+  });
+</script>
+<footer class="site-footer">
+  <span>&copy; 2026 LilyLambda</span>
+  <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
+  <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
+  <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
+</footer>
+</body>
+</html>
