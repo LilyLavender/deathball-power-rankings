@@ -106,7 +106,8 @@
     { "names": ["Dmt Goobz", "Goobz"], "canonical": "Dmt Goobz" },
     { "names": ["Queen_Magnolia", "Magnolia"], "canonical": "Queen_Magnolia" },
     { "names": ["Nambo_", "Nambo"], "canonical": "Nambo_" },
-    { "names": ["SamuelJH", "Sam"], "canonical": "SamuelJH", "id": "samueljh" }
+    { "names": ["SamuelJH", "Sam"], "canonical": "SamuelJH", "id": "samueljh" },
+    { "names": ["dirtd", "Danny"], "canonical": "dirtd" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
