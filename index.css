@@ -301,6 +301,59 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .event-venue { display: flex; align-items: center; gap: 6px; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #999; }
 .events-footer { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: #666; text-align: center; margin-top: 1.5rem; letter-spacing: 0.03em; }
 .events-empty { font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; color: #888; text-align: center; padding: 3rem 0; }
+.doubles-pill { display: inline-block; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: #b04fff; border: 1px solid rgba(176,79,255,0.5); border-radius: 3px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+/* Player-page "w/ <partner>" pill -- the partner's name is a real link, so
+   it keeps its own casing (uppercase would obscure/mangle it) and stays
+   unstyled-as-a-link until hover, matching the pill's own color scheme
+   instead of the browser-default blue/underline. */
+.doubles-pill.doubles-pill-plain { text-transform: none; letter-spacing: 0.01em; }
+.doubles-pill.doubles-pill-plain a { color: inherit; text-decoration: none; }
+.doubles-pill.doubles-pill-plain a:hover { text-decoration: underline; }
+/* align-items: start keeps each card sized to its own content -- without
+   it, CSS Grid's default row-stretch makes every card in a row match the
+   tallest one, which matters here since a player-page doubles card's height
+   varies with how many tournaments it lists (see .doubles-card .standings-list
+   below), unlike the Doubles tab's uniform two-line cards. */
+/* auto-fit (not a fixed repeat(3, 1fr)) so the column count always derives
+   from the actual container's width, not the viewport's -- this covers both
+   the full-width Doubles tab and h2h's own narrow 1-of-3 column on mixed
+   player pages, where a lone card (or a trailing odd one) stretches to
+   fill its row instead of sitting in a narrow track beside empty ones,
+   since auto-fit collapses tracks with no content rather than reserving
+   space for them the way a fixed column count would. The min() wrapped
+   around the minmax minimum keeps a single column from overflowing a
+   container narrower than 380px (e.g. a phone screen) -- minmax's own
+   minimum can't shrink below itself, only its maximum can, so without
+   min() a narrow-enough container would force a horizontal scrollbar
+   instead of the card just shrinking to fit. */
+.doubles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 20px; align-items: start; }
+/* Doubles-only players' 2-of-3-column-wide area (.doubles-only-grid) wants
+   the opposite of auto-fit's collapsing behavior: a lone card should stay
+   at 1-column width with visible empty space beside it (matching a normal
+   card's size elsewhere on the site), not stretch to fill both columns --
+   so this overrides the base rule with a genuinely fixed 2-track grid
+   instead. */
+.doubles-only-grid .doubles-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) { .doubles-only-grid .doubles-grid { grid-template-columns: 1fr; } }
+.doubles-card { display: flex; flex-direction: column; gap: 8px; background: #0f0f0f; border: 1px solid #222; border-radius: 0; padding: 1.1rem 1.3rem; transition: border-color 150ms, background 150ms; }
+.doubles-card.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.22) 0%, #0f0f0f 65%); }
+.doubles-card.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%); }
+.doubles-card.card-green:hover { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.38) 0%, #181818 65%); border-color: rgba(62,255,139,0.65); }
+.doubles-card.card-purple:hover { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.38) 0%, #181818 65%); border-color: rgba(176,79,255,0.6); }
+.doubles-card-names { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.2rem; color: #fff; line-height: 1.3; }
+.doubles-card-names a { color: #fff; }
+.doubles-card-names a:hover { color: #3eff8b; }
+.doubles-amp { color: #666; font-weight: 400; }
+.doubles-card-stats { font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #999; display: flex; align-items: center; gap: 8px; }
+.doubles-sep { color: #444; }
+.doubles-empty { font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; color: #888; text-align: center; padding: 3rem 0; }
+/* Player page Doubles section reuses .doubles-grid itself (not just
+   .doubles-card), so multiple partner cards can lay out side by side
+   within h2h's own column (see .player-grid.has-doubles) exactly like the
+   Doubles tab, rather than always stacking one per row. Each card also
+   carries its own per-tournament list, so it needs a bit more internal
+   spacing than the tab's plain stat line. */
+.doubles-card .standings-list { margin-top: 0.5rem; }
 .back-link { display: inline-block; color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
 .back-link:hover { color: #3eff8b; }
 .tourney-meta { display: flex; align-items: center; gap: 1.25rem; color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
@@ -428,8 +481,28 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .h2h-col { grid-area: h2h; min-width: 0; }
 .matches-col { grid-area: matches; min-width: 0; }
 .tournaments-col { grid-area: tournaments; min-width: 0; }
+/* For a mixed player, the Doubles section is nested directly inside
+   .h2h-col (right after Match Statistics) rather than being a grid item of
+   its own, so it picks up its spacing from a margin here instead of
+   .player-grid's inter-item gap the way a sibling grid cell would --
+   .doubles-col's own grid-area only actually applies in .doubles-only-grid
+   below. The "Doubles Teams" <h2>'s UA-default top margin (0.83em) would
+   otherwise collapse through the empty .doubles-col box and add on top of
+   this, so it's zeroed and this margin is the only spacing above the
+   section. Scoped to the nested (.h2h-col) case specifically -- in
+   .doubles-only-grid, .doubles-col is a grid-area sibling of
+   .tournaments-col and needs its top to stay flush with the grid row (no
+   margin) so the two columns' headers line up. */
+.doubles-col { grid-area: doubles; min-width: 0; }
+.doubles-col h2 { margin-top: 0; }
+.h2h-col .doubles-col { margin-top: 1.25rem; }
+/* Doubles-only players (no singles play at all) skip the chart/stats/match
+   log entirely -- Tournaments takes the left 1 of 3 columns, Doubles the
+   right 2, same 3-column grid as everyone else's page. */
+.player-grid.doubles-only-grid { grid-template-areas: "tournaments doubles doubles"; }
 @media (max-width: 900px) {
   .player-grid { grid-template-columns: 1fr; grid-template-areas: "chart" "h2h" "matches" "tournaments"; }
+  .player-grid.doubles-only-grid { grid-template-areas: "tournaments" "doubles"; }
 }
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
 .h2h-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }

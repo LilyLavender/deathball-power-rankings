@@ -170,11 +170,41 @@ function lookupPlayerInfo(id, name) {
     || playerInfoByLowerKey.get((name || '').toLowerCase())
     || {};
 }
+
+// Shared by every doubles-card renderer (Doubles tab, player-page Doubles
+// section) so a team's two names always carry their flags, same as any
+// other player-name mention on the site.
+function playerFlagImg(id, name) {
+  const flag = flagForInfo(lookupPlayerInfo(id, name));
+  return flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
+}
 const tournamentLocations = readJson(path.join(DATA_ROOT, 'tournament-locations.json'), { locations: {} }).locations || {};
 // Flat map of tournament URL -> group id, for collapsing a cluster of
 // same-event tournaments (e.g. SGDQ 2024's several side brackets) into one
 // point for rating-change/history purposes -- see groupIdFor() below.
 const tournamentGroups = readJson(path.join(DATA_ROOT, 'tournament-groups.json'), {});
+// Flat map of tournament URL -> true, for tournaments that were a doubles
+// (2v2 team) format instead of standard singles -- see isDoublesTournament()
+// below. Doubles tournaments still get their own page and show up in the
+// Tournaments list (with a pill), but never feed the Glicko rating engine or
+// a player's singles win/loss stats/rating history (see the isDoubles guards
+// in processChronologically/buildPlayerHistories/buildPlayerStats); their
+// results are only ever aggregated into team records for the Doubles tab
+// (buildDoublesTeams).
+const tournamentDoubles = readJson(path.join(DATA_ROOT, 'tournament-doubles.json'), {});
+function isDoublesTournament(url) {
+  return !!tournamentDoubles[url];
+}
+
+// Splits a doubles participant/team raw name (e.g. "PlayerA + PlayerB" or
+// "PlayerA & PlayerB") into its two component raw player names. Returns
+// null if the name doesn't contain exactly one such separator.
+function parseTeamName(rawName) {
+  const trimmed = normName(rawName);
+  if (!trimmed) return null;
+  const parts = trimmed.split(/\s*[+&]\s*/).map((s) => s.trim()).filter(Boolean);
+  return parts.length === 2 ? parts : null;
+}
 // Manually maintained list for the "Upcoming Events" tab -- each entry is
 // { date, link, city, state, location, name }, keyed by nothing (just an
 // array) since these aren't cross-referenced against scraped tournament
@@ -220,6 +250,22 @@ function cardAccent(id, colorOverride) {
   return (h & 1) ? 'card-purple' : 'card-green';
 }
 
+// Doubles-card counterpart to cardAccent -- when both teammates land on the
+// same accent (either the same explicit color override, or the same hash
+// default), the team card just uses that; when they differ, picks between
+// the two deterministically off the team's own pair key (not either
+// player's id alone) so the same team always lands on the same accent
+// across regenerations.
+function teamCardAccent(a, b) {
+  const accentA = cardAccent(a.id, lookupPlayerInfo(a.id, a.name).color);
+  const accentB = cardAccent(b.id, lookupPlayerInfo(b.id, b.name).color);
+  if (accentA === accentB) return accentA;
+  const key = teamKeyFor(a.id, b.id);
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (Math.imul(h, 31) + key.charCodeAt(i)) | 0;
+  return (h & 1) ? accentB : accentA;
+}
+
 // Resolves a raw in-tournament name to its canonical display name plus a
 // flag image (if the player has location info on file), for display on
 // tournament pages — standings, crosstable, round list, bracket viewer.
@@ -246,6 +292,7 @@ function playerHref(id, prefix) {
 function buildPlayerStats(allTournaments) {
   const players = new Map();
   for (const t of allTournaments) {
+    if (t.isDoubles) continue;
     for (const m of t.matches) {
       if (!m.winnerName || !m.loserName) continue;
       recordMatch(players, m.winnerName, m.loserName, t.url, t.label);
@@ -489,6 +536,7 @@ function collectChallonge() {
       matchCount: matches.length,
       source: 'Challonge',
       tournamentType: t.tournament_type || null,
+      isDoubles: isDoublesTournament(url),
       participantList,
       matches,
       pendingMatches,
@@ -573,6 +621,7 @@ function collectStartgg() {
       matchCount: matches.length,
       source: 'start.gg',
       tournamentType: null,
+      isDoubles: isDoublesTournament(url),
       participantList,
       matches,
       pendingMatches,
@@ -1035,6 +1084,9 @@ function loadManualMatches(knownUrls) {
 // chart on player pages, rank-at-the-time, etc).
 function processChronologically(allTournaments, players, glicko, preTournamentRatings, snapshots) {
   for (const tournament of allTournaments) {
+    // Doubles tournaments never touch the Glicko engine or singles W/L
+    // stats -- see buildDoublesTeams for where their results actually go.
+    if (tournament.isDoubles) continue;
     // Compute pre-tournament states with lazy decay — fixed across all passes.
     const originalPreStates = new Map();
     for (const match of tournament.matches) {
@@ -1151,6 +1203,12 @@ function assignPlayerSlugs(players) {
 //                 date, tournamentUrl, tournamentSlug, tournamentLabel }
 //   placements: one entry per tournament entered, newest last —
 //               { url, slug, label, date, rank, totalEntrants, wins, losses }
+//               — plus, for a doubles tournament only, isDoubles/partnerId/
+//               partnerName (the team's own rank/record in that event; see
+//               the isDoubles branch below). Doubles tournaments only ever
+//               contribute a placement, never a match -- see the isDoubles
+//               guards in processChronologically/buildPlayerStats and
+//               buildDoublesHistories for where the rest of their results go.
 function buildPlayerHistories(allTournaments, preTournamentRatings) {
   const histories = new Map();
   const ensure = (id) => {
@@ -1160,6 +1218,23 @@ function buildPlayerHistories(allTournaments, preTournamentRatings) {
 
   for (const t of allTournaments) {
     const standings = buildStandings(t);
+
+    if (t.isDoubles) {
+      const pairsByCanonName = resolveDoublesTeamPairs(t);
+      for (const s of standings) {
+        const pair = pairsByCanonName.get(s.name);
+        if (!pair) continue;
+        const [a, b] = pair;
+        for (const [self, partner] of [[a, b], [b, a]]) {
+          ensure(self.id).placements.push({
+            url: t.url, slug: t.slug, label: t.label, date: t.date, flag: t.locationDisplay.flag,
+            rank: s.rank, totalEntrants: standings.length, wins: s.wins, losses: s.losses,
+            isDoubles: true, partnerId: partner.id, partnerName: partner.name,
+          });
+        }
+      }
+      continue;
+    }
 
     const idByCanonName = new Map();
     for (const p of t.participantList) {
@@ -1897,6 +1972,59 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .event-venue { display: flex; align-items: center; gap: 6px; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #999; }
 .events-footer { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: #666; text-align: center; margin-top: 1.5rem; letter-spacing: 0.03em; }
 .events-empty { font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; color: #888; text-align: center; padding: 3rem 0; }
+.doubles-pill { display: inline-block; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: #b04fff; border: 1px solid rgba(176,79,255,0.5); border-radius: 3px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+/* Player-page "w/ <partner>" pill -- the partner's name is a real link, so
+   it keeps its own casing (uppercase would obscure/mangle it) and stays
+   unstyled-as-a-link until hover, matching the pill's own color scheme
+   instead of the browser-default blue/underline. */
+.doubles-pill.doubles-pill-plain { text-transform: none; letter-spacing: 0.01em; }
+.doubles-pill.doubles-pill-plain a { color: inherit; text-decoration: none; }
+.doubles-pill.doubles-pill-plain a:hover { text-decoration: underline; }
+/* align-items: start keeps each card sized to its own content -- without
+   it, CSS Grid's default row-stretch makes every card in a row match the
+   tallest one, which matters here since a player-page doubles card's height
+   varies with how many tournaments it lists (see .doubles-card .standings-list
+   below), unlike the Doubles tab's uniform two-line cards. */
+/* auto-fit (not a fixed repeat(3, 1fr)) so the column count always derives
+   from the actual container's width, not the viewport's -- this covers both
+   the full-width Doubles tab and h2h's own narrow 1-of-3 column on mixed
+   player pages, where a lone card (or a trailing odd one) stretches to
+   fill its row instead of sitting in a narrow track beside empty ones,
+   since auto-fit collapses tracks with no content rather than reserving
+   space for them the way a fixed column count would. The min() wrapped
+   around the minmax minimum keeps a single column from overflowing a
+   container narrower than 380px (e.g. a phone screen) -- minmax's own
+   minimum can't shrink below itself, only its maximum can, so without
+   min() a narrow-enough container would force a horizontal scrollbar
+   instead of the card just shrinking to fit. */
+.doubles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 20px; align-items: start; }
+/* Doubles-only players' 2-of-3-column-wide area (.doubles-only-grid) wants
+   the opposite of auto-fit's collapsing behavior: a lone card should stay
+   at 1-column width with visible empty space beside it (matching a normal
+   card's size elsewhere on the site), not stretch to fill both columns --
+   so this overrides the base rule with a genuinely fixed 2-track grid
+   instead. */
+.doubles-only-grid .doubles-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) { .doubles-only-grid .doubles-grid { grid-template-columns: 1fr; } }
+.doubles-card { display: flex; flex-direction: column; gap: 8px; background: #0f0f0f; border: 1px solid #222; border-radius: 0; padding: 1.1rem 1.3rem; transition: border-color 150ms, background 150ms; }
+.doubles-card.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.22) 0%, #0f0f0f 65%); }
+.doubles-card.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%); }
+.doubles-card.card-green:hover { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.38) 0%, #181818 65%); border-color: rgba(62,255,139,0.65); }
+.doubles-card.card-purple:hover { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.38) 0%, #181818 65%); border-color: rgba(176,79,255,0.6); }
+.doubles-card-names { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.2rem; color: #fff; line-height: 1.3; }
+.doubles-card-names a { color: #fff; }
+.doubles-card-names a:hover { color: #3eff8b; }
+.doubles-amp { color: #666; font-weight: 400; }
+.doubles-card-stats { font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #999; display: flex; align-items: center; gap: 8px; }
+.doubles-sep { color: #444; }
+.doubles-empty { font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; color: #888; text-align: center; padding: 3rem 0; }
+/* Player page Doubles section reuses .doubles-grid itself (not just
+   .doubles-card), so multiple partner cards can lay out side by side
+   within h2h's own column (see .player-grid.has-doubles) exactly like the
+   Doubles tab, rather than always stacking one per row. Each card also
+   carries its own per-tournament list, so it needs a bit more internal
+   spacing than the tab's plain stat line. */
+.doubles-card .standings-list { margin-top: 0.5rem; }
 .back-link { display: inline-block; color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
 .back-link:hover { color: #3eff8b; }
 .tourney-meta { display: flex; align-items: center; gap: 1.25rem; color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
@@ -2024,8 +2152,28 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .h2h-col { grid-area: h2h; min-width: 0; }
 .matches-col { grid-area: matches; min-width: 0; }
 .tournaments-col { grid-area: tournaments; min-width: 0; }
+/* For a mixed player, the Doubles section is nested directly inside
+   .h2h-col (right after Match Statistics) rather than being a grid item of
+   its own, so it picks up its spacing from a margin here instead of
+   .player-grid's inter-item gap the way a sibling grid cell would --
+   .doubles-col's own grid-area only actually applies in .doubles-only-grid
+   below. The "Doubles Teams" <h2>'s UA-default top margin (0.83em) would
+   otherwise collapse through the empty .doubles-col box and add on top of
+   this, so it's zeroed and this margin is the only spacing above the
+   section. Scoped to the nested (.h2h-col) case specifically -- in
+   .doubles-only-grid, .doubles-col is a grid-area sibling of
+   .tournaments-col and needs its top to stay flush with the grid row (no
+   margin) so the two columns' headers line up. */
+.doubles-col { grid-area: doubles; min-width: 0; }
+.doubles-col h2 { margin-top: 0; }
+.h2h-col .doubles-col { margin-top: 1.25rem; }
+/* Doubles-only players (no singles play at all) skip the chart/stats/match
+   log entirely -- Tournaments takes the left 1 of 3 columns, Doubles the
+   right 2, same 3-column grid as everyone else's page. */
+.player-grid.doubles-only-grid { grid-template-areas: "tournaments doubles doubles"; }
 @media (max-width: 900px) {
   .player-grid { grid-template-columns: 1fr; grid-template-areas: "chart" "h2h" "matches" "tournaments"; }
+  .player-grid.doubles-only-grid { grid-template-areas: "tournaments" "doubles"; }
 }
 .h2h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
 .h2h-tile { background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 0.6rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
@@ -2163,7 +2311,7 @@ function writeJs() {
     indicator.style.width = targetRect.width + 'px';
   }
 
-  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map', 'events-tab': 'Upcoming Events' };
+  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'doubles-tab': 'Doubles Teams', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map', 'events-tab': 'Upcoming Events' };
 
   // Cross-fades just the variable part of the page heading ("DeathBall" is
   // static) to the tab's own heading instead of snapping straight to it.
@@ -3197,7 +3345,167 @@ ${cards}
 <div class="events-footer"${isEmpty ? ' hidden' : ''} id="events-footer">That's all for now, try scheduling an event!</div>`;
 }
 
-function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments, rankingHistory) {
+function teamKeyFor(idA, idB) {
+  return [idA, idB].sort().join('::');
+}
+
+// For a doubles tournament, maps each standings entry's canonical team name
+// (as produced by buildStandings/resolveIdentity) to its two resolved player
+// identities -- shared by buildPlayerHistories's doubles branch and
+// buildDoublesHistories, which both need a team's *per-tournament* standing
+// (rank/record), unlike buildDoublesTeams' simpler cross-tournament tally.
+function resolveDoublesTeamPairs(t) {
+  const pairByCanonName = new Map();
+  const consider = (raw) => {
+    if (!raw) return;
+    const canon = resolveIdentity(raw, t.url).name;
+    if (pairByCanonName.has(canon)) return;
+    const parts = parseTeamName(raw);
+    if (!parts) return;
+    const a = resolveIdentity(parts[0], t.url);
+    const b = resolveIdentity(parts[1], t.url);
+    if (!a.id || !b.id || a.id === b.id) return;
+    pairByCanonName.set(canon, [a, b]);
+  };
+  for (const p of t.participantList) consider(p.name);
+  for (const m of t.matches) { consider(m.winnerName); consider(m.loserName); }
+  return pairByCanonName;
+}
+
+// Ensures every doubles participant has a `players` map entry (even someone
+// who has never played a singles match at all) so they get a slug, a player
+// page, and a row on the Players tab -- but only ever touches `tournaments`
+// (for the tab's tournament count/list), never wins/losses/games, which stay
+// whatever recordMatch/singles play already gave them (0 for a doubles-only
+// player). A 0-games player is automatically excluded from the PR tab by
+// buildRankingRows' existing `games > 0` filter, so this alone is enough to
+// keep doubles-only players off the rankings without a separate guard.
+function registerDoublesParticipants(allTournaments, players) {
+  for (const t of allTournaments) {
+    if (!t.isDoubles) continue;
+    for (const [a, b] of resolveDoublesTeamPairs(t).values()) {
+      for (const identity of [a, b]) {
+        getPlayer(players, identity).tournaments.set(t.url, t.label);
+      }
+    }
+  }
+}
+
+// Aggregates doubles-tournament rosters/matches into one record per team (an
+// unordered pair of two existing player identities): tournaments entered,
+// wins, losses. This is the only place doubles results are counted anywhere
+// on the site — the Glicko engine and singles stats never see them (see the
+// isDoubles guards in processChronologically/buildPlayerHistories/
+// buildPlayerStats). Powers the Doubles tab.
+function buildDoublesTeams(allTournaments) {
+  const teams = new Map();
+  const ensureTeam = (a, b) => {
+    const key = teamKeyFor(a.id, b.id);
+    if (!teams.has(key)) teams.set(key, { key, players: [a, b], tournaments: new Map(), wins: 0, losses: 0 });
+    return teams.get(key);
+  };
+
+  for (const t of allTournaments) {
+    if (!t.isDoubles) continue;
+
+    for (const p of t.participantList) {
+      const parts = parseTeamName(p.name);
+      if (!parts) continue;
+      const a = resolveIdentity(parts[0], t.url);
+      const b = resolveIdentity(parts[1], t.url);
+      if (!a.id || !b.id || a.id === b.id) continue;
+      ensureTeam(a, b).tournaments.set(t.url, t.label);
+    }
+
+    for (const m of t.matches) {
+      if (!m.winnerName || !m.loserName) continue;
+      const winnerParts = parseTeamName(m.winnerName);
+      const loserParts = parseTeamName(m.loserName);
+      if (!winnerParts || !loserParts) continue;
+      const winA = resolveIdentity(winnerParts[0], t.url);
+      const winB = resolveIdentity(winnerParts[1], t.url);
+      const loseA = resolveIdentity(loserParts[0], t.url);
+      const loseB = resolveIdentity(loserParts[1], t.url);
+      if (winA.id === winB.id || loseA.id === loseB.id) continue;
+      const winnerTeam = ensureTeam(winA, winB);
+      winnerTeam.tournaments.set(t.url, t.label);
+      winnerTeam.wins += 1;
+      const loserTeam = ensureTeam(loseA, loseB);
+      loserTeam.tournaments.set(t.url, t.label);
+      loserTeam.losses += 1;
+    }
+  }
+
+  return [...teams.values()]
+    .map((team) => ({
+      key: team.key,
+      players: team.players,
+      tournamentCount: team.tournaments.size,
+      wins: team.wins,
+      losses: team.losses,
+    }))
+    .sort((a, b) => b.wins - a.wins || (b.wins - b.losses) - (a.wins - a.losses));
+}
+
+// Per-player breakdown of doubles results by partner, for the player page's
+// "Doubles" section: Map<playerId, { partners: Map<partnerId, { id, name,
+// entries: [{ url, slug, label, date, rank, totalEntrants, wins, losses }] }> }>
+// -- entries is every tournament that player and that specific partner
+// entered together, each with the team's own rank/record in that event.
+function buildDoublesHistories(allTournaments) {
+  const byPlayer = new Map();
+  const ensure = (id) => {
+    if (!byPlayer.has(id)) byPlayer.set(id, { partners: new Map() });
+    return byPlayer.get(id);
+  };
+
+  for (const t of allTournaments) {
+    if (!t.isDoubles) continue;
+    const standings = buildStandings(t);
+    const pairsByCanonName = resolveDoublesTeamPairs(t);
+
+    for (const s of standings) {
+      const pair = pairsByCanonName.get(s.name);
+      if (!pair) continue;
+      const [a, b] = pair;
+      for (const [self, partner] of [[a, b], [b, a]]) {
+        const rec = ensure(self.id);
+        if (!rec.partners.has(partner.id)) rec.partners.set(partner.id, { id: partner.id, name: partner.name, entries: [] });
+        rec.partners.get(partner.id).entries.push({
+          url: t.url, slug: t.slug, label: t.label, date: t.date,
+          rank: s.rank, totalEntrants: standings.length, wins: s.wins, losses: s.losses,
+        });
+      }
+    }
+  }
+
+  return byPlayer;
+}
+
+function buildDoublesTabHtml(doublesTeams) {
+  if (doublesTeams.length === 0) {
+    return `<p class="doubles-empty">No doubles tournaments yet&hellip; results will show up here once one gets added.</p>`;
+  }
+  const cards = doublesTeams.map((team) => {
+    const names = team.players.map((p) => {
+      const href = playerHref(p.id, '');
+      const flagImg = playerFlagImg(p.id, p.name);
+      return href ? `<a href="${escapeHtml(href)}">${flagImg}${escapeHtml(p.name)}</a>` : `<span>${flagImg}${escapeHtml(p.name)}</span>`;
+    }).join(' <span class="doubles-amp">&amp;</span> ');
+    const games = team.wins + team.losses;
+    const winPct = games > 0 ? Math.round((team.wins / games) * 100) : 0;
+    const accent = teamCardAccent(team.players[0], team.players[1]);
+    return `<div class="doubles-card ${accent}">
+  <div class="doubles-card-names">${names}</div>
+  <div class="doubles-card-stats"><span>${team.tournamentCount} tournament${team.tournamentCount === 1 ? '' : 's'}</span><span class="doubles-sep">&middot;</span><span>${team.wins}-${team.losses} (${winPct}%)</span></div>
+</div>`;
+  }).join('\n');
+  return `<div class="doubles-grid">
+${cards}
+</div>`;
+}
+
+function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments, rankingHistory, doublesTeams) {
   const playerTableRows = playerRows.map((p) => {
     const tournamentLinks = p.tournaments
       .map((t) => `<a href="tournaments/${escapeHtml(t.slug)}.html"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
@@ -3218,7 +3526,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
   const tournamentTableRows = [...allTournaments]
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .map((t) => `<tr>
-      <td><a href="tournaments/${escapeHtml(t.slug)}.html">${escapeHtml(t.label)}</a><a class="ext-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener" title="View original">&#8599;</a></td>
+      <td><a href="tournaments/${escapeHtml(t.slug)}.html">${escapeHtml(t.label)}</a><a class="ext-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener" title="View original">&#8599;</a>${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</td>
       <td data-sort="${t.date}">${escapeHtml(t.date)}</td>
       <td>${locationHtml(t.locationDisplay)}</td>
       <td>${escapeHtml(t.source)}</td>
@@ -3386,6 +3694,7 @@ ${latestSectionHtml}
   <button class="tab-button active" data-tab="rankings-tab">Power Rankings</button>
   <button class="tab-button" data-tab="players-tab">Players</button>
   <button class="tab-button" data-tab="tournaments-tab">Tournaments</button>
+  <button class="tab-button" data-tab="doubles-tab">Doubles Teams</button>
   <button class="tab-button" data-tab="map-tab">Map</button>
   <button class="tab-button" data-tab="events-tab">Upcoming Events</button>
   <span class="tab-underline"></span>
@@ -3440,6 +3749,10 @@ ${playerTableRows}
 ${tournamentTableRows}
     </tbody>
   </table>
+</div>
+
+<div id="doubles-tab" class="tab-panel">
+${buildDoublesTabHtml(doublesTeams)}
 </div>
 
 <div id="map-tab" class="tab-panel">
@@ -3997,6 +4310,25 @@ function nameHtml(rawName, tournamentUrl) {
   return href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner;
 }
 
+// Doubles-aware counterpart to nameHtml, for tournament pages -- splits the
+// raw team name into its two component players and links each individually
+// (clicking either name goes to that player's own page), always joined by
+// "&" regardless of what separator the source bracket actually used. Falls
+// back to nameHtml itself if the raw string can't be split (e.g. a name
+// with no + or & wasn't a proper doubles entry).
+function teamNameHtml(rawTeamName, tournamentUrl) {
+  const parts = parseTeamName(rawTeamName);
+  if (!parts) return nameHtml(rawTeamName, tournamentUrl);
+  const spans = parts.map((raw) => {
+    const { id, name, flag } = resolveDisplayName(raw, tournamentUrl);
+    const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
+    const href = playerHref(id, '../');
+    const inner = `${flagImg}${escapeHtml(name)}`;
+    return href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner;
+  });
+  return spans.join(' <span class="doubles-amp">&amp;</span> ');
+}
+
 // Standings/crosstable already canonicalize names (aliases/splits resolved)
 // before this point, so by the time we'd call nameHtml the original raw
 // in-tournament spelling is gone — re-resolving the *canonical* name against
@@ -4041,10 +4373,14 @@ function writeTournamentPages(allTournaments) {
 
   for (const t of allTournaments) {
     const standings = buildStandings(t);
+    // Doubles tournaments render each roster/match slot as two individually
+    // clickable player links (teamNameHtml) instead of one opaque team-name
+    // link (nameHtml) -- see requirement in teamNameHtml's own comment.
+    const teamAware = (raw) => (t.isDoubles ? teamNameHtml(raw, t.url) : nameHtml(raw, t.url));
 
     const standingsHtml = standings.length
       ? `<ol class="standings-list">
-${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${nameHtml(rawNameForCanonical(t, s.name), t.url)}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
+${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${teamAware(rawNameForCanonical(t, s.name))}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
     </ol>`
       : '<p>No standings available.</p>';
 
@@ -4076,9 +4412,9 @@ ${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span clas
         const { names, cell } = buildCrosstable(st, stageStandings);
         return `${heading}<div class="crosstable-wrap">
   <table class="crosstable">
-    <thead><tr><th></th>${names.map((n) => `<th>${nameHtml(rawNameForCanonical(t, n), t.url)}</th>`).join('')}</tr></thead>
+    <thead><tr><th></th>${names.map((n) => `<th>${teamAware(rawNameForCanonical(t, n))}</th>`).join('')}</tr></thead>
     <tbody>
-${names.map((rowName) => `      <tr><th class="row-name">${nameHtml(rawNameForCanonical(t, rowName), t.url)}</th>${names.map((colName) => {
+${names.map((rowName) => `      <tr><th class="row-name">${teamAware(rawNameForCanonical(t, rowName))}</th>${names.map((colName) => {
           const c = cell(rowName, colName);
           if (c === null) return '<td class="cell-diag">&mdash;</td>';
           if (c.empty) return '<td class="cell-empty">&middot;</td>';
@@ -4093,7 +4429,7 @@ ${names.map((rowName) => `      <tr><th class="row-name">${nameHtml(rawNameForCa
       const roundGroups = buildRoundGroups(st);
       return `${heading}${roundGroups.map((g) => `<div class="round-group">
       <h3>${escapeHtml(g.label)}</h3>
-${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">${nameHtml(m.winnerName, t.url)}</span><span> def. </span><span class="match-loser">${nameHtml(m.loserName, t.url)}</span>${m.isDQ ? '<span class="match-dq">(DQ)</span>' : ''}<span class="match-score">${escapeHtml(matchScoreLabel(m))}</span></div>`).join('\n')}
+${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">${teamAware(m.winnerName)}</span><span> def. </span><span class="match-loser">${teamAware(m.loserName)}</span>${m.isDQ ? '<span class="match-dq">(DQ)</span>' : ''}<span class="match-score">${escapeHtml(matchScoreLabel(m))}</span></div>`).join('\n')}
     </div>`).join('\n')}`;
     }).join('\n');
 
@@ -4106,7 +4442,7 @@ ${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">
 ${extraHead}
 </head>
 <body>
-<h1>${escapeHtml(t.label)}</h1>
+<h1>${escapeHtml(t.label)}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</h1>
 <div class="tourney-meta">
   <span>${escapeHtml(formatDateHuman(t.date))}</span>
   ${t.locationDisplay.venue || t.locationDisplay.cityState ? `<span class="tourney-loc">${locationHtml(t.locationDisplay)}</span>` : ''}
@@ -4249,7 +4585,7 @@ function buildRatingChartSvg(history) {
 </div>`;
 }
 
-function writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById) {
+function writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById, doublesHistories) {
   const dir = path.join(REPO_ROOT, 'players');
   fs.mkdirSync(dir, { recursive: true });
   const keep = new Set();
@@ -4266,6 +4602,14 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
       : info.state ? (STATE_NAMES[info.state] || info.state) : (info.country || '');
 
     const aliases = aliasesUsed(p);
+
+    // A player only ever gets `players` entries via recordMatch (singles) or
+    // registerDoublesParticipants (doubles) -- 0 games means they've never
+    // played a real singles match, i.e. every tournament on file for them is
+    // doubles. Their page shows only the Tournaments list and Doubles
+    // section (see the branch near the bottom of this loop); top stat
+    // tiles/chart/Match Statistics/match log would all just be empty/zero.
+    const isDoublesOnly = p.games === 0;
 
     const hist = histories.get(id) || { matches: [], placements: [] };
     let stocksFor = 0;
@@ -4380,9 +4724,13 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     // milestones) — same .h2h-tile shell as h2hRow, just a plain value.
     const statTile = (label, valueHtml, iconKey, flip) => `<div class="h2h-tile"><span class="h2h-label">${h2hIcon(iconKey, flip)}${escapeHtml(label)}</span><span class="h2h-value">${valueHtml}</span></div>`;
 
-    const totalPlacements = hist.placements.length;
-    const podiumCount = hist.placements.filter((pl) => pl.rank <= 3).length;
-    const top8Count = hist.placements.filter((pl) => pl.rank <= 8).length;
+    // Podium/Top 8 rate is a Match Statistics tile -- like the rest of that
+    // section, doubles placements don't count toward it (see the isDoubles
+    // guards elsewhere in this file), only hist.placements' singles entries.
+    const singlesPlacements = hist.placements.filter((pl) => !pl.isDoubles);
+    const totalPlacements = singlesPlacements.length;
+    const podiumCount = singlesPlacements.filter((pl) => pl.rank <= 3).length;
+    const top8Count = singlesPlacements.filter((pl) => pl.rank <= 8).length;
     const rateValue = (count) => totalPlacements
       ? `${count}/${totalPlacements} <span class="h2h-record-dim">(${((count / totalPlacements) * 100).toFixed(0)}%)</span>`
       : '&mdash;';
@@ -4417,9 +4765,52 @@ ${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimM
 
     const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) => {
       const histFlagImg = pl.flag ? `<img class="loc-flag" src="${escapeHtml(pl.flag.src)}" title="${escapeHtml(pl.flag.title)}" alt="${escapeHtml(pl.flag.title)}">` : '';
-      return `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name">${histFlagImg}<a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a></span><span class="standings-record">${escapeHtml(formatDateHuman(pl.date))}</span></li>`;
+      let doublesPill = '';
+      if (pl.isDoubles) {
+        const partnerHref = playerHref(pl.partnerId, '../');
+        const partnerNameHtml = partnerHref ? `<a href="${escapeHtml(partnerHref)}">${escapeHtml(pl.partnerName)}</a>` : escapeHtml(pl.partnerName);
+        doublesPill = ` <span class="doubles-pill doubles-pill-plain">w/ ${partnerNameHtml}</span>`;
+      }
+      return `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name">${histFlagImg}<a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a>${doublesPill}</span><span class="standings-record">${escapeHtml(formatDateHuman(pl.date))}</span></li>`;
     },
       'No tournaments on record.');
+
+    // Doubles section: one full-width card per unique partner, styled like
+    // the Doubles tab's team cards (same background glow, same "Name &
+    // Name" / "N tournaments · W-L (pct%)" header), with every tournament
+    // that player+partner entered together and the team's own
+    // record/placement there (buildDoublesHistories) listed underneath --
+    // deliberately separate from the top-of-page stats/Match
+    // Statistics/match log above, which never include doubles results at all.
+    const doublesHist = doublesHistories.get(id);
+    const doublesSectionHtml = doublesHist && doublesHist.partners.size
+      ? `<div class="tourney-section doubles-col">
+  <h2>Doubles Teams</h2>
+  <div class="doubles-grid">
+${[...doublesHist.partners.values()]
+    .sort((a, b) => b.entries.length - a.entries.length || a.name.localeCompare(b.name))
+    .map((partner) => {
+      const pWins = partner.entries.reduce((sum, e) => sum + e.wins, 0);
+      const pLosses = partner.entries.reduce((sum, e) => sum + e.losses, 0);
+      const games = pWins + pLosses;
+      const winPct = games > 0 ? Math.round((pWins / games) * 100) : 0;
+      const partnerHref = playerHref(partner.id, '../');
+      const partnerFlagImg = playerFlagImg(partner.id, partner.name);
+      const partnerNameHtml = partnerHref ? `<a href="${escapeHtml(partnerHref)}">${partnerFlagImg}${escapeHtml(partner.name)}</a>` : `${partnerFlagImg}${escapeHtml(partner.name)}`;
+      const accent = teamCardAccent({ id, name }, { id: partner.id, name: partner.name });
+      const entriesDesc = [...partner.entries].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const entriesHtml = entriesDesc.map((e) => `      <li><span class="standings-rank"><span class="rank-ordinal">${ordinal(e.rank)}<span class="rank-total">/${e.totalEntrants}</span></span> <span class="hist-record">${e.wins}-${e.losses}</span></span><span class="hist-tourney-name"><a href="../tournaments/${escapeHtml(e.slug)}.html">${escapeHtml(e.label)}</a></span><span class="standings-record">${escapeHtml(formatDateHuman(e.date))}</span></li>`).join('\n');
+      return `    <div class="doubles-card ${accent}">
+      <div class="doubles-card-names">${flagImg}${escapeHtml(name)} <span class="doubles-amp">&amp;</span> ${partnerNameHtml}</div>
+      <div class="doubles-card-stats"><span>${partner.entries.length} tournament${partner.entries.length === 1 ? '' : 's'}</span><span class="doubles-sep">&middot;</span><span>${pWins}-${pLosses} (${winPct}%)</span></div>
+      <ol class="standings-list">
+${entriesHtml}
+      </ol>
+    </div>`;
+    }).join('\n')}
+  </div>
+</div>`
+      : '';
 
     const hasChart = ratingHistory.length >= 2;
 
@@ -4443,7 +4834,15 @@ ${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimM
 ${metaLine}
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>
 
-<div class="tourney-section">
+${isDoublesOnly
+  ? `<div class="player-grid doubles-only-grid">
+  <div class="tourney-section tournaments-col">
+    <h2>Tournaments (${p.tournaments.size})</h2>
+    ${historyRows}
+  </div>
+${doublesSectionHtml}
+</div>`
+  : `<div class="tourney-section">
   <div class="player-stats-grid">
 ${statTiles}
 ${goalsTile}
@@ -4460,7 +4859,7 @@ ${hasChart
 
   <div class="tourney-section h2h-col">
     <h2>Match Statistics</h2>
-    ${h2hSection}
+    ${h2hSection}${doublesSectionHtml}
   </div>
 
   <div class="tourney-section matches-col">
@@ -4486,9 +4885,10 @@ ${hasChart
 
   <div class="tourney-section player-col">
     <h2>Match Statistics</h2>
-    ${h2hSection}
+    ${h2hSection}${doublesSectionHtml ? `
+    ${doublesSectionHtml}` : ''}
   </div>
-</div>`}
+</div>`}`}
 <script>
   document.querySelectorAll('.show-more-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -4627,6 +5027,7 @@ async function main() {
   const preTournamentRatings = new Map();
   const snapshots = [];
   processChronologically(allTournaments, players, glicko, preTournamentRatings, snapshots);
+  registerDoublesParticipants(allTournaments, players);
 
   const tournamentMetaByUrl = new Map(allTournaments.map((t) => [t.url, { location: t.location, slug: t.slug }]));
   const playerRows = buildPlayerRows(players, tournamentMetaByUrl);
@@ -4770,6 +5171,14 @@ async function main() {
     }
   });
 
+  // Doubles tournaments never touch the Glicko engine and, per request,
+  // don't show up on the Historical Rating chart either -- ratingHistoryById
+  // is built purely from `snapshots` above, which already never contains a
+  // doubles tournament (processChronologically skips them before ever
+  // pushing one). buildDoublesHistories still powers the player page's
+  // separate Doubles section (partner/tournament breakdown), just not the chart.
+  const doublesHistories = buildDoublesHistories(allTournaments);
+
   // Map sidebar player lists are alphabetical (not rank order) and only
   // include players with a resolved location — even the unfiltered "All
   // States" list, since an unlocatable player can't meaningfully belong to
@@ -4852,12 +5261,14 @@ async function main() {
     };
   });
 
+  const doublesTeams = buildDoublesTeams(allTournaments);
+
   writeCsv(playerRows);
   writeCss();
   writeJs();
-  writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments, rankingHistory);
+  writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments, rankingHistory, doublesTeams);
   writeTournamentPages(allTournaments);
-  writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById);
+  writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById, doublesHistories);
 
   console.log(`Unique players: ${playerRows.length}`);
   console.log(`Tournaments:    ${allTournaments.length}`);
@@ -4878,4 +5289,5 @@ module.exports = {
   collectChallonge,
   collectStartgg,
   buildPlayerStats,
+  parseTeamName,
 };

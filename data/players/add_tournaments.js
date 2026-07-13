@@ -1,7 +1,12 @@
 // Interactive helper for the full add-tournament workflow:
 //   1. Fetches every URL listed in tours-all-challonge.md / tours-all-startgg.md
 //      (both fetch_batch.js scripts are idempotent, so this is safe to rerun).
-//   2. Finds tournaments that were newly fetched this run and walks through
+//   2. For each new tournament, asks whether it was singles or doubles (2v2);
+//      doubles writes tournament-doubles.json and splits every raw
+//      participant/match name on + or & (see parseTeamName in
+//      aggregate_players.js) before the per-name dedup pass below, so each
+//      half of a team is resolved as its own individual player.
+//   3. Finds tournaments that were newly fetched this run and walks through
 //      their unique raw player names one at a time, asking you to confirm
 //      merges/collisions only where the existing auto-resolution logic in
 //      aggregate_players.js can't already resolve them safely:
@@ -13,14 +18,14 @@
 //      Everything else (exact repeats of an unambiguous name, names already
 //      covered by an alias or split resolution) is left to auto-resolve
 //      exactly as it does today — no prompt.
-//   3. For each new tournament, asks for city/state/venue (blank = skip) and
+//   4. For each new tournament, asks for city/state/venue (blank = skip) and
 //      writes them to tournament-locations.json.
-//   4. For genuinely new players, asks for city/state/country (blank = skip)
+//   5. For genuinely new players, asks for city/state/country (blank = skip)
 //      and an optional card color override, and writes them to
 //      player-info.json. Decisions made earlier in the same run are reused
 //      automatically (no re-asking) because they're written to the shared
 //      identities object as soon as they're made.
-//   5. Regenerates players.csv / index.html / index.css / index.js via
+//   6. Regenerates players.csv / index.html / index.css / index.js via
 //      aggregate_players.js.
 //
 // Usage: node add_tournaments.js
@@ -33,13 +38,14 @@ const { execFileSync } = require('child_process');
 const readline = require('node:readline/promises');
 const {
   DATA_ROOT, identities, hiddenNames, normName, resolveIdentity,
-  displayName, collectChallonge, collectStartgg, buildPlayerStats,
+  displayName, collectChallonge, collectStartgg, buildPlayerStats, parseTeamName,
 } = require('./aggregate_players');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
 
 const IDENTITIES_PATH = path.join(DATA_ROOT, 'player-identities.json');
 const PLAYER_INFO_PATH = path.join(DATA_ROOT, 'player-info.json');
 const TOURNAMENT_LOCATIONS_PATH = path.join(DATA_ROOT, 'tournament-locations.json');
+const TOURNAMENT_DOUBLES_PATH = path.join(DATA_ROOT, 'tournament-doubles.json');
 const CHALLONGE_STORE = path.join(DATA_ROOT, 'challonge', 'tournaments.json');
 const STARTGG_STORE = path.join(DATA_ROOT, 'start.gg', 'tournaments.json');
 
@@ -121,6 +127,8 @@ playerInfoFile.players = playerInfoFile.players || {};
 const tournamentLocationsFile = readJson(TOURNAMENT_LOCATIONS_PATH, { locations: {} });
 tournamentLocationsFile.locations = tournamentLocationsFile.locations || {};
 
+const tournamentDoublesFile = readJson(TOURNAMENT_DOUBLES_PATH, {});
+
 function saveIdentities() {
   fs.writeFileSync(IDENTITIES_PATH, serializeIdentities(identities));
 }
@@ -129,6 +137,18 @@ function savePlayerInfo() {
 }
 function saveTournamentLocations() {
   fs.writeFileSync(TOURNAMENT_LOCATIONS_PATH, serializeKeyedMap(tournamentLocationsFile, 'locations'));
+}
+// tournament-doubles.json is a flat { url: true, ... } map (like
+// tournament-groups.json) -- no wrapper key, so it gets its own tiny
+// serializer instead of reusing serializeKeyedMap.
+function saveTournamentDoubles() {
+  const lines = ['{'];
+  const keys = Object.keys(tournamentDoublesFile);
+  keys.forEach((key, i) => {
+    lines.push(`${JSON.stringify(key)}: ${compactStringify(tournamentDoublesFile[key])}${i < keys.length - 1 ? ',' : ''}`);
+  });
+  lines.push('}');
+  fs.writeFileSync(TOURNAMENT_DOUBLES_PATH, lines.join('\n') + '\n');
 }
 
 // --- Fuzzy matching ---
@@ -258,14 +278,34 @@ async function askLocationAndColor(rl, label) {
   return info;
 }
 
+// Asks whether a new tournament was singles or doubles (2v2 teams) and
+// persists the answer to tournament-doubles.json -- doubles tournaments get
+// their raw participant/match names split on + or & (see parseTeamName) so
+// each half is deduped/resolved as a normal individual player, and never
+// feed the Glicko rating engine (see aggregate_players.js's isDoubles guards).
+async function askTournamentFormat(rl, tournament) {
+  if (tournament.url in tournamentDoublesFile) return tournamentDoublesFile[tournament.url];
+  const answer = (await ask(rl, `\nIs "${tournament.label}" (${tournament.date}) singles or doubles? [s/d] (default s): `)).trim().toLowerCase();
+  const isDoubles = answer === 'd' || answer === 'doubles';
+  if (isDoubles) {
+    tournamentDoublesFile[tournament.url] = true;
+    saveTournamentDoubles();
+  }
+  return isDoubles;
+}
+
 async function askTournamentLocation(rl, tournament) {
   if (tournamentLocationsFile.locations[tournament.url]) return; // already set, don't re-ask
 
-  console.log(`\nLocation for: ${tournament.label} (${tournament.date})`);
+  console.log(`\nTournament: ${tournament.label} (${tournament.date})`);
+  const nameOverride = await ask(rl, `  Name (blank = keep "${tournament.label}"): `);
+  const dateOverride = await ask(rl, `  Date (blank = keep ${tournament.date}, format YYYY-MM-DD): `);
   const city = await ask(rl, '  City (blank = unknown): ');
   const state = await ask(rl, '  State/Province abbreviation (blank = unknown): ');
   const location = await ask(rl, '  Venue (blank = unknown): ');
   const info = {};
+  if (nameOverride) info.name = nameOverride;
+  if (dateOverride) info.date = dateOverride;
   if (city) info.city = city;
   if (state) info.state = state;
   if (location) info.location = location;
@@ -412,10 +452,26 @@ async function main() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
     for (const t of newTournaments) {
+      const isDoublesTournament = await askTournamentFormat(rl, t);
       await askTournamentLocation(rl, t);
 
       const isStartgg = t.source === 'start.gg';
-      const names = [...new Set(rawParticipantNames(t.url, isStartgg))];
+      const rawNames = [...new Set(rawParticipantNames(t.url, isStartgg))];
+
+      // Doubles participant/team names are "PlayerA + PlayerB" (or "&") --
+      // split each into its two halves and dedupe/resolve them individually,
+      // same as any singles name, instead of treating the joined string as
+      // one (nonexistent) player.
+      const names = isDoublesTournament
+        ? [...new Set(rawNames.flatMap((raw) => {
+            const parts = parseTeamName(raw);
+            if (!parts) {
+              console.log(`  Could not split team name "${raw}" on + or & -- treating it as a single name.`);
+              return [raw];
+            }
+            return parts;
+          }))]
+        : rawNames;
 
       for (const rawName of names) {
         if (hiddenNames.has(normName(rawName).toLowerCase())) continue;
@@ -454,4 +510,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { saveIdentities, savePlayerInfo, saveTournamentLocations };
+module.exports = { saveIdentities, savePlayerInfo, saveTournamentLocations, saveTournamentDoubles };
