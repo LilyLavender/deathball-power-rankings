@@ -162,6 +162,13 @@ async function main() {
         url,
         tournament_id: String(tournamentId),
         resolved_via: 'browser',
+        // Browser-resolved tournaments bypass fetch_batch.js's own
+        // before/after diff (add_tournaments.js's normal "was this newly
+        // fetched this run" check), so they'd otherwise never surface for
+        // the interactive player/location prompts. This flag tells
+        // add_tournaments.js to treat it as new exactly once; it clears the
+        // flag itself after walking the tournament's prompts.
+        dedupPending: true,
         fetched_at: new Date().toISOString(),
         tournament: t,
       };

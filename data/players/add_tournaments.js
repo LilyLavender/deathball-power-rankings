@@ -437,9 +437,21 @@ function newFetchedUrls(storePath, beforeUrls) {
   const store = readJson(storePath, {});
   return new Set(
     Object.entries(store)
-      .filter(([url, rec]) => !beforeUrls.has(url) && !rec.error)
+      // dedupPending means resolve_via_browser.js resolved this outside of
+      // fetch_batch.js's own diff (see that script) -- surface it here too,
+      // regardless of whether it was already in the store before this run.
+      .filter(([url, rec]) => (!beforeUrls.has(url) && !rec.error) || rec.dedupPending)
       .map(([url]) => url)
   );
+}
+
+function clearDedupPending(url, isStartgg) {
+  const storePath = isStartgg ? STARTGG_STORE : CHALLONGE_STORE;
+  const store = readJson(storePath, {});
+  if (store[url] && store[url].dedupPending) {
+    delete store[url].dedupPending;
+    fs.writeFileSync(storePath, JSON.stringify(store, null, 1));
+  }
 }
 
 function rawParticipantNames(url, isStartgg) {
@@ -533,6 +545,8 @@ async function main() {
           });
         }
       }
+
+      clearDedupPending(t.url, isStartgg);
     }
   } finally {
     rl.close();
