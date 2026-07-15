@@ -1383,7 +1383,7 @@ function buildHeadToHead(matches) {
 
 // --- Output builders ---
 
-function buildPlayerRows(players, tournamentMetaByUrl) {
+function buildPlayerRows(players, tournamentMetaByUrl, lastActiveById) {
   return [...players.entries()]
     .map(([id, p]) => {
       const name = displayName(p);
@@ -1395,6 +1395,7 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
         losses: p.losses,
         games: p.games,
         winPct: p.games > 0 ? p.wins / p.games : 0,
+        lastActive: formatMonthYearHuman(lastActiveById.get(id)),
         location: info.city
           ? [info.city, info.state].filter(Boolean).join(', ')
           : info.state
@@ -1411,7 +1412,7 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
         })),
       };
     })
-    .sort((a, b) => b.winPct - a.winPct || b.games - a.games);
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
 // Identity/location fields for a player that don't vary with the point in
@@ -1419,7 +1420,7 @@ function buildPlayerRows(players, tournamentMetaByUrl) {
 // buildRankingRow so the Rankings tab's "View rankings at" history payload
 // (see rankingHistory in main()) can ship this once per player instead of
 // once per player per checkpoint, which would otherwise dominate its size.
-function buildPlayerMeta(id, p) {
+function buildPlayerMeta(id, p, lastActiveById) {
   const name = displayName(p);
   const info = lookupPlayerInfo(id, name);
   return {
@@ -1434,16 +1435,17 @@ function buildPlayerMeta(id, p) {
     locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
     state: info.state || '',
     color: info.color || '',
+    lastActive: lastActiveById ? formatMonthYearHuman(lastActiveById.get(id)) : '',
   };
 }
 
 // Shared by buildRankingRows (current standings) and buildRankingRowsAt
 // (a historical checkpoint) — everything about a ranking row except which
 // wins/losses/games/rating snapshot it's built from.
-function buildRankingRow(id, p, wins, losses, games, g) {
+function buildRankingRow(id, p, wins, losses, games, g, lastActiveById) {
   return {
     id,
-    ...buildPlayerMeta(id, p),
+    ...buildPlayerMeta(id, p, lastActiveById),
     r: g.r,
     rd: g.rd,
     conservativeRating: glicko2.conservativeRating(g),
@@ -1481,11 +1483,11 @@ function applyPlacementChange(rows, previousRanks, participantIds) {
   });
 }
 
-function buildRankingRows(players, glicko, previousRanks, participantIds) {
+function buildRankingRows(players, glicko, previousRanks, participantIds, lastActiveById) {
   const rows = [...players.entries()]
     .map(([id, p]) => {
       const g = glicko.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
-      return buildRankingRow(id, p, p.wins, p.losses, p.games, g);
+      return buildRankingRow(id, p, p.wins, p.losses, p.games, g, lastActiveById);
     })
     .filter((r) => r.games > 0)
     .sort((a, b) => b.conservativeRating - a.conservativeRating);
@@ -1498,13 +1500,13 @@ function buildRankingRows(players, glicko, previousRanks, participantIds) {
 // in main()) instead of the live players/glicko maps. Player identity (name,
 // location, color) still comes from the live `players` map — those don't
 // meaningfully change over time and aren't snapshotted per-tournament.
-function buildRankingRowsAt(players, ratings, stats, previousRanks, participantIds) {
+function buildRankingRowsAt(players, ratings, stats, previousRanks, participantIds, lastActiveById) {
   const rows = [...stats.entries()]
     .map(([id, s]) => {
       const p = players.get(id);
       if (!p) return null;
       const g = ratings.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
-      return buildRankingRow(id, p, s.wins, s.losses, s.games, g);
+      return buildRankingRow(id, p, s.wins, s.losses, s.games, g, lastActiveById);
     })
     .filter((r) => r && r.games > 0)
     .sort((a, b) => b.conservativeRating - a.conservativeRating);
@@ -1583,7 +1585,7 @@ function escapeHtml(str) {
 // deep (tournaments/*.html, players/*.html) — same convention as playerHref.
 function siteFooter(prefix) {
   return `<footer class="site-footer">
-  <span>&copy; ${new Date().getFullYear()} LilyLambda</span>
+  <span>&copy; ${new Date().getFullYear()} LilyLambda – Power Rankings Site | Tony Hauber – DeathBall</span>
   <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
   <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
   <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
@@ -2216,6 +2218,11 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
    the list itself, so their grid-template-columns stay in sync. */
 .map-sidebar-colhead { display: grid; gap: 0.5rem; padding: 0 0.75rem 0.35rem; font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; }
 .map-sidebar-colhead span:not(:first-child) { text-align: right; }
+.map-sidebar-colhead span { cursor: pointer; user-select: none; }
+.map-sidebar-colhead span:hover { color: #999; }
+.map-sidebar-colhead span.sorted-asc, .map-sidebar-colhead span.sorted-desc { color: #3eff8b; }
+.map-sidebar-colhead span.sorted-asc::after { content: " \\25B2"; }
+.map-sidebar-colhead span.sorted-desc::after { content: " \\25BC"; }
 .map-sidebar-list li { display: grid; gap: 0.5rem; }
 .map-sidebar-list li > span:not(:first-child) { text-align: right; margin-left: 0; }
 /* The map-cols-* class is toggled onto both the header div (which is
@@ -2583,6 +2590,43 @@ function writeJs() {
     return nameSpan;
   }
 
+  // Column definitions per view -- key is the field on each item (see
+  // toMapPlayerJson/toMapTournamentJson in aggregate_players.js), type
+  // picks string vs numeric comparison. Tournament dates sort on the raw
+  // ISO field (di), not the pre-formatted display date (d), for the same
+  // reason as the main tables: comparing formatted strings would order by
+  // month name instead of chronologically.
+  const MAP_SIDEBAR_COLUMNS = {
+    players: [
+      { label: 'Player', key: 'n', type: 'string' },
+      { label: 'Placement', key: 'rank', type: 'number' },
+      { label: 'Rating', key: 'v', type: 'number' },
+      { label: 'Last Active', key: 'la', type: 'string' },
+    ],
+    tournaments: [
+      { label: 'Tournament', key: 'n', type: 'string' },
+      { label: 'Date', key: 'di', type: 'string' },
+    ],
+  };
+
+  function sortMapItems(items, sort, columns) {
+    if (!sort) return items;
+    const col = columns.find((c) => c.key === sort.key);
+    if (!col) return items;
+    const sorted = items.slice();
+    sorted.sort((a, b) => {
+      if (col.type === 'number') {
+        const valA = Number(a[col.key]);
+        const valB = Number(b[col.key]);
+        return sort.asc ? valA - valB : valB - valA;
+      }
+      const valA = String(a[col.key] || '').toLowerCase();
+      const valB = String(b[col.key] || '').toLowerCase();
+      return sort.asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+    return sorted;
+  }
+
   function renderMapSidebar(panel, regionId, view) {
     const data = MAP_REGION_DATA[regionId];
     if (!data) return;
@@ -2599,14 +2643,36 @@ function writeJs() {
     colhead.classList.toggle('map-cols-players', !isTournaments);
     colhead.classList.toggle('map-cols-tournaments', isTournaments);
     colhead.innerHTML = '';
-    (isTournaments ? ['Tournament', 'Date'] : ['Player', 'Placement', 'Rating', 'Last Active']).forEach((label) => {
+    if (!panel._mapSort) panel._mapSort = { players: null, tournaments: null };
+    const sortKey = isTournaments ? 'tournaments' : 'players';
+    const columns = MAP_SIDEBAR_COLUMNS[sortKey];
+    const currentSort = panel._mapSort[sortKey];
+    columns.forEach((col) => {
       const span = document.createElement('span');
-      span.textContent = label;
+      span.textContent = col.label;
+      if (currentSort && currentSort.key === col.key) {
+        span.classList.add(currentSort.asc ? 'sorted-asc' : 'sorted-desc');
+      }
+      span.addEventListener('click', () => {
+        // Cycles ascending -> descending -> unsorted (back to the default
+        // list order) rather than just flipping asc/desc forever, so there's
+        // a way back to the original ordering without a page reload.
+        const prev = panel._mapSort[sortKey];
+        if (!prev || prev.key !== col.key) {
+          panel._mapSort[sortKey] = { key: col.key, asc: true };
+        } else if (prev.asc) {
+          panel._mapSort[sortKey] = { key: col.key, asc: false };
+        } else {
+          panel._mapSort[sortKey] = null;
+        }
+        if (panel._mapRefreshSidebar) panel._mapRefreshSidebar();
+        else renderMapSidebar(panel, regionId, view);
+      });
       colhead.appendChild(span);
     });
 
     list.innerHTML = '';
-    const items = isTournaments ? data.tournamentsList : data.playersList;
+    const items = sortMapItems(isTournaments ? data.tournamentsList : data.playersList, currentSort, columns);
     if (!items.length) {
       const li = document.createElement('li');
       li.className = 'map-sidebar-empty';
@@ -2903,7 +2969,12 @@ function writeJs() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'deathball-power-rankings-top100.png';
+      // Local date parts (not toISOString(), which is UTC and can read as
+      // tomorrow/yesterday depending on the visitor's timezone) -- date
+      // only, no time, so repeated same-day downloads share one filename.
+      const now = new Date();
+      const dateStamp = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      a.download = 'deathball-power-rankings-' + dateStamp + '.png';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -3132,6 +3203,10 @@ function writeJs() {
     addNumeric(String(row.losses), row.losses);
     addNumeric(String(row.games), row.games);
     addNumeric((row.winPct * 100).toFixed(1) + '%', row.winPct);
+
+    const lastActiveTd = document.createElement('td');
+    lastActiveTd.textContent = meta.lastActive || '';
+    tr.appendChild(lastActiveTd);
 
     const locTd = document.createElement('td');
     locTd.className = 'col-location';
@@ -3518,6 +3593,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
       <td class="numeric" data-sort="${p.winPct}">${(p.winPct * 100).toFixed(1)}%</td>
+      <td class="numeric">${escapeHtml(p.lastActive)}</td>
       <td class="numeric" data-sort="${p.tournaments.length}">${p.tournaments.length}</td>
       <td>${tournamentLinks}</td>
     </tr>`;
@@ -3545,6 +3621,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
       <td class="numeric" data-sort="${p.winPct}">${(p.winPct * 100).toFixed(1)}%</td>
+      <td class="numeric">${escapeHtml(p.lastActive)}</td>
       <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${p.flag ? `<img class="loc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : ''}${escapeHtml(p.location)}</td>
     </tr>`;
   }).join('\n');
@@ -3655,7 +3732,7 @@ ${latestSectionHtml}
       <div class="pr-square-qr-label">Join the Discord</div>
     </div>
   </div>
-  <div class="pr-square-footer">&copy; ${now.getFullYear()} LilyLambda &middot; Data sourced from start.gg &amp; Challonge</div>
+  <div class="pr-square-footer">&copy; ${now.getFullYear()} LilyLambda – PR | Tony Hauber – DeathBall &middot; Data sourced from start.gg &amp; Challonge</div>
   <img class="pr-square-mascot" src="https://images.squarespace-cdn.com/content/v1/5a6facad12abd9a8e6582589/ab04b855-7d9a-4bb8-b6a9-9f456e9d395d/Purple-wizard-large-deathball-arcade.png" alt="">
 </div>`;
 
@@ -3668,7 +3745,7 @@ ${latestSectionHtml}
   // always shows a list; clicking a region filters it rather than
   // replacing it with a totally separate view).
   const toMapPlayerJson = (p) => ({ n: p.name, h: p.href, rank: p.rank, v: p.rating, rd: p.rd, la: p.lastActive, f: p.flag });
-  const toMapTournamentJson = (t) => ({ n: t.label, h: t.href, d: t.date, f: t.flag });
+  const toMapTournamentJson = (t) => ({ n: t.label, h: t.href, d: t.date, di: t.dateIso, f: t.flag });
   const mapRegionData = Object.fromEntries(mapRegions.map((r) => [r.id, {
     name: r.name,
     playersList: r.playersList.map(toMapPlayerJson),
@@ -3716,12 +3793,13 @@ ${buildEventsTabHtml(upcomingEvents)}
   <table data-sortable>
     <thead>
       <tr>
-        <th data-type="string">Player</th>
+        <th data-type="string" class="sorted-asc">Player</th>
         <th data-type="string" data-blank-last="true" class="col-location">Location</th>
         <th data-type="number">Wins</th>
         <th data-type="number">Losses</th>
         <th data-type="number">Games</th>
-        <th data-type="number" class="sorted-desc">Win %</th>
+        <th data-type="number">Win %</th>
+        <th data-type="string">Last Active</th>
         <th data-type="number">Tournaments</th>
         <th data-type="string">Tournament List</th>
       </tr>
@@ -3846,6 +3924,7 @@ ${rankingCardItems}
         <th data-type="number">L</th>
         <th data-type="number">Games</th>
         <th data-type="number">Win %</th>
+        <th data-type="string">Last Active</th>
         <th data-type="string" data-blank-last="true" class="col-location">Location</th>
       </tr>
     </thead>
@@ -5030,7 +5109,20 @@ async function main() {
   registerDoublesParticipants(allTournaments, players);
 
   const tournamentMetaByUrl = new Map(allTournaments.map((t) => [t.url, { location: t.location, slug: t.slug }]));
-  const playerRows = buildPlayerRows(players, tournamentMetaByUrl);
+  // Last active = the most recent tournament date among a player's own
+  // tournaments, cross-referenced against allTournaments (players only
+  // track which tournament URLs they played, not dates).
+  const urlToDate = new Map(allTournaments.map((t) => [t.url, t.date]));
+  const lastActiveById = new Map();
+  for (const [id, p] of players.entries()) {
+    let last = '';
+    for (const url of p.tournaments.keys()) {
+      const d = urlToDate.get(url);
+      if (d && d > last) last = d;
+    }
+    lastActiveById.set(id, last);
+  }
+  const playerRows = buildPlayerRows(players, tournamentMetaByUrl, lastActiveById);
 
   // Each snapshot's ratings map covers everyone who'd played by that point,
   // so ranking it the same way buildRankingRows does (conservative rating,
@@ -5073,7 +5165,7 @@ async function main() {
   const previousGroup = groupCheckpoints[groupCheckpoints.length - 2];
   const previousRanks = previousGroup ? snapshotRanks[previousGroup.index] : new Map();
 
-  const rankingRows = buildRankingRows(players, glicko, previousRanks, currentGroup ? currentGroup.participantIds : new Set());
+  const rankingRows = buildRankingRows(players, glicko, previousRanks, currentGroup ? currentGroup.participantIds : new Set(), lastActiveById);
 
   // Must run before writeHtml/writeTournamentPages/writePlayerPages — they
   // all link player names via playerHref(), which reads this.
@@ -5086,7 +5178,7 @@ async function main() {
   // dominate the payload's size for no benefit.
   const playerMetaById = {};
   for (const [id, p] of players.entries()) {
-    const meta = buildPlayerMeta(id, p);
+    const meta = buildPlayerMeta(id, p, lastActiveById);
     playerMetaById[id] = {
       name: meta.name,
       href: playerHref(id, ''),
@@ -5096,6 +5188,7 @@ async function main() {
       locAbbr: meta.locAbbr,
       state: meta.state,
       color: meta.color,
+      lastActive: meta.lastActive,
     };
   }
 
@@ -5186,19 +5279,6 @@ async function main() {
   // Power Ranking position (looked up from the rank-ordered rankingRows
   // before re-sorting alphabetically), just displayed in an alpha-sorted list.
   const rankById = new Map(rankingRows.map((p, i) => [p.id, i + 1]));
-  // Last active = the most recent tournament date among a player's own
-  // tournaments, cross-referenced against allTournaments (players only
-  // track which tournament URLs they played, not dates).
-  const urlToDate = new Map(allTournaments.map((t) => [t.url, t.date]));
-  const lastActiveById = new Map();
-  for (const [id, p] of players.entries()) {
-    let last = '';
-    for (const url of p.tournaments.keys()) {
-      const d = urlToDate.get(url);
-      if (d && d > last) last = d;
-    }
-    lastActiveById.set(id, last);
-  }
   const toMapPlayer = (p) => ({
     name: p.name,
     href: playerHref(p.id, ''),
@@ -5223,7 +5303,7 @@ async function main() {
   // Tournament dates are pre-formatted human-readable ("May 23, 2026") at
   // generation time — sort by the raw ISO date first, then format, since
   // sorting the formatted strings would order by month name instead of time.
-  const toMapTournament = (t) => ({ label: t.label, href: `tournaments/${t.slug}.html`, date: formatDateHuman(t.date), flag: t.locationDisplay.flag });
+  const toMapTournament = (t) => ({ label: t.label, href: `tournaments/${t.slug}.html`, date: formatDateHuman(t.date), dateIso: t.date, flag: t.locationDisplay.flag });
   const mapAllTournaments = [...allTournaments].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(toMapTournament);
   const regionTournamentsRaw = new Map();
   for (const t of allTournaments) {

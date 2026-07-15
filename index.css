@@ -545,6 +545,11 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
    the list itself, so their grid-template-columns stay in sync. */
 .map-sidebar-colhead { display: grid; gap: 0.5rem; padding: 0 0.75rem 0.35rem; font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555; }
 .map-sidebar-colhead span:not(:first-child) { text-align: right; }
+.map-sidebar-colhead span { cursor: pointer; user-select: none; }
+.map-sidebar-colhead span:hover { color: #999; }
+.map-sidebar-colhead span.sorted-asc, .map-sidebar-colhead span.sorted-desc { color: #3eff8b; }
+.map-sidebar-colhead span.sorted-asc::after { content: " \25B2"; }
+.map-sidebar-colhead span.sorted-desc::after { content: " \25BC"; }
 .map-sidebar-list li { display: grid; gap: 0.5rem; }
 .map-sidebar-list li > span:not(:first-child) { text-align: right; margin-left: 0; }
 /* The map-cols-* class is toggled onto both the header div (which is

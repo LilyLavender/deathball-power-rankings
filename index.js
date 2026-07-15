@@ -324,6 +324,43 @@
     return nameSpan;
   }
 
+  // Column definitions per view -- key is the field on each item (see
+  // toMapPlayerJson/toMapTournamentJson in aggregate_players.js), type
+  // picks string vs numeric comparison. Tournament dates sort on the raw
+  // ISO field (di), not the pre-formatted display date (d), for the same
+  // reason as the main tables: comparing formatted strings would order by
+  // month name instead of chronologically.
+  const MAP_SIDEBAR_COLUMNS = {
+    players: [
+      { label: 'Player', key: 'n', type: 'string' },
+      { label: 'Placement', key: 'rank', type: 'number' },
+      { label: 'Rating', key: 'v', type: 'number' },
+      { label: 'Last Active', key: 'la', type: 'string' },
+    ],
+    tournaments: [
+      { label: 'Tournament', key: 'n', type: 'string' },
+      { label: 'Date', key: 'di', type: 'string' },
+    ],
+  };
+
+  function sortMapItems(items, sort, columns) {
+    if (!sort) return items;
+    const col = columns.find((c) => c.key === sort.key);
+    if (!col) return items;
+    const sorted = items.slice();
+    sorted.sort((a, b) => {
+      if (col.type === 'number') {
+        const valA = Number(a[col.key]);
+        const valB = Number(b[col.key]);
+        return sort.asc ? valA - valB : valB - valA;
+      }
+      const valA = String(a[col.key] || '').toLowerCase();
+      const valB = String(b[col.key] || '').toLowerCase();
+      return sort.asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+    return sorted;
+  }
+
   function renderMapSidebar(panel, regionId, view) {
     const data = MAP_REGION_DATA[regionId];
     if (!data) return;
@@ -340,14 +377,36 @@
     colhead.classList.toggle('map-cols-players', !isTournaments);
     colhead.classList.toggle('map-cols-tournaments', isTournaments);
     colhead.innerHTML = '';
-    (isTournaments ? ['Tournament', 'Date'] : ['Player', 'Placement', 'Rating', 'Last Active']).forEach((label) => {
+    if (!panel._mapSort) panel._mapSort = { players: null, tournaments: null };
+    const sortKey = isTournaments ? 'tournaments' : 'players';
+    const columns = MAP_SIDEBAR_COLUMNS[sortKey];
+    const currentSort = panel._mapSort[sortKey];
+    columns.forEach((col) => {
       const span = document.createElement('span');
-      span.textContent = label;
+      span.textContent = col.label;
+      if (currentSort && currentSort.key === col.key) {
+        span.classList.add(currentSort.asc ? 'sorted-asc' : 'sorted-desc');
+      }
+      span.addEventListener('click', () => {
+        // Cycles ascending -> descending -> unsorted (back to the default
+        // list order) rather than just flipping asc/desc forever, so there's
+        // a way back to the original ordering without a page reload.
+        const prev = panel._mapSort[sortKey];
+        if (!prev || prev.key !== col.key) {
+          panel._mapSort[sortKey] = { key: col.key, asc: true };
+        } else if (prev.asc) {
+          panel._mapSort[sortKey] = { key: col.key, asc: false };
+        } else {
+          panel._mapSort[sortKey] = null;
+        }
+        if (panel._mapRefreshSidebar) panel._mapRefreshSidebar();
+        else renderMapSidebar(panel, regionId, view);
+      });
       colhead.appendChild(span);
     });
 
     list.innerHTML = '';
-    const items = isTournaments ? data.tournamentsList : data.playersList;
+    const items = sortMapItems(isTournaments ? data.tournamentsList : data.playersList, currentSort, columns);
     if (!items.length) {
       const li = document.createElement('li');
       li.className = 'map-sidebar-empty';
@@ -644,7 +703,12 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'deathball-power-rankings-top100.png';
+      // Local date parts (not toISOString(), which is UTC and can read as
+      // tomorrow/yesterday depending on the visitor's timezone) -- date
+      // only, no time, so repeated same-day downloads share one filename.
+      const now = new Date();
+      const dateStamp = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      a.download = 'deathball-power-rankings-top100-' + dateStamp + '.png';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -873,6 +937,10 @@
     addNumeric(String(row.losses), row.losses);
     addNumeric(String(row.games), row.games);
     addNumeric((row.winPct * 100).toFixed(1) + '%', row.winPct);
+
+    const lastActiveTd = document.createElement('td');
+    lastActiveTd.textContent = meta.lastActive || '';
+    tr.appendChild(lastActiveTd);
 
     const locTd = document.createElement('td');
     locTd.className = 'col-location';
