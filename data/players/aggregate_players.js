@@ -23,6 +23,27 @@ const { buildBracketData } = require('./build_bracket');
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
+// Base URL for og:url on every generated page (Discord/Twitter/etc link
+// embeds). No canonical domain is configured anywhere else in the repo
+// (no CNAME, no Pages workflow) -- this is the GitHub Pages URL the site
+// is actually served from.
+const SITE_URL = 'https://lilylavender.github.io/deathball-power-rankings/';
+
+// Shared Open Graph / Twitter Card tags for link-unfurling embeds (Discord,
+// Twitter/X, Slack, etc). No og:image is set -- the site has no per-page
+// preview image, and Discord/Twitter still render a title+description card
+// without one.
+function embedMetaTags(title, description, urlPath) {
+  return `<meta property="og:title" content="${escapeHtml(title)}" />
+<meta property="og:description" content="${escapeHtml(description)}" />
+<meta property="og:url" content="${escapeHtml(SITE_URL + urlPath)}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="DeathBall Power Rankings" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${escapeHtml(title)}" />
+<meta name="twitter:description" content="${escapeHtml(description)}" />`;
+}
+
 // Inlined as data: URIs at build time rather than referenced by path -- a
 // relative same-origin <img src> can silently fail to load if the page is
 // ever opened as a local file:// URL instead of served over http(s), and
@@ -4133,6 +4154,7 @@ ${latestSectionHtml}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DeathBall Power Rankings</title>
+${embedMetaTags('DeathBall Power Rankings', 'Glicko-2 power rankings, player stats, and tournament results for the DeathBall community', '')}
 <link rel="stylesheet" href="index.css">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
@@ -4901,6 +4923,7 @@ ${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(t.label)} — DeathBall Power Rankings</title>
+${embedMetaTags(`${t.label} — DeathBall Tournament`, `Tournament results for ${t.label}. ${[formatDateHuman(t.date), t.locationDisplay.cityState || null].filter(Boolean).join(' — ')}`, `tournaments/${t.slug}.html`)}
 <link rel="stylesheet" href="../index.css">
 ${extraHead}
 </head>
@@ -5322,6 +5345,14 @@ ${entriesHtml}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(name)} — DeathBall Power Rankings</title>
+${embedMetaTags(`${name} — DeathBall Player`, isDoublesOnly
+      ? ['Profile for ' + name + '.', location || null].filter(Boolean).join(' ')
+      : [
+          'Profile for ' + name + '.',
+          `${p.wins}-${p.losses} (${(winPct * 100).toFixed(1)}%) across ${p.games} game${p.games === 1 ? '' : 's'}.`,
+          officialIdx >= 0 ? `Ranked #${officialIdx + 1}.` : null,
+          location || null,
+        ].filter(Boolean).join(' '), `players/${slug}.html`)}
 <link rel="stylesheet" href="../index.css">
 </head>
 <body class="${cardAccent(id, info.color)}">
