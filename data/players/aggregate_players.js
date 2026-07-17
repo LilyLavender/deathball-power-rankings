@@ -3867,7 +3867,7 @@ function buildDoublesTeams(allTournaments) {
   const teams = new Map();
   const ensureTeam = (a, b) => {
     const key = teamKeyFor(a.id, b.id);
-    if (!teams.has(key)) teams.set(key, { key, players: [a, b], tournaments: new Map(), wins: 0, losses: 0 });
+    if (!teams.has(key)) teams.set(key, { key, players: [a, b], tournaments: new Map(), wins: 0, losses: 0, tournamentWins: 0 });
     return teams.get(key);
   };
 
@@ -3900,6 +3900,16 @@ function buildDoublesTeams(allTournaments) {
       loserTeam.tournaments.set(t.url, t.label);
       loserTeam.losses += 1;
     }
+
+    // Tournament-win tiebreaker: which team placed 1st in this event.
+    const standings = buildStandings(t);
+    const pairsByCanonName = resolveDoublesTeamPairs(t);
+    for (const s of standings) {
+      if (s.rank !== 1) continue;
+      const pair = pairsByCanonName.get(s.name);
+      if (!pair) continue;
+      ensureTeam(pair[0], pair[1]).tournamentWins += 1;
+    }
   }
 
   return [...teams.values()]
@@ -3910,7 +3920,9 @@ function buildDoublesTeams(allTournaments) {
       wins: team.wins,
       losses: team.losses,
     }))
-    .sort((a, b) => b.wins - a.wins || (b.wins - b.losses) - (a.wins - a.losses));
+    .sort((a, b) => b.wins - a.wins
+      || teams.get(b.key).tournamentWins - teams.get(a.key).tournamentWins
+      || (b.wins - b.losses) - (a.wins - a.losses));
 }
 
 // Per-player breakdown of doubles results by partner, for the player page's
@@ -5149,10 +5161,20 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     // Years the player has tournament placements in, collapsed to a single
     // year ("2021") or a range ("2021-2024") for a compact tenure callout
     // shown in the subtitle rather than a stat tile.
-    const activeYears = [...new Set(hist.placements.map((pl) => (pl.date || '').slice(0, 4)).filter(Boolean))].sort();
-    const activeRange = activeYears.length
-      ? (activeYears[0] === activeYears[activeYears.length - 1] ? activeYears[0] : `${activeYears[0]}-${activeYears[activeYears.length - 1]}`)
-      : '';
+    // Years with placements, collapsed into contiguous ranges -- a gap of at
+    // least 2 fully inactive years between two active years (year diff >= 3)
+    // starts a new comma-separated segment instead of stretching one range
+    // across a real absence, e.g. "2019 - 2021, 2025" rather than "2019-2025".
+    const activeYearNums = [...new Set(hist.placements.map((pl) => Number((pl.date || '').slice(0, 4))).filter(Boolean))].sort((a, b) => a - b);
+    const activeSegments = [];
+    for (const year of activeYearNums) {
+      const last = activeSegments[activeSegments.length - 1];
+      if (last && year - last[1] < 3) last[1] = year;
+      else activeSegments.push([year, year]);
+    }
+    const activeRange = activeSegments
+      .map(([start, end]) => (start === end ? `${start}` : `${start} - ${end}`))
+      .join(', ');
 
     const statTiles = `<div class="stat-tile stat-span-3">
   <div class="stat-multi">
@@ -5238,8 +5260,8 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     // Giant-killer/upset-victim counts show the 150+ tier as the headline
     // number, with the rarer 200+ tier called out alongside it when there
     // are any — a player with zero 200+ wins doesn't need "0 (200+)" noise.
-    const gapTierValue = (count, majorCount) => count
-      ? `&times;${count} <span class="h2h-record-dim">(150+)</span>${majorCount ? ` <span class="h2h-record-dim">&middot; ${majorCount} (200+)</span>` : ''}`
+    const gapTierValue = (count, majorCount, showTier = true) => count
+      ? `&times;${count}${showTier ? ` <span class="h2h-record-dim">(150+)</span>${majorCount ? ` <span class="h2h-record-dim">&middot; ${majorCount} (200+)</span>` : ''}` : ''}`
       : '&mdash;';
 
     const peakRating = ratingHistory.length
@@ -5260,7 +5282,7 @@ ${statTile('Longest Loss Streak', `${h2h.longestLossStreak}`, 'snowflake')}
 ${statTile('Podium Rate (Top 3)', rateValue(podiumCount), 'podium', undefined, 'Top 3 Rate')}
 ${statTile('Top 8 Rate', rateValue(top8Count), 'brackets')}
 ${statTile('Giant Killer Wins', gapTierValue(h2h.giantKiller, h2h.giantKillerMajor), 'breakout')}
-${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimMajor), 'breakoutDown', undefined, 'Upset Losses')}
+${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimMajor, false), 'breakoutDown', undefined, 'Upset Losses')}
 </div>`;
 
     const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) => {
