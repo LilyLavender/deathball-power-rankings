@@ -81,6 +81,7 @@
         panel.classList.add('active');
         moveIndicator(underline, tabsEl, btn);
         setHeaderForTab(btn.dataset.tab);
+        updateDownloadVisibility();
         // Cards were sized while this panel was display:none (offsetWidth 0
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
@@ -97,6 +98,59 @@
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
+  }
+
+  // Mobile-only hamburger toggle for the tab row (see .tabs-toggle in
+  // writeCss) -- .tabs-toggle is display:none above the mobile breakpoint,
+  // so this is inert on desktop even though the listener is always attached.
+  // .tabs slides in from the left as a fixed drawer over a dimming
+  // .tabs-backdrop, which also closes the drawer when tapped.
+  function enableTabsMenu() {
+    const toggle = document.querySelector('.tabs-toggle');
+    const tabsEl = document.querySelector('.tabs');
+    const backdrop = document.querySelector('.tabs-backdrop');
+    if (!toggle || !tabsEl) return;
+    function setOpen(open) {
+      tabsEl.classList.toggle('mobile-open', open);
+      if (backdrop) backdrop.classList.toggle('mobile-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    }
+    toggle.addEventListener('click', () => setOpen(!tabsEl.classList.contains('mobile-open')));
+    if (backdrop) backdrop.addEventListener('click', () => setOpen(false));
+    // Selecting a tab closes the drawer again rather than leaving it open
+    // over the newly-shown panel.
+    tabsEl.querySelectorAll('.tab-button').forEach((btn) => {
+      btn.addEventListener('click', () => setOpen(false));
+    });
+  }
+
+  // Mobile-only collapse for the Power Rankings tab's filter/action row (see
+  // .rankings-options-toggle in writeCss) -- off by default on mobile so the
+  // grid/table of rankings isn't pushed down by a wall of selects before
+  // anyone asks for them; the toggle itself is display:none on desktop,
+  // where the panel is always visible regardless of this class.
+  function enableOptionsToggle() {
+    const toggle = document.querySelector('.rankings-options-toggle');
+    const panel = document.getElementById('rankings-options-panel');
+    if (!toggle || !panel) return;
+    toggle.addEventListener('click', () => {
+      const open = panel.classList.toggle('options-open');
+      toggle.classList.toggle('active', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      // The Grid/Table and Hide/Show-delta sliding pills were positioned (at
+      // page load and on every filter change) while this panel was
+      // display:none on mobile -- getBoundingClientRect on a display:none
+      // element's children is a zero-size rect, so both pills got stuck at
+      // left:0/width:0 until something recomputed them against real layout.
+      // Re-run that positioning now that the panel actually has size.
+      if (open) {
+        for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
+          const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
+          const innerActive = innerToggle.querySelector('.view-btn.active, .delta-btn.active');
+          if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
+        }
+      }
+    });
   }
 
   function populateStateFilter(panel) {
@@ -456,12 +510,74 @@
     if (home.length === 4 && home.every((n) => !isNaN(n))) animateViewBox(svg, home, 450);
   }
 
+  // Two-finger pinch zoom on the map SVG specifically (touch-only — desktop
+  // mouse users are unaffected). touch-action:none on .map-svg (see writeCss)
+  // stops the browser from treating this as a page-level gesture first.
+  // Zoom is anchored at the pinch midpoint (converted to the SVG's own user
+  // space via getScreenCTM, not just the viewBox center) so the point under
+  // the fingers stays under the fingers as the box shrinks/grows, clamped to
+  // between the full home extent and 15% of it so a pinch can't zoom out
+  // past the map's natural bounds or in until it's a meaningless close-up.
+  function enableMapPinchZoom(svg) {
+    const home = (svg.dataset.home || '').split(' ').map(Number);
+    if (home.length !== 4 || home.some((n) => isNaN(n))) return;
+    const maxW = home[2];
+    const minW = home[2] * 0.15;
+    let startDist = null;
+    let startBox = null;
+    let anchor = null;
+
+    function touchDist(touches) {
+      return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    }
+    function toSvgPoint(clientX, clientY) {
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return null;
+      const pt = svg.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      return pt.matrixTransform(ctm.inverse());
+    }
+    function endPinch() {
+      startDist = null;
+      startBox = null;
+      anchor = null;
+    }
+
+    svg.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 2) return;
+      e.preventDefault();
+      startDist = touchDist(e.touches);
+      const vb = svg.viewBox.baseVal;
+      startBox = { x: vb.x, y: vb.y, width: vb.width, height: vb.height };
+      anchor = toSvgPoint(
+        (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        (e.touches[0].clientY + e.touches[1].clientY) / 2
+      );
+    }, { passive: false });
+
+    svg.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 2 || !startDist || !startBox || !anchor) return;
+      e.preventDefault();
+      const scale = startDist / touchDist(e.touches);
+      const newW = Math.max(minW, Math.min(maxW, startBox.width * scale));
+      const newH = newW * (startBox.height / startBox.width);
+      const fx = (anchor.x - startBox.x) / startBox.width;
+      const fy = (anchor.y - startBox.y) / startBox.height;
+      svg.setAttribute('viewBox', (anchor.x - fx * newW).toFixed(2) + ' ' + (anchor.y - fy * newH).toFixed(2) + ' ' + newW.toFixed(2) + ' ' + newH.toFixed(2));
+    }, { passive: false });
+
+    svg.addEventListener('touchend', (e) => { if (e.touches.length < 2) endPinch(); });
+    svg.addEventListener('touchcancel', endPinch);
+  }
+
   function enableMapRegions(panel) {
     if (!panel) return;
     const svg = panel.querySelector('.map-svg');
     const regions = [...panel.querySelectorAll('.map-region')];
     const backBtn = panel.querySelector('.map-sidebar-back');
     let selectedId = '__ALL__';
+    enableMapPinchZoom(svg);
 
     function currentView() {
       const active = panel.querySelector('.view-btn.active');
@@ -708,7 +824,7 @@
       // only, no time, so repeated same-day downloads share one filename.
       const now = new Date();
       const dateStamp = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-      a.download = 'deathball-power-rankings-top100-' + dateStamp + '.png';
+      a.download = 'deathball-power-rankings-' + dateStamp + '.png';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -718,6 +834,24 @@
     }
   }
 
+  // Two download buttons exist in the DOM at once -- .download-btn-boxed
+  // (desktop, inside the Power Rankings tab-controls row) and
+  // .download-btn-icon (mobile, top-right of .page-title-row, so it stays
+  // reachable regardless of whether the mobile Options panel is collapsed)
+  // -- CSS shows exactly one of them per viewport (see writeCss), but both
+  // need the same show/hide state, which depends on which tab and which
+  // view (Grid vs Table) are active. Both enableTabs (tab switch) and
+  // enableViewToggle (view switch) call this after they change either one.
+  function updateDownloadVisibility() {
+    const btns = document.querySelectorAll('.download-btn');
+    if (!btns.length) return;
+    const rankingsPanel = document.getElementById('rankings-tab');
+    const rankingsActive = !!rankingsPanel && rankingsPanel.classList.contains('active');
+    const gridActive = !!rankingsPanel && !!rankingsPanel.querySelector('.view-btn[data-view="grid"].active');
+    const hide = !(rankingsActive && gridActive);
+    btns.forEach((btn) => { btn.hidden = hide; });
+  }
+
   function enableViewToggle(panel) {
     const buttons = [...panel.querySelectorAll('.view-btn')];
     if (!buttons.length) return;
@@ -725,7 +859,6 @@
     const table = panel.querySelector('table');
     const toggleEl = panel.querySelector('.view-toggle');
     const indicator = panel.querySelector('.view-toggle-indicator');
-    const downloadBtn = panel.querySelector('.download-btn');
     // The rank-delta badge only ever exists in the card markup (see
     // rankDeltaHtml's call sites), so its show/hide pill is meaningless --
     // and would sit there inert -- once the Table view is active.
@@ -735,24 +868,29 @@
     // easy to trigger since generation takes a couple of seconds and gave
     // no visible feedback before this). A failed attempt clears back to the
     // normal enabled state (not "loading") so the button is clickable again
-    // to retry, rather than getting stuck disabled forever.
-    const downloadLabel = downloadBtn ? downloadBtn.querySelector('.download-btn-label') : null;
-    if (downloadBtn) downloadBtn.addEventListener('click', async () => {
-      if (downloadBtn.disabled) return;
-      downloadBtn.disabled = true;
-      downloadBtn.classList.remove('failed');
-      downloadBtn.classList.add('loading');
-      if (downloadLabel) downloadLabel.textContent = 'Preparing…';
-      try {
-        await downloadRankingsImage(panel);
-        if (downloadLabel) downloadLabel.textContent = 'Download PR';
-      } catch (err) {
-        downloadBtn.classList.add('failed');
-        if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
-      } finally {
-        downloadBtn.disabled = false;
-        downloadBtn.classList.remove('loading');
-      }
+    // to retry, rather than getting stuck disabled forever. Only one of the
+    // two buttons is ever visible/clickable at once (see writeCss), but the
+    // listener is attached to both independently -- each just drives its
+    // own loading/failed state and the same downloadRankingsImage call.
+    document.querySelectorAll('.download-btn').forEach((downloadBtn) => {
+      const downloadLabel = downloadBtn.querySelector('.download-btn-label');
+      downloadBtn.addEventListener('click', async () => {
+        if (downloadBtn.disabled) return;
+        downloadBtn.disabled = true;
+        downloadBtn.classList.remove('failed');
+        downloadBtn.classList.add('loading');
+        if (downloadLabel) downloadLabel.textContent = 'Preparing…';
+        try {
+          await downloadRankingsImage(panel);
+          if (downloadLabel) downloadLabel.textContent = 'Download PR';
+        } catch (err) {
+          downloadBtn.classList.add('failed');
+          if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.classList.remove('loading');
+        }
+      });
     });
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -761,7 +899,12 @@
         const view = btn.dataset.view;
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
-        if (downloadBtn) downloadBtn.hidden = view !== 'grid';
+        updateDownloadVisibility();
+        // Desktop collapses this pill entirely on Table view (see
+        // .rank-delta-toggle[hidden] in writeCss); mobile overrides that
+        // same [hidden] rule back to display:flex + visibility:hidden so it
+        // still reserves its space instead of shifting the Min Games/Max RD
+        // controls next to it.
         if (rankDeltaToggle) rankDeltaToggle.hidden = view !== 'grid';
         moveIndicator(indicator, toggleEl, btn);
         // Also refreshes the "Click a column header to sort." hint for the
@@ -770,7 +913,7 @@
       });
     });
     const activeBtn = buttons.find((b) => b.classList.contains('active'));
-    if (downloadBtn) downloadBtn.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
+    updateDownloadVisibility();
     if (rankDeltaToggle) rankDeltaToggle.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
     moveIndicator(indicator, toggleEl, activeBtn);
   }
@@ -1064,6 +1207,8 @@
 
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
+  enableTabsMenu();
+  enableOptionsToggle();
   initPanel('players-tab');
   initPanel('rankings-tab');
   enableMapToggle(document.getElementById('map-tab'));

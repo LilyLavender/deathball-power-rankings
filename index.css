@@ -47,24 +47,40 @@ a:hover { text-decoration: underline; }
 .view-btn.active, .delta-btn.active { color: #000; }
 .view-btn:not(.active):hover, .delta-btn:not(.active):hover { color: #bbb; }
 /* Grid-only toggle -- the up/down/new badge never renders in the table
-   view at all (see rankingTableRows), so this pill itself is hidden
-   whenever the Grid/Table switch is on Table. */
+   view at all (see rankingTableRows), so this pill is hidden whenever the
+   Grid/Table switch is on Table (see the [hidden] boolean attribute set in
+   enableViewToggle). Desktop collapses it entirely; the mobile override
+   below (inside the max-width query) turns this back into
+   visibility:hidden instead, so on a phone it still reserves its own box
+   rather than shifting the Min Games/Max RD controls sitting next to it. */
 .rank-delta-toggle[hidden] { display: none; }
-.download-btn { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
-.download-btn:hover { border-color: #3eff8b; color: #3eff8b; }
+/* Two separate elements share the .download-btn hook/behavior classes
+   (see writeJs, which wires both up identically) but only one is ever
+   visible at a given viewport width: .download-btn-boxed is the original
+   labeled button living inside the Power Rankings tab-controls row
+   (desktop); .download-btn-icon is a plain icon-only control in
+   .page-title-row, top-right, next to .tabs-toggle (mobile) -- it needs to
+   stay reachable regardless of whether the mobile Options panel is
+   collapsed, which the boxed version inside that panel can't guarantee. */
 .download-btn[hidden] { display: none; }
 .download-btn:disabled { cursor: default; opacity: 0.85; }
-.download-btn.failed { border-color: #ff5c5c; color: #ff5c5c; }
-.download-icon { width: 14px; height: 14px; flex-shrink: 0; }
 /* Spinner swaps in for .download-icon while generating -- see the
    downloadBtn click handler in initPanel/enableViewToggle, which toggles
    .loading and disables the button for the duration so a second click
    can't kick off a concurrent export mid-generation. Path is a ~300 degree
    open ring (not a full circle) so the rotation itself reads as motion. */
-.download-spinner { display: none; width: 14px; height: 14px; flex-shrink: 0; animation: download-spin 0.7s linear infinite; }
+.download-spinner { display: none; flex-shrink: 0; animation: download-spin 0.7s linear infinite; }
 .download-btn.loading .download-icon { display: none; }
 .download-btn.loading .download-spinner { display: block; }
 @keyframes download-spin { to { transform: rotate(360deg); } }
+.download-btn-boxed { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
+.download-btn-boxed:hover { border-color: #3eff8b; color: #3eff8b; }
+.download-btn-boxed.failed { border-color: #ff5c5c; color: #ff5c5c; }
+.download-btn-boxed .download-icon, .download-btn-boxed .download-spinner { width: 14px; height: 14px; flex-shrink: 0; }
+.download-btn-icon { display: none; align-items: center; justify-content: center; flex-shrink: 0; background: none; border: none; padding: 0; margin: 0; color: #aaa; cursor: pointer; transition: color 150ms; }
+.download-btn-icon:hover { color: #3eff8b; }
+.download-btn-icon.failed { color: #ff5c5c; }
+.download-btn-icon .download-icon, .download-btn-icon .download-spinner { width: 20px; height: 20px; flex-shrink: 0; }
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -101,6 +117,7 @@ a:hover { text-decoration: underline; }
    content, not a secondary history section) — scoped to the map sidebar
    only so player pages' own lists are untouched. */
 .map-sidebar-list .hist-tourney-name { font-size: 1.05rem; }
+.table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
@@ -568,3 +585,184 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
 .site-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #222; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center; color: #555; font-size: 0.8rem; }
 .site-footer a { color: #777; }
 .site-footer a:hover { color: #3eff8b; }
+/* --- Mobile responsiveness (max-width queries + a couple of touch-only
+   rules that are inert without a touchscreen, so nothing here can ever
+   affect a mouse/desktop-width viewport) --- */
+/* h1 loses its own bottom margin here since .page-title-row (which wraps it
+   together with the hamburger icon and the download icon) carries that
+   margin instead -- see writeHtml, where index.html's h1 is the only one
+   wrapped this way (player/tournament page h1s are untouched, plain
+   elements, so their own margin: 0 0 1.5rem rule still applies to them). */
+.page-title-row { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 1.5rem; }
+.page-title-row h1 { margin: 0; flex: 1 1 auto; min-width: 0; }
+.tabs-toggle { display: none; }
+/* Off by default (no .options-open class) above the mobile breakpoint too,
+   but the toggle button itself is display:none there, so .tab-controls'
+   normal (always visible) CSS is the only thing that ever applies on desktop. */
+.rankings-options-toggle { display: none; }
+/* Hidden on desktop -- the "Historical Rating"-style heading above the top
+   stat grid only exists to label that grid once it's the first thing on the
+   page on mobile (see .player-title-row and h1 shrinking below); on desktop
+   the grid sits directly under the page title where a label is redundant. */
+.mobile-only-heading { display: none; }
+.player-title-row { display: block; }
+.aka-toggle { display: none; }
+.aka-content { display: none; }
+.footer-copyright-short { display: none; }
+/* .footer-row is display:contents on desktop so each pairing (credits+Ko-Fi,
+   sources+correction) still renders as independent flex items of
+   .site-footer, wrapping wherever the row happens to break -- the grouping
+   only turns into an actual visual row once .site-footer switches to
+   flex-direction:column on mobile (see below). */
+.footer-row { display: contents; }
+.date-short { display: none; }
+.stat-label-short { display: none; }
+/* Lets a two-finger touch gesture on the map be handled entirely by
+   enableMapPinchZoom (see writeJs) instead of the browser's own page-zoom/
+   scroll gesture recognizer grabbing it first. No effect for mouse/desktop
+   input, so this isn't gated behind a max-width query. */
+.map-svg { touch-action: none; }
+@media (max-width: 700px) {
+  h1 { font-size: 1.1rem; }
+  /* Hamburger replaces the full tab row -- six tabs (Power Rankings/Players/
+     Tournaments/Doubles/Map/Events) don't fit a phone width even scrolled --
+     as a plain white icon next to the page title (no button box), matching
+     .download-btn's own icon-only look on the opposite side of the row.
+     Clicking it slides .tabs in from the left edge as a fixed drawer over a
+     dimming backdrop, rather than a dropdown that would otherwise need to
+     find room directly under a title row that's now also holding the
+     download icon. */
+  .tabs-toggle { display: flex; align-items: center; justify-content: center; background: none; border: none; padding: 0; color: #ccc; cursor: pointer; flex-shrink: 0; }
+  .tabs-toggle:hover { color: #3eff8b; }
+  .tabs-toggle-icon { width: 20px; height: 20px; }
+  .tabs { flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; width: 78%; max-width: 300px; background: #0a0a0a; border-right: 1px solid #222; z-index: 50; padding: 4rem 1.25rem 1.5rem; margin-bottom: 0; transform: translateX(-100%); transition: transform 220ms ease; }
+  .tabs.mobile-open { transform: translateX(0); }
+  .tab-button { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid #161616; margin-bottom: 0; }
+  .tab-underline { display: none; }
+  .tabs-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 40; }
+  .tabs-backdrop.mobile-open { display: block; }
+
+  /* Swap which download button is visible -- the boxed one (inside the
+     Power Rankings tab-controls row) only makes sense on desktop; mobile
+     shows the plain icon in .page-title-row instead, top-right next to
+     .tabs-toggle. Both share the same [hidden]/loading/failed state (see
+     updateDownloadVisibility/enableViewToggle in writeJs), so only their
+     display toggles here, not their visibility logic. */
+  .download-btn-boxed { display: none; }
+  .download-btn-icon { display: inline-flex; }
+
+  /* Fixed 240px standings column (see .tourney-standings above) can pinch
+     the bracket column on a narrow phone -- stack them instead, same as
+     flex-wrap already does once both no longer fit side by side at a
+     reasonable size. */
+  .tourney-standings { flex: 1 1 100%; }
+  .tourney-matches { flex: 1 1 100%; }
+  /* Tournament page: location / date / "view original" each pinned to their
+     own line via column layout, reordered (source order stays date/location/
+     link, unchanged for desktop) and clipped with an ellipsis instead of
+     wrapping a second time within their own line. */
+  .tourney-meta { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  .tourney-meta > * { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tourney-loc { order: 1; }
+  .tourney-date { order: 2; }
+  .tourney-original-link { order: 3; }
+
+  /* Power Rankings tab: filters/view-toggles/download collapse behind an
+     Options button instead of sitting open above the grid by default. */
+  .rankings-options-toggle { display: flex; align-items: center; gap: 0.4rem; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.4rem 0.9rem; margin-bottom: 1rem; cursor: pointer; }
+  .rankings-options-toggle:hover, .rankings-options-toggle.active { border-color: #3eff8b; color: #3eff8b; }
+  .rankings-options-caret { width: 9px; height: 6px; transition: transform 150ms ease; }
+  .rankings-options-toggle.active .rankings-options-caret { transform: rotate(180deg); }
+  #rankings-options-panel { display: none; }
+  /* 2-column grid instead of one long wrapping row of controls -- the
+     Grid/Table and Hide/Show-delta pills naturally land in row 1 (one per
+     column), then the four filter selects form a clean 2x2 grid below them
+     in the same document order they already had. Grid's default
+     justify-items:stretch fills each pill's own column width instead of
+     leaving it at its cramped intrinsic size -- its two buttons then split
+     that width evenly (flex: 1 1 0) rather than sizing to their own text. */
+  #rankings-options-panel.options-open { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem 0.75rem; align-items: end; }
+  #rankings-options-panel.options-open .view-toggle,
+  #rankings-options-panel.options-open .rank-delta-toggle { width: 100%; }
+  #rankings-options-panel.options-open .view-btn,
+  #rankings-options-panel.options-open .delta-btn { flex: 1 1 0; text-align: center; white-space: nowrap; padding-left: 0.4rem; padding-right: 0.4rem; }
+  /* Override the desktop [hidden]{display:none} rule above -- on mobile,
+     switching to Table view should leave this pill's grid cell empty
+     (invisible but still occupying its row) instead of collapsing it and
+     shifting Min Games/Max RD up into row 1. Needs !important to beat the
+     global [hidden]{display:none !important} rule (see the .pr-card/
+     [hidden] note elsewhere in this file), which otherwise wins over any
+     non-important rule regardless of selector specificity or source order. */
+  .rank-delta-toggle[hidden] { display: flex !important; visibility: hidden; }
+  #rankings-options-panel.options-open label { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  #rankings-options-panel.options-open label select { width: 100%; }
+
+  /* Player page: name + AKA toggle share a row; the header matching
+     "Historical Rating" only shows here since the grid is the first section
+     on the page on mobile. */
+  .player-title-row { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .mobile-only-heading { display: block; }
+  .aka-full { display: none; }
+  /* Caret sits after the "AKA" text (flex row, not the default marker
+     position) and never itself moves -- toggling .open only affects
+     .aka-content, a separate full-width block between the name and the
+     location/active meta line, so this button's own size/position is
+     identical whether the list is open or not. */
+  .aka-toggle { display: inline-flex; align-items: center; gap: 0.3rem; background: none; border: none; padding: 0; cursor: pointer; color: #888; font-family: 'Rajdhani', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; user-select: none; }
+  .aka-toggle:hover, .aka-toggle.active { color: #3eff8b; }
+  .aka-caret { width: 9px; height: 6px; flex-shrink: 0; transition: transform 150ms ease; }
+  .aka-toggle.active .aka-caret { transform: rotate(180deg); }
+  /* Same -1rem trick .tourney-meta uses below to pull up close under h1's
+     own large default margin -- keeps the title-to-AKA gap the same size as
+     the title-to-location gap on a page with no AKA line at all. */
+  .aka-content { margin: -1rem 0 0; color: #888; font-size: 0.85rem; }
+  .aka-content.open { display: block; }
+  /* Once AKA is open and visible, .tourney-meta directly follows it instead
+     of h1 -- its own -1rem margin-top (tuned for pulling up against h1's
+     larger gap) would sit too tight against a line of plain text, so this
+     drops it to the same 0.3rem rhythm .tourney-meta already uses between
+     its own location/active lines, keeping every line in the block evenly
+     spaced. Only matches while .open is present, so a page with the AKA
+     toggle closed (or no aliases at all) still gets the normal tourney-meta
+     spacing straight off h1. */
+  .aka-content.open + .tourney-meta { margin-top: 0.3rem; }
+
+  /* Match Statistics tiles stay 2-per-row instead of collapsing to 1 once
+     each tile's 200px minimum no longer fits twice across a phone width. */
+  .h2h-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* Condensed "Jul. 10 '26" dates in the Matches/Tournaments lists (see
+     dateDualHtml) instead of the full "July 10, 2026" form. */
+  .date-full { display: none; }
+  .date-short { display: inline; }
+
+  /* Shorter Match Statistics labels (see dualLabelHtml) -- e.g. "Best Win
+     Rate" instead of "Best Win Rate (Min. 3)" -- only on mobile; desktop
+     keeps the original, more explicit wording. */
+  .stat-label-full { display: none; }
+  .stat-label-short { display: inline; }
+
+  /* Footer: condensed copyright, one row per group (credits+Ko-Fi, then
+     sources+correction) instead of wrapping wherever the flex row breaks. */
+  .site-footer { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .footer-copyright-full { display: none; }
+  .footer-copyright-short { display: inline; }
+  .footer-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+}
+@media (max-width: 800px) {
+  /* 2:1 map/sidebar split (see .map-panel above) is too cramped once the
+     map column itself drops under ~300px -- stack map above sidebar and
+     shrink the map's own fixed height (still fixed, just a smaller fixed
+     value, matching the "never resize dynamically" approach used on desktop). */
+  .map-panel { grid-template-columns: 1fr; }
+  .map-svg { height: 320px; }
+  .map-sidebar { height: 420px; }
+  /* Drop the Rating column from the player sidebar list -- Placement and
+     Last Active are what people actually scan for on a narrow screen, and
+     three number columns plus a name don't have room to breathe. Column
+     order is Player/Placement/Rating/Last Active (see MAP_SIDEBAR_COLUMNS
+     and renderMapSidebar in writeJs), so Rating is always the 3rd child. */
+  .map-sidebar-colhead.map-cols-players, ol.map-cols-players li { grid-template-columns: 1fr 3.4rem 4rem; }
+  .map-sidebar-colhead.map-cols-players span:nth-child(3),
+  ol.map-cols-players li > span:nth-child(3) { display: none; }
+}

@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Eddy — DeathBall Power Rankings</title>
 <link rel="stylesheet" href="../index.css">
 </head>
 <body class="card-green">
-<h1>Eddy</h1>
+<div class="player-title-row"><h1>Eddy</h1></div>
+
 <div class="tourney-meta"><span class="alias-list">Active 2026</span></div>
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>
 
@@ -14,7 +16,7 @@
   <div class="tourney-section tournaments-col">
     <h2>Tournaments (1)</h2>
     <ol class="standings-list" id="tournament-history-list">
-      <li><span class="standings-rank"><span class="rank-ordinal">3rd<span class="rank-total">/7</span></span> <span class="hist-record">3-4</span></span><span class="hist-tourney-name"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Flag_of_Minneapolis.svg" title="Minneapolis" alt="Minneapolis"><a href="../tournaments/sgdq-2026-doubles-2026-07-10.html">SGDQ 2026 Doubles</a> <span class="doubles-pill doubles-pill-plain">w/ <a href="../players/dmt-goobz.html">Dmt Goobz</a></span></span><span class="standings-record">July 10, 2026</span></li>
+      <li><span class="standings-rank"><span class="rank-ordinal">3rd<span class="rank-total">/7</span></span> <span class="hist-record">3-4</span></span><span class="hist-tourney-name"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Flag_of_Minneapolis.svg" title="Minneapolis" alt="Minneapolis"><a href="../tournaments/sgdq-2026-doubles-2026-07-10.html">SGDQ 2026 Doubles</a> <span class="doubles-pill doubles-pill-plain">w/ <a href="../players/dmt-goobz.html">Dmt Goobz</a></span></span><span class="standings-record"><span class="date-full">July 10, 2026</span><span class="date-short">Jul. 10 '26</span></span></li>
     </ol>
     
   </div>
@@ -40,6 +42,21 @@
       if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
     });
   });
+
+  // Mobile-only AKA disclosure (see .aka-toggle/.aka-content in writeCss) --
+  // a plain button + a separate content block, not <details>, so the toggle
+  // itself never moves and the alias list lands in its own full-width row
+  // below the location/active line instead of right next to the button.
+  (() => {
+    const toggle = document.querySelector('.aka-toggle');
+    const content = document.getElementById('aka-content');
+    if (!toggle || !content) return;
+    toggle.addEventListener('click', () => {
+      const open = content.classList.toggle('open');
+      toggle.classList.toggle('active', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+  })();
 
   // Historical-rating chart: hover/focus a tournament point to show its
   // tooltip, positioned against the chart's inner box (its actual
@@ -86,10 +103,14 @@
   });
 </script>
 <footer class="site-footer">
-  <span>&copy; 2026 LilyLambda – Power Rankings Site | Tony Hauber – DeathBall</span>
-  <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
-  <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
-  <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
+  <span class="footer-row">
+    <span class="footer-copyright"><span class="footer-copyright-full">&copy; 2026 LilyLambda – Power Rankings Site | Tony Hauber – DeathBall</span><span class="footer-copyright-short">&copy; 2026 LilyLambda, Tony Hauber</span></span>
+    <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
+  </span>
+  <span class="footer-row">
+    <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
+    <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
+  </span>
 </footer>
 </body>
 </html>

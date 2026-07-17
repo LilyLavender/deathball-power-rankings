@@ -1584,11 +1584,19 @@ function escapeHtml(str) {
 // prefix is '' from a root-level page (index.html) or '../' from one level
 // deep (tournaments/*.html, players/*.html) — same convention as playerHref.
 function siteFooter(prefix) {
+  const year = new Date().getFullYear();
+  // Grouped into two rows -- credits+Ko-Fi, then sources+correction -- so
+  // each link sits directly after the thing it's most related to instead of
+  // all four being one undifferentiated wrapping line.
   return `<footer class="site-footer">
-  <span>&copy; ${new Date().getFullYear()} LilyLambda – Power Rankings Site | Tony Hauber – DeathBall</span>
-  <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
-  <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
-  <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
+  <span class="footer-row">
+    <span class="footer-copyright"><span class="footer-copyright-full">&copy; ${year} LilyLambda – Power Rankings Site | Tony Hauber – DeathBall</span><span class="footer-copyright-short">&copy; ${year} LilyLambda, Tony Hauber</span></span>
+    <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
+  </span>
+  <span class="footer-row">
+    <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
+    <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
+  </span>
 </footer>`;
 }
 
@@ -1616,6 +1624,25 @@ function formatMonthYearHumanFull(iso) {
   if (!m) return iso || '';
   const [, y, mo] = m;
   return `${MONTH_NAMES[parseInt(mo, 10) - 1]} ${y}`;
+}
+
+const MONTH_ABBR = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'Jun.', 'Jul.', 'Aug.', 'Sep.', 'Oct.', 'Nov.', 'Dec.'];
+
+// "Mon. D 'YY" ("Jul. 10 '26") — condensed form of formatDateHuman for the
+// Matches/Tournaments list rows on player pages, which get too tight for a
+// full "July 10, 2026" once the whole row has to fit a phone-width column.
+function formatDateShort(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return iso || '';
+  const [, y, mo, d] = m;
+  return `${MONTH_ABBR[parseInt(mo, 10) - 1]} ${parseInt(d, 10)} '${y.slice(2)}`;
+}
+
+// Renders both the full and condensed date forms side by side, one hidden
+// via CSS depending on viewport (see .date-full/.date-short in writeCss) —
+// avoids needing JS to reformat dates client-side just for a mobile layout.
+function dateDualHtml(iso) {
+  return `<span class="date-full">${escapeHtml(formatDateHuman(iso))}</span><span class="date-short">${escapeHtml(formatDateShort(iso))}</span>`;
 }
 
 // Year only ("2025") — used for "Last Active" on the Map tab, where the
@@ -1720,24 +1747,40 @@ a:hover { text-decoration: underline; }
 .view-btn.active, .delta-btn.active { color: #000; }
 .view-btn:not(.active):hover, .delta-btn:not(.active):hover { color: #bbb; }
 /* Grid-only toggle -- the up/down/new badge never renders in the table
-   view at all (see rankingTableRows), so this pill itself is hidden
-   whenever the Grid/Table switch is on Table. */
+   view at all (see rankingTableRows), so this pill is hidden whenever the
+   Grid/Table switch is on Table (see the [hidden] boolean attribute set in
+   enableViewToggle). Desktop collapses it entirely; the mobile override
+   below (inside the max-width query) turns this back into
+   visibility:hidden instead, so on a phone it still reserves its own box
+   rather than shifting the Min Games/Max RD controls sitting next to it. */
 .rank-delta-toggle[hidden] { display: none; }
-.download-btn { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
-.download-btn:hover { border-color: #3eff8b; color: #3eff8b; }
+/* Two separate elements share the .download-btn hook/behavior classes
+   (see writeJs, which wires both up identically) but only one is ever
+   visible at a given viewport width: .download-btn-boxed is the original
+   labeled button living inside the Power Rankings tab-controls row
+   (desktop); .download-btn-icon is a plain icon-only control in
+   .page-title-row, top-right, next to .tabs-toggle (mobile) -- it needs to
+   stay reachable regardless of whether the mobile Options panel is
+   collapsed, which the boxed version inside that panel can't guarantee. */
 .download-btn[hidden] { display: none; }
 .download-btn:disabled { cursor: default; opacity: 0.85; }
-.download-btn.failed { border-color: #ff5c5c; color: #ff5c5c; }
-.download-icon { width: 14px; height: 14px; flex-shrink: 0; }
 /* Spinner swaps in for .download-icon while generating -- see the
    downloadBtn click handler in initPanel/enableViewToggle, which toggles
    .loading and disables the button for the duration so a second click
    can't kick off a concurrent export mid-generation. Path is a ~300 degree
    open ring (not a full circle) so the rotation itself reads as motion. */
-.download-spinner { display: none; width: 14px; height: 14px; flex-shrink: 0; animation: download-spin 0.7s linear infinite; }
+.download-spinner { display: none; flex-shrink: 0; animation: download-spin 0.7s linear infinite; }
 .download-btn.loading .download-icon { display: none; }
 .download-btn.loading .download-spinner { display: block; }
 @keyframes download-spin { to { transform: rotate(360deg); } }
+.download-btn-boxed { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
+.download-btn-boxed:hover { border-color: #3eff8b; color: #3eff8b; }
+.download-btn-boxed.failed { border-color: #ff5c5c; color: #ff5c5c; }
+.download-btn-boxed .download-icon, .download-btn-boxed .download-spinner { width: 14px; height: 14px; flex-shrink: 0; }
+.download-btn-icon { display: none; align-items: center; justify-content: center; flex-shrink: 0; background: none; border: none; padding: 0; margin: 0; color: #aaa; cursor: pointer; transition: color 150ms; }
+.download-btn-icon:hover { color: #3eff8b; }
+.download-btn-icon.failed { color: #ff5c5c; }
+.download-btn-icon .download-icon, .download-btn-icon .download-spinner { width: 20px; height: 20px; flex-shrink: 0; }
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -1774,6 +1817,7 @@ a:hover { text-decoration: underline; }
    content, not a secondary history section) — scoped to the map sidebar
    only so player pages' own lists are untouched. */
 .map-sidebar-list .hist-tourney-name { font-size: 1.05rem; }
+.table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 1rem; }
 #rankings-tab table { user-select: none; }
 th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1a1a1a; text-align: left; vertical-align: middle; }
@@ -2241,6 +2285,187 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
 .site-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #222; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center; color: #555; font-size: 0.8rem; }
 .site-footer a { color: #777; }
 .site-footer a:hover { color: #3eff8b; }
+/* --- Mobile responsiveness (max-width queries + a couple of touch-only
+   rules that are inert without a touchscreen, so nothing here can ever
+   affect a mouse/desktop-width viewport) --- */
+/* h1 loses its own bottom margin here since .page-title-row (which wraps it
+   together with the hamburger icon and the download icon) carries that
+   margin instead -- see writeHtml, where index.html's h1 is the only one
+   wrapped this way (player/tournament page h1s are untouched, plain
+   elements, so their own margin: 0 0 1.5rem rule still applies to them). */
+.page-title-row { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 1.5rem; }
+.page-title-row h1 { margin: 0; flex: 1 1 auto; min-width: 0; }
+.tabs-toggle { display: none; }
+/* Off by default (no .options-open class) above the mobile breakpoint too,
+   but the toggle button itself is display:none there, so .tab-controls'
+   normal (always visible) CSS is the only thing that ever applies on desktop. */
+.rankings-options-toggle { display: none; }
+/* Hidden on desktop -- the "Historical Rating"-style heading above the top
+   stat grid only exists to label that grid once it's the first thing on the
+   page on mobile (see .player-title-row and h1 shrinking below); on desktop
+   the grid sits directly under the page title where a label is redundant. */
+.mobile-only-heading { display: none; }
+.player-title-row { display: block; }
+.aka-toggle { display: none; }
+.aka-content { display: none; }
+.footer-copyright-short { display: none; }
+/* .footer-row is display:contents on desktop so each pairing (credits+Ko-Fi,
+   sources+correction) still renders as independent flex items of
+   .site-footer, wrapping wherever the row happens to break -- the grouping
+   only turns into an actual visual row once .site-footer switches to
+   flex-direction:column on mobile (see below). */
+.footer-row { display: contents; }
+.date-short { display: none; }
+.stat-label-short { display: none; }
+/* Lets a two-finger touch gesture on the map be handled entirely by
+   enableMapPinchZoom (see writeJs) instead of the browser's own page-zoom/
+   scroll gesture recognizer grabbing it first. No effect for mouse/desktop
+   input, so this isn't gated behind a max-width query. */
+.map-svg { touch-action: none; }
+@media (max-width: 700px) {
+  h1 { font-size: 1.1rem; }
+  /* Hamburger replaces the full tab row -- six tabs (Power Rankings/Players/
+     Tournaments/Doubles/Map/Events) don't fit a phone width even scrolled --
+     as a plain white icon next to the page title (no button box), matching
+     .download-btn's own icon-only look on the opposite side of the row.
+     Clicking it slides .tabs in from the left edge as a fixed drawer over a
+     dimming backdrop, rather than a dropdown that would otherwise need to
+     find room directly under a title row that's now also holding the
+     download icon. */
+  .tabs-toggle { display: flex; align-items: center; justify-content: center; background: none; border: none; padding: 0; color: #ccc; cursor: pointer; flex-shrink: 0; }
+  .tabs-toggle:hover { color: #3eff8b; }
+  .tabs-toggle-icon { width: 20px; height: 20px; }
+  .tabs { flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; width: 78%; max-width: 300px; background: #0a0a0a; border-right: 1px solid #222; z-index: 50; padding: 4rem 1.25rem 1.5rem; margin-bottom: 0; transform: translateX(-100%); transition: transform 220ms ease; }
+  .tabs.mobile-open { transform: translateX(0); }
+  .tab-button { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid #161616; margin-bottom: 0; }
+  .tab-underline { display: none; }
+  .tabs-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 40; }
+  .tabs-backdrop.mobile-open { display: block; }
+
+  /* Swap which download button is visible -- the boxed one (inside the
+     Power Rankings tab-controls row) only makes sense on desktop; mobile
+     shows the plain icon in .page-title-row instead, top-right next to
+     .tabs-toggle. Both share the same [hidden]/loading/failed state (see
+     updateDownloadVisibility/enableViewToggle in writeJs), so only their
+     display toggles here, not their visibility logic. */
+  .download-btn-boxed { display: none; }
+  .download-btn-icon { display: inline-flex; }
+
+  /* Fixed 240px standings column (see .tourney-standings above) can pinch
+     the bracket column on a narrow phone -- stack them instead, same as
+     flex-wrap already does once both no longer fit side by side at a
+     reasonable size. */
+  .tourney-standings { flex: 1 1 100%; }
+  .tourney-matches { flex: 1 1 100%; }
+  /* Tournament page: location / date / "view original" each pinned to their
+     own line via column layout, reordered (source order stays date/location/
+     link, unchanged for desktop) and clipped with an ellipsis instead of
+     wrapping a second time within their own line. */
+  .tourney-meta { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  .tourney-meta > * { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tourney-loc { order: 1; }
+  .tourney-date { order: 2; }
+  .tourney-original-link { order: 3; }
+
+  /* Power Rankings tab: filters/view-toggles/download collapse behind an
+     Options button instead of sitting open above the grid by default. */
+  .rankings-options-toggle { display: flex; align-items: center; gap: 0.4rem; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.4rem 0.9rem; margin-bottom: 1rem; cursor: pointer; }
+  .rankings-options-toggle:hover, .rankings-options-toggle.active { border-color: #3eff8b; color: #3eff8b; }
+  .rankings-options-caret { width: 9px; height: 6px; transition: transform 150ms ease; }
+  .rankings-options-toggle.active .rankings-options-caret { transform: rotate(180deg); }
+  #rankings-options-panel { display: none; }
+  /* 2-column grid instead of one long wrapping row of controls -- the
+     Grid/Table and Hide/Show-delta pills naturally land in row 1 (one per
+     column), then the four filter selects form a clean 2x2 grid below them
+     in the same document order they already had. Grid's default
+     justify-items:stretch fills each pill's own column width instead of
+     leaving it at its cramped intrinsic size -- its two buttons then split
+     that width evenly (flex: 1 1 0) rather than sizing to their own text. */
+  #rankings-options-panel.options-open { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem 0.75rem; align-items: end; }
+  #rankings-options-panel.options-open .view-toggle,
+  #rankings-options-panel.options-open .rank-delta-toggle { width: 100%; }
+  #rankings-options-panel.options-open .view-btn,
+  #rankings-options-panel.options-open .delta-btn { flex: 1 1 0; text-align: center; white-space: nowrap; padding-left: 0.4rem; padding-right: 0.4rem; }
+  /* Override the desktop [hidden]{display:none} rule above -- on mobile,
+     switching to Table view should leave this pill's grid cell empty
+     (invisible but still occupying its row) instead of collapsing it and
+     shifting Min Games/Max RD up into row 1. Needs !important to beat the
+     global [hidden]{display:none !important} rule (see the .pr-card/
+     [hidden] note elsewhere in this file), which otherwise wins over any
+     non-important rule regardless of selector specificity or source order. */
+  .rank-delta-toggle[hidden] { display: flex !important; visibility: hidden; }
+  #rankings-options-panel.options-open label { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  #rankings-options-panel.options-open label select { width: 100%; }
+
+  /* Player page: name + AKA toggle share a row; the header matching
+     "Historical Rating" only shows here since the grid is the first section
+     on the page on mobile. */
+  .player-title-row { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .mobile-only-heading { display: block; }
+  .aka-full { display: none; }
+  /* Caret sits after the "AKA" text (flex row, not the default marker
+     position) and never itself moves -- toggling .open only affects
+     .aka-content, a separate full-width block between the name and the
+     location/active meta line, so this button's own size/position is
+     identical whether the list is open or not. */
+  .aka-toggle { display: inline-flex; align-items: center; gap: 0.3rem; background: none; border: none; padding: 0; cursor: pointer; color: #888; font-family: 'Rajdhani', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; user-select: none; }
+  .aka-toggle:hover, .aka-toggle.active { color: #3eff8b; }
+  .aka-caret { width: 9px; height: 6px; flex-shrink: 0; transition: transform 150ms ease; }
+  .aka-toggle.active .aka-caret { transform: rotate(180deg); }
+  /* Same -1rem trick .tourney-meta uses below to pull up close under h1's
+     own large default margin -- keeps the title-to-AKA gap the same size as
+     the title-to-location gap on a page with no AKA line at all. */
+  .aka-content { margin: -1rem 0 0; color: #888; font-size: 0.85rem; }
+  .aka-content.open { display: block; }
+  /* Once AKA is open and visible, .tourney-meta directly follows it instead
+     of h1 -- its own -1rem margin-top (tuned for pulling up against h1's
+     larger gap) would sit too tight against a line of plain text, so this
+     drops it to the same 0.3rem rhythm .tourney-meta already uses between
+     its own location/active lines, keeping every line in the block evenly
+     spaced. Only matches while .open is present, so a page with the AKA
+     toggle closed (or no aliases at all) still gets the normal tourney-meta
+     spacing straight off h1. */
+  .aka-content.open + .tourney-meta { margin-top: 0.3rem; }
+
+  /* Match Statistics tiles stay 2-per-row instead of collapsing to 1 once
+     each tile's 200px minimum no longer fits twice across a phone width. */
+  .h2h-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* Condensed "Jul. 10 '26" dates in the Matches/Tournaments lists (see
+     dateDualHtml) instead of the full "July 10, 2026" form. */
+  .date-full { display: none; }
+  .date-short { display: inline; }
+
+  /* Shorter Match Statistics labels (see dualLabelHtml) -- e.g. "Best Win
+     Rate" instead of "Best Win Rate (Min. 3)" -- only on mobile; desktop
+     keeps the original, more explicit wording. */
+  .stat-label-full { display: none; }
+  .stat-label-short { display: inline; }
+
+  /* Footer: condensed copyright, one row per group (credits+Ko-Fi, then
+     sources+correction) instead of wrapping wherever the flex row breaks. */
+  .site-footer { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .footer-copyright-full { display: none; }
+  .footer-copyright-short { display: inline; }
+  .footer-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+}
+@media (max-width: 800px) {
+  /* 2:1 map/sidebar split (see .map-panel above) is too cramped once the
+     map column itself drops under ~300px -- stack map above sidebar and
+     shrink the map's own fixed height (still fixed, just a smaller fixed
+     value, matching the "never resize dynamically" approach used on desktop). */
+  .map-panel { grid-template-columns: 1fr; }
+  .map-svg { height: 320px; }
+  .map-sidebar { height: 420px; }
+  /* Drop the Rating column from the player sidebar list -- Placement and
+     Last Active are what people actually scan for on a narrow screen, and
+     three number columns plus a name don't have room to breathe. Column
+     order is Player/Placement/Rating/Last Active (see MAP_SIDEBAR_COLUMNS
+     and renderMapSidebar in writeJs), so Rating is always the 3rd child. */
+  .map-sidebar-colhead.map-cols-players, ol.map-cols-players li { grid-template-columns: 1fr 3.4rem 4rem; }
+  .map-sidebar-colhead.map-cols-players span:nth-child(3),
+  ol.map-cols-players li > span:nth-child(3) { display: none; }
+}
 `;
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
 }
@@ -2347,6 +2572,7 @@ function writeJs() {
         panel.classList.add('active');
         moveIndicator(underline, tabsEl, btn);
         setHeaderForTab(btn.dataset.tab);
+        updateDownloadVisibility();
         // Cards were sized while this panel was display:none (offsetWidth 0
         // at page load, or never resized since last becoming visible), so
         // names need a fresh fit now that the panel actually has layout.
@@ -2363,6 +2589,59 @@ function writeJs() {
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
+  }
+
+  // Mobile-only hamburger toggle for the tab row (see .tabs-toggle in
+  // writeCss) -- .tabs-toggle is display:none above the mobile breakpoint,
+  // so this is inert on desktop even though the listener is always attached.
+  // .tabs slides in from the left as a fixed drawer over a dimming
+  // .tabs-backdrop, which also closes the drawer when tapped.
+  function enableTabsMenu() {
+    const toggle = document.querySelector('.tabs-toggle');
+    const tabsEl = document.querySelector('.tabs');
+    const backdrop = document.querySelector('.tabs-backdrop');
+    if (!toggle || !tabsEl) return;
+    function setOpen(open) {
+      tabsEl.classList.toggle('mobile-open', open);
+      if (backdrop) backdrop.classList.toggle('mobile-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    }
+    toggle.addEventListener('click', () => setOpen(!tabsEl.classList.contains('mobile-open')));
+    if (backdrop) backdrop.addEventListener('click', () => setOpen(false));
+    // Selecting a tab closes the drawer again rather than leaving it open
+    // over the newly-shown panel.
+    tabsEl.querySelectorAll('.tab-button').forEach((btn) => {
+      btn.addEventListener('click', () => setOpen(false));
+    });
+  }
+
+  // Mobile-only collapse for the Power Rankings tab's filter/action row (see
+  // .rankings-options-toggle in writeCss) -- off by default on mobile so the
+  // grid/table of rankings isn't pushed down by a wall of selects before
+  // anyone asks for them; the toggle itself is display:none on desktop,
+  // where the panel is always visible regardless of this class.
+  function enableOptionsToggle() {
+    const toggle = document.querySelector('.rankings-options-toggle');
+    const panel = document.getElementById('rankings-options-panel');
+    if (!toggle || !panel) return;
+    toggle.addEventListener('click', () => {
+      const open = panel.classList.toggle('options-open');
+      toggle.classList.toggle('active', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      // The Grid/Table and Hide/Show-delta sliding pills were positioned (at
+      // page load and on every filter change) while this panel was
+      // display:none on mobile -- getBoundingClientRect on a display:none
+      // element's children is a zero-size rect, so both pills got stuck at
+      // left:0/width:0 until something recomputed them against real layout.
+      // Re-run that positioning now that the panel actually has size.
+      if (open) {
+        for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
+          const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
+          const innerActive = innerToggle.querySelector('.view-btn.active, .delta-btn.active');
+          if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
+        }
+      }
+    });
   }
 
   function populateStateFilter(panel) {
@@ -2722,12 +3001,74 @@ function writeJs() {
     if (home.length === 4 && home.every((n) => !isNaN(n))) animateViewBox(svg, home, 450);
   }
 
+  // Two-finger pinch zoom on the map SVG specifically (touch-only — desktop
+  // mouse users are unaffected). touch-action:none on .map-svg (see writeCss)
+  // stops the browser from treating this as a page-level gesture first.
+  // Zoom is anchored at the pinch midpoint (converted to the SVG's own user
+  // space via getScreenCTM, not just the viewBox center) so the point under
+  // the fingers stays under the fingers as the box shrinks/grows, clamped to
+  // between the full home extent and 15% of it so a pinch can't zoom out
+  // past the map's natural bounds or in until it's a meaningless close-up.
+  function enableMapPinchZoom(svg) {
+    const home = (svg.dataset.home || '').split(' ').map(Number);
+    if (home.length !== 4 || home.some((n) => isNaN(n))) return;
+    const maxW = home[2];
+    const minW = home[2] * 0.15;
+    let startDist = null;
+    let startBox = null;
+    let anchor = null;
+
+    function touchDist(touches) {
+      return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    }
+    function toSvgPoint(clientX, clientY) {
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return null;
+      const pt = svg.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      return pt.matrixTransform(ctm.inverse());
+    }
+    function endPinch() {
+      startDist = null;
+      startBox = null;
+      anchor = null;
+    }
+
+    svg.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 2) return;
+      e.preventDefault();
+      startDist = touchDist(e.touches);
+      const vb = svg.viewBox.baseVal;
+      startBox = { x: vb.x, y: vb.y, width: vb.width, height: vb.height };
+      anchor = toSvgPoint(
+        (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        (e.touches[0].clientY + e.touches[1].clientY) / 2
+      );
+    }, { passive: false });
+
+    svg.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 2 || !startDist || !startBox || !anchor) return;
+      e.preventDefault();
+      const scale = startDist / touchDist(e.touches);
+      const newW = Math.max(minW, Math.min(maxW, startBox.width * scale));
+      const newH = newW * (startBox.height / startBox.width);
+      const fx = (anchor.x - startBox.x) / startBox.width;
+      const fy = (anchor.y - startBox.y) / startBox.height;
+      svg.setAttribute('viewBox', (anchor.x - fx * newW).toFixed(2) + ' ' + (anchor.y - fy * newH).toFixed(2) + ' ' + newW.toFixed(2) + ' ' + newH.toFixed(2));
+    }, { passive: false });
+
+    svg.addEventListener('touchend', (e) => { if (e.touches.length < 2) endPinch(); });
+    svg.addEventListener('touchcancel', endPinch);
+  }
+
   function enableMapRegions(panel) {
     if (!panel) return;
     const svg = panel.querySelector('.map-svg');
     const regions = [...panel.querySelectorAll('.map-region')];
     const backBtn = panel.querySelector('.map-sidebar-back');
     let selectedId = '__ALL__';
+    enableMapPinchZoom(svg);
 
     function currentView() {
       const active = panel.querySelector('.view-btn.active');
@@ -2984,6 +3325,24 @@ function writeJs() {
     }
   }
 
+  // Two download buttons exist in the DOM at once -- .download-btn-boxed
+  // (desktop, inside the Power Rankings tab-controls row) and
+  // .download-btn-icon (mobile, top-right of .page-title-row, so it stays
+  // reachable regardless of whether the mobile Options panel is collapsed)
+  // -- CSS shows exactly one of them per viewport (see writeCss), but both
+  // need the same show/hide state, which depends on which tab and which
+  // view (Grid vs Table) are active. Both enableTabs (tab switch) and
+  // enableViewToggle (view switch) call this after they change either one.
+  function updateDownloadVisibility() {
+    const btns = document.querySelectorAll('.download-btn');
+    if (!btns.length) return;
+    const rankingsPanel = document.getElementById('rankings-tab');
+    const rankingsActive = !!rankingsPanel && rankingsPanel.classList.contains('active');
+    const gridActive = !!rankingsPanel && !!rankingsPanel.querySelector('.view-btn[data-view="grid"].active');
+    const hide = !(rankingsActive && gridActive);
+    btns.forEach((btn) => { btn.hidden = hide; });
+  }
+
   function enableViewToggle(panel) {
     const buttons = [...panel.querySelectorAll('.view-btn')];
     if (!buttons.length) return;
@@ -2991,7 +3350,6 @@ function writeJs() {
     const table = panel.querySelector('table');
     const toggleEl = panel.querySelector('.view-toggle');
     const indicator = panel.querySelector('.view-toggle-indicator');
-    const downloadBtn = panel.querySelector('.download-btn');
     // The rank-delta badge only ever exists in the card markup (see
     // rankDeltaHtml's call sites), so its show/hide pill is meaningless --
     // and would sit there inert -- once the Table view is active.
@@ -3001,24 +3359,29 @@ function writeJs() {
     // easy to trigger since generation takes a couple of seconds and gave
     // no visible feedback before this). A failed attempt clears back to the
     // normal enabled state (not "loading") so the button is clickable again
-    // to retry, rather than getting stuck disabled forever.
-    const downloadLabel = downloadBtn ? downloadBtn.querySelector('.download-btn-label') : null;
-    if (downloadBtn) downloadBtn.addEventListener('click', async () => {
-      if (downloadBtn.disabled) return;
-      downloadBtn.disabled = true;
-      downloadBtn.classList.remove('failed');
-      downloadBtn.classList.add('loading');
-      if (downloadLabel) downloadLabel.textContent = 'Preparing…';
-      try {
-        await downloadRankingsImage(panel);
-        if (downloadLabel) downloadLabel.textContent = 'Download PR';
-      } catch (err) {
-        downloadBtn.classList.add('failed');
-        if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
-      } finally {
-        downloadBtn.disabled = false;
-        downloadBtn.classList.remove('loading');
-      }
+    // to retry, rather than getting stuck disabled forever. Only one of the
+    // two buttons is ever visible/clickable at once (see writeCss), but the
+    // listener is attached to both independently -- each just drives its
+    // own loading/failed state and the same downloadRankingsImage call.
+    document.querySelectorAll('.download-btn').forEach((downloadBtn) => {
+      const downloadLabel = downloadBtn.querySelector('.download-btn-label');
+      downloadBtn.addEventListener('click', async () => {
+        if (downloadBtn.disabled) return;
+        downloadBtn.disabled = true;
+        downloadBtn.classList.remove('failed');
+        downloadBtn.classList.add('loading');
+        if (downloadLabel) downloadLabel.textContent = 'Preparing…';
+        try {
+          await downloadRankingsImage(panel);
+          if (downloadLabel) downloadLabel.textContent = 'Download PR';
+        } catch (err) {
+          downloadBtn.classList.add('failed');
+          if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.classList.remove('loading');
+        }
+      });
     });
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -3027,7 +3390,12 @@ function writeJs() {
         const view = btn.dataset.view;
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
-        if (downloadBtn) downloadBtn.hidden = view !== 'grid';
+        updateDownloadVisibility();
+        // Desktop collapses this pill entirely on Table view (see
+        // .rank-delta-toggle[hidden] in writeCss); mobile overrides that
+        // same [hidden] rule back to display:flex + visibility:hidden so it
+        // still reserves its space instead of shifting the Min Games/Max RD
+        // controls next to it.
         if (rankDeltaToggle) rankDeltaToggle.hidden = view !== 'grid';
         moveIndicator(indicator, toggleEl, btn);
         // Also refreshes the "Click a column header to sort." hint for the
@@ -3036,7 +3404,7 @@ function writeJs() {
       });
     });
     const activeBtn = buttons.find((b) => b.classList.contains('active'));
-    if (downloadBtn) downloadBtn.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
+    updateDownloadVisibility();
     if (rankDeltaToggle) rankDeltaToggle.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
     moveIndicator(indicator, toggleEl, activeBtn);
   }
@@ -3330,6 +3698,8 @@ function writeJs() {
 
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
+  enableTabsMenu();
+  enableOptionsToggle();
   initPanel('players-tab');
   initPanel('rankings-tab');
   enableMapToggle(document.getElementById('map-tab'));
@@ -3761,13 +4131,18 @@ ${latestSectionHtml}
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DeathBall Power Rankings</title>
 <link rel="stylesheet" href="index.css">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
-<h1>DeathBall <span id="tab-heading">Power Rankings</span></h1>
-<div class="tabs">
+<div class="page-title-row">
+  <button class="tabs-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-tabs"><svg class="tabs-toggle-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
+  <h1>DeathBall <span id="tab-heading">Power Rankings</span></h1>
+  <button class="download-btn download-btn-icon" type="button" title="Download power rankings image" aria-label="Download power rankings image"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg></button>
+</div>
+<div class="tabs" id="site-tabs">
   <button class="tab-button active" data-tab="rankings-tab">Power Rankings</button>
   <button class="tab-button" data-tab="players-tab">Players</button>
   <button class="tab-button" data-tab="tournaments-tab">Tournaments</button>
@@ -3776,6 +4151,7 @@ ${latestSectionHtml}
   <button class="tab-button" data-tab="events-tab">Upcoming Events</button>
   <span class="tab-underline"></span>
 </div>
+<div class="tabs-backdrop"></div>
 
 <div id="events-tab" class="tab-panel">
 ${buildEventsTabHtml(upcomingEvents)}
@@ -3790,6 +4166,7 @@ ${buildEventsTabHtml(upcomingEvents)}
     </label>
     <span class="filter-count">${playerRows.length} unique players. Click a column header to sort.</span>
   </div>
+  <div class="table-wrap">
   <table data-sortable>
     <thead>
       <tr>
@@ -3808,10 +4185,12 @@ ${buildEventsTabHtml(upcomingEvents)}
 ${playerTableRows}
     </tbody>
   </table>
+  </div>
 </div>
 
 <div id="tournaments-tab" class="tab-panel">
   <div id="count">${allTournaments.length} tournaments. Click a column header to sort.</div>
+  <div class="table-wrap">
   <table data-sortable>
     <thead>
       <tr>
@@ -3827,6 +4206,7 @@ ${playerTableRows}
 ${tournamentTableRows}
     </tbody>
   </table>
+  </div>
 </div>
 
 <div id="doubles-tab" class="tab-panel">
@@ -3870,7 +4250,8 @@ ${mapLabels}
 <script type="application/json" id="map-region-data">${JSON.stringify(mapRegionData)}</script>
 
 <div id="rankings-tab" class="tab-panel active show-rank-delta">
-  <div class="tab-controls">
+  <button class="rankings-options-toggle" type="button" aria-expanded="false" aria-controls="rankings-options-panel">Options <svg class="rankings-options-caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button>
+  <div class="tab-controls" id="rankings-options-panel">
     <div class="view-toggle">
       <span class="view-toggle-indicator"></span>
       <button class="view-btn active" data-view="grid">Grid</button>
@@ -3907,12 +4288,13 @@ ${mapLabels}
     <label>Rankings at:
       <select class="pr-history-select"></select>
     </label>
-    <button class="download-btn" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download PR</span></button>
+    <button class="download-btn download-btn-boxed" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download PR</span></button>
   </div>
   <div class="pr-grid">
 ${prSquareHtml}
 ${rankingCardItems}
   </div>
+  <div class="table-wrap">
   <table data-sortable style="display:none">
     <thead>
       <tr>
@@ -3932,6 +4314,7 @@ ${rankingCardItems}
 ${rankingTableRows}
     </tbody>
   </table>
+  </div>
 </div>
 <script type="application/json" id="pr-history-data">${JSON.stringify(rankingHistory)}</script>
 
@@ -4516,6 +4899,7 @@ ${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(t.label)} — DeathBall Power Rankings</title>
 <link rel="stylesheet" href="../index.css">
 ${extraHead}
@@ -4523,9 +4907,9 @@ ${extraHead}
 <body>
 <h1>${escapeHtml(t.label)}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</h1>
 <div class="tourney-meta">
-  <span>${escapeHtml(formatDateHuman(t.date))}</span>
+  <span class="tourney-date">${escapeHtml(formatDateHuman(t.date))}</span>
   ${t.locationDisplay.venue || t.locationDisplay.cityState ? `<span class="tourney-loc">${locationHtml(t.locationDisplay)}</span>` : ''}
-  <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">View original on ${escapeHtml(t.source)} &#8599;</a>
+  <a class="tourney-original-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener">View original on ${escapeHtml(t.source)} &#8599;</a>
 </div>
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>
 
@@ -4601,12 +4985,16 @@ ${lis}
 function buildRatingChartSvg(history) {
   const W = 720;
   const H = 220;
-  // Small fixed padding just enough that point circles/stroke at the
-  // extremes aren't clipped — the plot otherwise runs edge-to-edge, since
-  // axis/date labels now live outside the SVG as HTML overlays (see
-  // preserveAspectRatio="none" below and the .chart-label rules).
-  const padL = 6;
-  const padR = 6;
+  // Padding just enough that the first/last point's dot + its outline stroke
+  // (r=3.5, stroke-width 1.5 — see .chart-dot) aren't flush against the SVG's
+  // own edge — the plot otherwise runs edge-to-edge, since axis/date labels
+  // now live outside the SVG as HTML overlays (see preserveAspectRatio="none"
+  // below and the .chart-label rules). 6 previously left the endpoint dots
+  // reading as clipped once the chart was squeezed into a narrow mobile
+  // column, where the rendered margin (padL/W of the actual pixel width)
+  // shrinks below the dot's own visual radius.
+  const padL = 14;
+  const padR = 14;
   const padT = 24; // extra headroom so the floating current-rating label (anchored above the last point) never crowds the top edge
   const padB = 10;
   const n = history.length;
@@ -4786,13 +5174,23 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
 </div>`;
 
     const recentMatchesHtml = paginatedListHtml(matchesDesc, 'recent-matches-list', (m, hidden) =>
-      `      <li${hidden ? ' hidden' : ''}><span class="standings-rank ${m.won ? 'result-win' : 'result-loss'}"><span class="result-letter">${m.won ? 'W' : 'L'}</span> <span class="match-score-mini">${m.isDQ ? 'DQ' : `${m.scoreFor}-${m.scoreAgainst}`}</span></span><span>vs ${opponentLinkHtml(m.opponentId, m.opponentName)} <span class="match-tourney-name">(<a href="../tournaments/${escapeHtml(m.tournamentSlug)}.html">${escapeHtml(m.tournamentLabel)}</a>)</span></span><span class="standings-record">${escapeHtml(formatDateHuman(m.date))}</span></li>`,
+      `      <li${hidden ? ' hidden' : ''}><span class="standings-rank ${m.won ? 'result-win' : 'result-loss'}"><span class="result-letter">${m.won ? 'W' : 'L'}</span> <span class="match-score-mini">${m.isDQ ? 'DQ' : `${m.scoreFor}-${m.scoreAgainst}`}</span></span><span>vs ${opponentLinkHtml(m.opponentId, m.opponentName)} <span class="match-tourney-name">(<a href="../tournaments/${escapeHtml(m.tournamentSlug)}.html">${escapeHtml(m.tournamentLabel)}</a>)</span></span><span class="standings-record">${dateDualHtml(m.date)}</span></li>`,
       'No matches on record.');
 
-    const h2hRow = (label, entry, formatMetric, iconKey, flip) => {
+    // A handful of Match Statistics labels are shorter on mobile than
+    // desktop (e.g. "Best Win Rate (Min. 3)" vs "Best Win Rate") -- both
+    // variants are always rendered, with CSS (.stat-label-full/-short)
+    // picking one per viewport, rather than actually changing the label per
+    // breakpoint. mobileLabel defaults to the desktop label when the two
+    // don't differ, which just renders the plain text with no dual spans.
+    const dualLabelHtml = (label, mobileLabel) => (!mobileLabel || mobileLabel === label)
+      ? escapeHtml(label)
+      : `<span class="stat-label-full">${escapeHtml(label)}</span><span class="stat-label-short">${escapeHtml(mobileLabel)}</span>`;
+    const h2hRow = (label, entry, formatMetric, iconKey, flip, mobileLabel) => {
       const icon = h2hIcon(iconKey, flip);
-      if (!entry) return `<div class="h2h-tile"><span class="h2h-label">${icon}${escapeHtml(label)}</span><span class="h2h-value">&mdash;</span></div>`;
-      return `<div class="h2h-tile"><span class="h2h-label">${icon}${escapeHtml(label)}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
+      const labelHtml = dualLabelHtml(label, mobileLabel);
+      if (!entry) return `<div class="h2h-tile"><span class="h2h-label">${icon}${labelHtml}</span><span class="h2h-value">&mdash;</span></div>`;
+      return `<div class="h2h-tile"><span class="h2h-label">${icon}${labelHtml}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
     };
     const bestWinMetric = (e) => {
       const rankLabel = e.oppRank != null ? `#${e.oppRank}` : 'Unranked';
@@ -4801,7 +5199,7 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     };
     // For tiles that aren't "vs. an opponent" (streaks, podium rate, rating
     // milestones) — same .h2h-tile shell as h2hRow, just a plain value.
-    const statTile = (label, valueHtml, iconKey, flip) => `<div class="h2h-tile"><span class="h2h-label">${h2hIcon(iconKey, flip)}${escapeHtml(label)}</span><span class="h2h-value">${valueHtml}</span></div>`;
+    const statTile = (label, valueHtml, iconKey, flip, mobileLabel) => `<div class="h2h-tile"><span class="h2h-label">${h2hIcon(iconKey, flip)}${dualLabelHtml(label, mobileLabel)}</span><span class="h2h-value">${valueHtml}</span></div>`;
 
     // Podium/Top 8 rate is a Match Statistics tile -- like the rest of that
     // section, doubles placements don't count toward it (see the isDoubles
@@ -4826,20 +5224,20 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
       : null;
 
     const h2hSection = `<div class="h2h-grid">
-${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'trendUp')}
-${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'trendUp', true)}
-${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`, 'swords')}
-${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`, 'shield')}
+${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'trendUp', undefined, 'Best Win Rate')}
+${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'trendUp', true, 'Worst Win Rate')}
+${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`, 'swords', undefined, 'Most Wins Vs')}
+${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`, 'shield', undefined, 'Most Losses Vs')}
 ${h2hRow('Most Played', h2h.mostPlayed, (e) => `&times;${e.total}`, 'loop')}
-${h2hRow('Rival (Min. 3)', h2h.rival, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'vs')}
+${h2hRow('Rival (Min. 3)', h2h.rival, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'vs', undefined, 'Rival')}
 ${h2hRow('Best Win', bestWin, bestWinMetric, 'star')}
 ${statTile('Peak Rating', peakRating ? `<a href="../tournaments/${escapeHtml(peakRating.slug)}.html">${peakRating.rating}</a> <span class="h2h-record-dim">${escapeHtml(formatDateHuman(peakRating.date))}</span>` : '&mdash;', 'mountain')}
 ${statTile('Longest Win Streak', `${h2h.longestWinStreak}`, 'flame')}
 ${statTile('Longest Loss Streak', `${h2h.longestLossStreak}`, 'snowflake')}
-${statTile('Podium Rate (Top 3)', rateValue(podiumCount), 'podium')}
+${statTile('Podium Rate (Top 3)', rateValue(podiumCount), 'podium', undefined, 'Top 3 Rate')}
 ${statTile('Top 8 Rate', rateValue(top8Count), 'brackets')}
 ${statTile('Giant Killer Wins', gapTierValue(h2h.giantKiller, h2h.giantKillerMajor), 'breakout')}
-${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimMajor), 'breakoutDown')}
+${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimMajor), 'breakoutDown', undefined, 'Upset Losses')}
 </div>`;
 
     const historyRows = paginatedListHtml(placementsDesc, 'tournament-history-list', (pl, hidden) => {
@@ -4850,7 +5248,7 @@ ${statTile('Upset Victim Losses', gapTierValue(h2h.upsetVictim, h2h.upsetVictimM
         const partnerNameHtml = partnerHref ? `<a href="${escapeHtml(partnerHref)}">${escapeHtml(pl.partnerName)}</a>` : escapeHtml(pl.partnerName);
         doublesPill = ` <span class="doubles-pill doubles-pill-plain">w/ ${partnerNameHtml}</span>`;
       }
-      return `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name">${histFlagImg}<a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a>${doublesPill}</span><span class="standings-record">${escapeHtml(formatDateHuman(pl.date))}</span></li>`;
+      return `      <li${hidden ? ' hidden' : ''}><span class="standings-rank"><span class="rank-ordinal">${ordinal(pl.rank)}<span class="rank-total">/${pl.totalEntrants}</span></span> <span class="hist-record">${pl.wins}-${pl.losses}</span></span><span class="hist-tourney-name">${histFlagImg}<a href="../tournaments/${escapeHtml(pl.slug)}.html">${escapeHtml(pl.label)}</a>${doublesPill}</span><span class="standings-record">${dateDualHtml(pl.date)}</span></li>`;
     },
       'No tournaments on record.');
 
@@ -4893,8 +5291,25 @@ ${entriesHtml}
 
     const hasChart = ratingHistory.length >= 2;
 
+    // The full "Also known as: ..." caption stays in the meta line for
+    // desktop (aka-full is only hidden below the mobile breakpoint) -- on
+    // mobile it's replaced by a plain toggle button next to the name (see
+    // akaToggle) plus a separate full-width row between the name and the
+    // location/active meta line (see akaContentRow), off by default so a
+    // long alias list doesn't push the rest of the page down before anyone
+    // asks for it. Deliberately a real <button> + a sibling block rather
+    // than <details>/<summary> -- a disclosure marker shifts/rotates in
+    // place, and here the names need to land in their own row, not right
+    // next to the toggle, so the toggle's own position must never move
+    // regardless of open state.
     const aliasCaption = aliases.length
-      ? `<span class="alias-list">Also known as: ${aliases.map(escapeHtml).join(', ')}</span>`
+      ? `<span class="alias-list aka-full">Also known as: ${aliases.map(escapeHtml).join(', ')}</span>`
+      : '';
+    const akaToggle = aliases.length
+      ? `<button class="aka-toggle" type="button" aria-expanded="false" aria-controls="aka-content">AKA <svg class="aka-caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button>`
+      : '';
+    const akaContentRow = aliases.length
+      ? `<div class="aka-content" id="aka-content">AKA: ${aliases.map(escapeHtml).join(', ')}</div>`
       : '';
     const activeCaption = activeRange ? `<span class="alias-list">Active ${escapeHtml(activeRange)}</span>` : '';
     const metaLine = location || activeCaption || aliasCaption
@@ -4905,11 +5320,13 @@ ${entriesHtml}
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(name)} — DeathBall Power Rankings</title>
 <link rel="stylesheet" href="../index.css">
 </head>
 <body class="${cardAccent(id, info.color)}">
-<h1>${escapeHtml(name)}</h1>
+<div class="player-title-row"><h1>${escapeHtml(name)}</h1>${akaToggle}</div>
+${akaContentRow}
 ${metaLine}
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>
 
@@ -4922,6 +5339,7 @@ ${isDoublesOnly
 ${doublesSectionHtml}
 </div>`
   : `<div class="tourney-section">
+  <h2 class="mobile-only-heading">Essential Stats</h2>
   <div class="player-stats-grid">
 ${statTiles}
 ${goalsTile}
@@ -4977,6 +5395,21 @@ ${hasChart
       if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
     });
   });
+
+  // Mobile-only AKA disclosure (see .aka-toggle/.aka-content in writeCss) --
+  // a plain button + a separate content block, not <details>, so the toggle
+  // itself never moves and the alias list lands in its own full-width row
+  // below the location/active line instead of right next to the button.
+  (() => {
+    const toggle = document.querySelector('.aka-toggle');
+    const content = document.getElementById('aka-content');
+    if (!toggle || !content) return;
+    toggle.addEventListener('click', () => {
+      const open = content.classList.toggle('open');
+      toggle.classList.toggle('active', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+  })();
 
   // Historical-rating chart: hover/focus a tournament point to show its
   // tooltip, positioned against the chart's inner box (its actual
