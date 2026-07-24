@@ -13,7 +13,105 @@
 <meta name="twitter:title" content="2019 July League Week 1 — DeathBall Tournament" />
 <meta name="twitter:description" content="Tournament results for 2019 July League Week 1. July 3, 2019 — Chattanooga, TN" />
 <link rel="stylesheet" href="../index.css">
+<script>
+  // Highlights one player everywhere they appear on the page — every
+  // bracket match, crosstable row/column, round-list entry (across every
+  // stage/container, in case a tournament has more than one), and their
+  // standings row — or clears the highlight when called with null. Matched
+  // by canonical display name (the same string the standings list,
+  // crosstable, round-list, and bracket participants were all rendered
+  // with), since bracket participant ids are only unique within their own
+  // stage's render, not across the whole page.
+  function setActivePlayer(name) {
+    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
+    if (!name) return;
+    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
+    if (li) li.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable td[data-row-player="' + CSS.escape(name) + '"], .crosstable td[data-col-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.round-group [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.textContent.trim() !== name) continue;
+      p.classList.add('player-active');
+    }
+  }
 
+  // Wires up: (1) hover/click sync between the standings list, crosstable,
+  // round-list, and every bracket on the page via setActivePlayer, with
+  // click "pinning" the highlight so it survives the mouse moving away —
+  // otherwise there'd be no way to highlight a run and then actually look
+  // at it; (2) click-and-drag panning and left/right-arrow scrolling for
+  // each bracket container, since a wide bracket only exposes a horizontal
+  // scrollbar that's easy to miss. Called once per page, after every stage
+  // has rendered.
+  function setupPlayerInteractivity() {
+    let pinned = null;
+    let dragMoved = false; // suppresses the click a drag-release generates
+
+    function playerNameAt(el) {
+      const withName = el.closest('[data-player]');
+      if (withName) return withName.dataset.player;
+      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
+      if (!p) return null;
+      const nameEl = p.querySelector('.name');
+      return nameEl ? nameEl.textContent.trim() : null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      if (pinned) return;
+      const name = playerNameAt(e.target);
+      if (name) setActivePlayer(name);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (pinned) return;
+      if (!playerNameAt(e.target)) return;
+      // Moving between child elements of the same row shouldn't flicker
+      // the highlight off and back on.
+      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
+      setActivePlayer(null);
+    });
+    document.addEventListener('click', (e) => {
+      if (dragMoved) { dragMoved = false; return; }
+      const name = playerNameAt(e.target);
+      if (!name) {
+        if (pinned) { pinned = null; setActivePlayer(null); }
+        return;
+      }
+      if (pinned === name) { pinned = null; setActivePlayer(null); }
+      else { pinned = name; setActivePlayer(name); }
+    });
+
+    for (const bv of document.querySelectorAll('.brackets-viewer')) {
+      bv.setAttribute('tabindex', '0');
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+      bv.addEventListener('mousedown', (e) => {
+        dragging = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = bv.scrollLeft;
+        bv.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 4) dragMoved = true;
+        bv.scrollLeft = startScroll - dx;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        bv.classList.remove('dragging');
+      });
+      bv.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
+      });
+    }
+  }
+</script>
 </head>
 <body>
 <h1>2019 July League Week 1</h1>
@@ -41,18 +139,18 @@
     <h2>Matches</h2>
     <div class="crosstable-wrap">
   <table class="crosstable">
-    <thead><tr><th></th><th><a href="../players/corley.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Corley</a></th><th><a href="../players/somewes.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">somewes</a></th><th><a href="../players/chronin.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Chronin</a></th><th><a href="../players/anthony.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Anthony</a></th><th><a href="../players/romaine-lettuce.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">romaine lettuce</a></th><th><a href="../players/doodooheadjones.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">doodooheadjones</a></th></tr></thead>
+    <thead><tr><th></th><th data-player="Corley"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Corley</th><th data-player="somewes"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">somewes</th><th data-player="Chronin"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Chronin</th><th data-player="Anthony"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Anthony</th><th data-player="romaine lettuce"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">romaine lettuce</th><th data-player="doodooheadjones"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">doodooheadjones</th></tr></thead>
     <tbody>
-      <tr><th class="row-name"><a href="../players/corley.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Corley</a></th><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/somewes.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">somewes</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/chronin.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Chronin</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td></tr>
-      <tr><th class="row-name"><a href="../players/anthony.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Anthony</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/romaine-lettuce.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">romaine lettuce</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/doodooheadjones.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">doodooheadjones</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td></tr>
+      <tr><th class="row-name" data-player="Corley"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Corley</th><td class="cell-diag" data-row-player="Corley" data-col-player="Corley">&mdash;</td><td class="cell-win" data-row-player="Corley" data-col-player="somewes"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Corley" data-col-player="Chronin"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Corley" data-col-player="Anthony"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Corley" data-col-player="romaine lettuce"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Corley" data-col-player="doodooheadjones"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="somewes"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">somewes</th><td class="cell-loss" data-row-player="somewes" data-col-player="Corley"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="somewes" data-col-player="somewes">&mdash;</td><td class="cell-win" data-row-player="somewes" data-col-player="Chronin"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="somewes" data-col-player="Anthony"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="somewes" data-col-player="romaine lettuce"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="somewes" data-col-player="doodooheadjones"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Chronin"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Chronin</th><td class="cell-loss" data-row-player="Chronin" data-col-player="Corley"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Chronin" data-col-player="somewes"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Chronin" data-col-player="Chronin">&mdash;</td><td class="cell-win" data-row-player="Chronin" data-col-player="Anthony"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Chronin" data-col-player="romaine lettuce"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Chronin" data-col-player="doodooheadjones"><span class="crosstable-result cell-loss">L 0-1</span></td></tr>
+      <tr><th class="row-name" data-player="Anthony"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">Anthony</th><td class="cell-loss" data-row-player="Anthony" data-col-player="Corley"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Anthony" data-col-player="somewes"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Anthony" data-col-player="Chronin"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Anthony" data-col-player="Anthony">&mdash;</td><td class="cell-win" data-row-player="Anthony" data-col-player="romaine lettuce"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Anthony" data-col-player="doodooheadjones"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="romaine lettuce"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">romaine lettuce</th><td class="cell-loss" data-row-player="romaine lettuce" data-col-player="Corley"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="romaine lettuce" data-col-player="somewes"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="romaine lettuce" data-col-player="Chronin"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="romaine lettuce" data-col-player="Anthony"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="romaine lettuce" data-col-player="romaine lettuce">&mdash;</td><td class="cell-win" data-row-player="romaine lettuce" data-col-player="doodooheadjones"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="doodooheadjones"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flag_of_Chattanooga%2C_Tennessee.svg" title="Chattanooga" alt="Chattanooga">doodooheadjones</th><td class="cell-loss" data-row-player="doodooheadjones" data-col-player="Corley"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="doodooheadjones" data-col-player="somewes"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="doodooheadjones" data-col-player="Chronin"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="doodooheadjones" data-col-player="Anthony"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="doodooheadjones" data-col-player="romaine lettuce"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="doodooheadjones" data-col-player="doodooheadjones">&mdash;</td></tr>
     </tbody>
   </table>
 </div>
-    
+    <script>setupPlayerInteractivity();</script>
   </div>
 </div>
 <footer class="site-footer">

@@ -13,7 +13,105 @@
 <meta name="twitter:title" content="DBJAX League Week 5 — DeathBall Tournament" />
 <meta name="twitter:description" content="Tournament results for DBJAX League Week 5. February 18, 2019 — Jacksonville, FL" />
 <link rel="stylesheet" href="../index.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
+<script>
+  // Highlights one player everywhere they appear on the page — every
+  // bracket match, crosstable row/column, round-list entry (across every
+  // stage/container, in case a tournament has more than one), and their
+  // standings row — or clears the highlight when called with null. Matched
+  // by canonical display name (the same string the standings list,
+  // crosstable, round-list, and bracket participants were all rendered
+  // with), since bracket participant ids are only unique within their own
+  // stage's render, not across the whole page.
+  function setActivePlayer(name) {
+    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
+    if (!name) return;
+    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
+    if (li) li.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable td[data-row-player="' + CSS.escape(name) + '"], .crosstable td[data-col-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.round-group [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.textContent.trim() !== name) continue;
+      p.classList.add('player-active');
+    }
+  }
+
+  // Wires up: (1) hover/click sync between the standings list, crosstable,
+  // round-list, and every bracket on the page via setActivePlayer, with
+  // click "pinning" the highlight so it survives the mouse moving away —
+  // otherwise there'd be no way to highlight a run and then actually look
+  // at it; (2) click-and-drag panning and left/right-arrow scrolling for
+  // each bracket container, since a wide bracket only exposes a horizontal
+  // scrollbar that's easy to miss. Called once per page, after every stage
+  // has rendered.
+  function setupPlayerInteractivity() {
+    let pinned = null;
+    let dragMoved = false; // suppresses the click a drag-release generates
+
+    function playerNameAt(el) {
+      const withName = el.closest('[data-player]');
+      if (withName) return withName.dataset.player;
+      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
+      if (!p) return null;
+      const nameEl = p.querySelector('.name');
+      return nameEl ? nameEl.textContent.trim() : null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      if (pinned) return;
+      const name = playerNameAt(e.target);
+      if (name) setActivePlayer(name);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (pinned) return;
+      if (!playerNameAt(e.target)) return;
+      // Moving between child elements of the same row shouldn't flicker
+      // the highlight off and back on.
+      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
+      setActivePlayer(null);
+    });
+    document.addEventListener('click', (e) => {
+      if (dragMoved) { dragMoved = false; return; }
+      const name = playerNameAt(e.target);
+      if (!name) {
+        if (pinned) { pinned = null; setActivePlayer(null); }
+        return;
+      }
+      if (pinned === name) { pinned = null; setActivePlayer(null); }
+      else { pinned = name; setActivePlayer(name); }
+    });
+
+    for (const bv of document.querySelectorAll('.brackets-viewer')) {
+      bv.setAttribute('tabindex', '0');
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+      bv.addEventListener('mousedown', (e) => {
+        dragging = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = bv.scrollLeft;
+        bv.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 4) dragMoved = true;
+        bv.scrollLeft = startScroll - dx;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        bv.classList.remove('dragging');
+      });
+      bv.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
+      });
+    }
+  }
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
 <script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
 <style>
   .brackets-viewer {
@@ -342,99 +440,6 @@
       opponents.appendChild(icon);
     }
   }
-
-  // Highlights one player everywhere they appear on the page — every
-  // bracket match they're in (across every stage/container, in case a
-  // tournament has more than one) and their standings row — or clears the
-  // highlight when called with null. Matched by canonical display name
-  // (the same string both the standings list and every bracket participant
-  // were rendered with), since bracket participant ids are only unique
-  // within their own stage's render, not across the whole page.
-  function setActivePlayer(name) {
-    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
-    if (!name) return;
-    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
-    if (li) li.classList.add('player-active');
-    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
-      const nameEl = p.querySelector('.name');
-      if (!nameEl || nameEl.textContent.trim() !== name) continue;
-      p.classList.add('player-active');
-    }
-  }
-
-  // Wires up: (1) hover/click sync between the standings list and every
-  // bracket on the page via setActivePlayer, with click "pinning" the
-  // highlight so it survives the mouse moving away — otherwise there'd be
-  // no way to highlight a run and then actually look at it; (2) click-and-
-  // drag panning and left/right-arrow scrolling for each bracket container,
-  // since a wide bracket only exposes a horizontal scrollbar that's easy to
-  // miss. Called once per page, after every stage has rendered.
-  function setupBracketInteractivity() {
-    let pinned = null;
-    let dragMoved = false; // suppresses the click a drag-release generates
-
-    function playerNameAt(el) {
-      const li = el.closest('.standings-list li[data-player]');
-      if (li) return li.dataset.player;
-      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
-      if (!p) return null;
-      const nameEl = p.querySelector('.name');
-      return nameEl ? nameEl.textContent.trim() : null;
-    }
-
-    document.addEventListener('mouseover', (e) => {
-      if (pinned) return;
-      const name = playerNameAt(e.target);
-      if (name) setActivePlayer(name);
-    });
-    document.addEventListener('mouseout', (e) => {
-      if (pinned) return;
-      if (!playerNameAt(e.target)) return;
-      // Moving between child elements of the same row shouldn't flicker
-      // the highlight off and back on.
-      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
-      setActivePlayer(null);
-    });
-    document.addEventListener('click', (e) => {
-      if (dragMoved) { dragMoved = false; return; }
-      const name = playerNameAt(e.target);
-      if (!name) {
-        if (pinned) { pinned = null; setActivePlayer(null); }
-        return;
-      }
-      if (pinned === name) { pinned = null; setActivePlayer(null); }
-      else { pinned = name; setActivePlayer(name); }
-    });
-
-    for (const bv of document.querySelectorAll('.brackets-viewer')) {
-      bv.setAttribute('tabindex', '0');
-      let dragging = false;
-      let startX = 0;
-      let startScroll = 0;
-      bv.addEventListener('mousedown', (e) => {
-        dragging = true;
-        dragMoved = false;
-        startX = e.clientX;
-        startScroll = bv.scrollLeft;
-        bv.classList.add('dragging');
-      });
-      window.addEventListener('mousemove', (e) => {
-        if (!dragging) return;
-        const dx = e.clientX - startX;
-        if (Math.abs(dx) > 4) dragMoved = true;
-        bv.scrollLeft = startScroll - dx;
-      });
-      window.addEventListener('mouseup', () => {
-        if (!dragging) return;
-        dragging = false;
-        bv.classList.remove('dragging');
-      });
-      bv.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
-        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
-      });
-    }
-  }
 </script>
 </head>
 <body>
@@ -471,7 +476,7 @@
   layoutBrackets();
   markPendingMatches();
 </script>
-    <script>setupBracketInteractivity();</script>
+    <script>setupPlayerInteractivity();</script>
   </div>
 </div>
 <footer class="site-footer">

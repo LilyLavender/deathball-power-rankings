@@ -432,21 +432,51 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .tourney-columns { display: flex; align-items: flex-start; gap: 2.5rem; flex-wrap: wrap; }
 .tourney-standings { flex: 0 0 240px; }
 .tourney-matches { flex: 1 1 520px; min-width: 0; }
-.round-group { margin-bottom: 1.25rem; }
+.round-group { margin-bottom: 2rem; }
 .round-group h3 { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin: 0 0 0.4rem; }
 .match-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid #161616; font-size: 0.95rem; }
 .match-winner { font-weight: 700; color: #f0f0f0; }
 .match-loser { color: #888; }
 .match-score { font-variant-numeric: tabular-nums; color: #3eff8b; font-weight: 700; margin-left: auto; }
 .match-dq { color: #ff5e5e; font-size: 0.8rem; }
+/* Swiss cards: a grid of one card per match (3 per row), left player |
+   score | right player -- left/right is decided the same way
+   build_bracket.js decides top/bottom for a bracket match (a stable hash
+   of the pairing, not win/loss), so a player isn't always shown on the
+   same side just for having won. Neither name is bolded; only the score
+   numbers are colored (green for whoever actually won, red for whoever
+   lost), independent of which side they landed on. A 3-column grid (not
+   flex) gives each side its own full-height cell -- padding included --
+   so the hover highlight (.player-active, via setActivePlayer) can fill
+   exactly that half of the card without touching the score or the other
+   player. Names crowd toward the score (right player's name left-aligned,
+   left player's right-aligned) with each side's flag at the outer edge --
+   flagAfter (see nameHtml/teamNameHtml) flips the flag to trail the name
+   for the right side so both flags land outermost instead of both
+   clustering next to the score. */
+.swiss-round-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+.swiss-match-card { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; border: 1px solid #1a1a1a; border-radius: 4px; background: #0d0d0d; font-size: 0.95rem; overflow: hidden; }
+.swiss-match-card .match-side { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f0f0f0; font-weight: 400; padding: 0.7rem 0.9rem; }
+.swiss-match-card .match-side:first-child { text-align: right; }
+.swiss-match-card .match-side:last-child { text-align: left; }
+/* The base .loc-flag rule only ever adds margin-right (it assumes a flag
+   always leads the name) -- on the right side the flag trails the name
+   instead (flagAfter, see nameHtml), so its gap needs to flip to
+   margin-left or the name and flag would sit flush against each other. */
+.swiss-match-card .match-side:last-child img.loc-flag { margin-right: 0; margin-left: 0.35em; }
+.swiss-match-card .match-score { display: flex; align-items: center; justify-content: center; gap: 0.25em; padding: 0.7rem 0.4rem; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.swiss-match-card .score-win { color: #3eff8b; }
+.swiss-match-card .score-loss { color: #ff5e5e; }
+.swiss-match-card .score-sep { color: #555; }
+.swiss-match-card .score-dq { color: #ff5e5e; }
 .standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; }
 .standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; cursor: pointer; transition: background-color 150ms ease; }
 .standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; flex-shrink: 0; }
 .standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
-/* Synced with the bracket: hovering or clicking a player in either place
-   highlights them in both (see setupBracketInteractivity in the bracket
-   head script). */
+/* Synced with the bracket/crosstable/round-list: hovering or clicking a
+   player anywhere highlights them everywhere (see setupPlayerInteractivity
+   in the always-loaded player-interactivity head script). */
 .standings-list li.player-active { background-color: rgba(62,255,139,0.12); }
 .stage-label { font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #3eff8b; margin: 1.5rem 0 0.75rem; }
 .stage-label:first-child { margin-top: 0; }
@@ -454,13 +484,33 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .crosstable-wrap { overflow-x: auto; }
 .crosstable { border-collapse: collapse; font-size: 0.85rem; }
 .crosstable th, .crosstable td { border: 1px solid #1a1a1a; padding: 0.4rem 0.6rem; text-align: center; white-space: nowrap; }
-.crosstable th { background: #111; color: #888; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
+/* Player names are real names, not fixed column labels like the rest of the
+   site's tables -- override the global uppercase th rule so they render in
+   their actual casing. */
+.crosstable th { background: #111; color: #888; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: none; cursor: pointer; }
 .crosstable th.row-name { text-align: left; color: #f0f0f0; }
 .crosstable td.cell-diag { background: #0a0a0a; }
 .crosstable td.cell-empty { color: #333; }
-.crosstable td.cell-win { color: #3eff8b; font-weight: 700; }
-.crosstable td.cell-loss { color: #ff5e5e; }
-.crosstable td.cell-draw { color: #ccc; }
+/* Result label -- W/L/D plus the actual game score (the score used to be
+   tooltip-only via the title attribute), plain colored text with no pill
+   background. */
+.crosstable-result { display: inline-flex; align-items: center; gap: 0.35em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.crosstable-result.cell-win { color: #3eff8b; }
+.crosstable-result.cell-loss { color: #ff5e5e; }
+.crosstable-result.cell-draw { color: #ccc; }
+/* Hovering/clicking a player (row header, column header, or standings row)
+   highlights their row-name th, every column th, and every cell of theirs
+   -- i.e. all of their games in the crosstable -- via data-player/
+   data-row-player/data-col-player attributes set in writeTournamentPages. */
+.crosstable th.player-active, .crosstable td.player-active { background: rgba(62,255,139,0.16); }
+/* Round-list entries and swiss cards get the same hover highlight on
+   whichever name was hovered. */
+.round-group .player-active { background-color: rgba(62,255,139,0.16); border-radius: 2px; }
+/* Swiss's own .match-side is already a full-height, padded grid cell (see
+   .swiss-match-card above) -- no radius of its own, so the card's outer
+   border-radius plus overflow:hidden is what actually rounds the highlight
+   at the card's edge instead of a mismatched inner corner mid-card. */
+.swiss-match-card .player-active { border-radius: 0; }
 h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .alias-list { color: #888; font-size: 0.9rem; }
 /* 13-column grid so Record (3) + Goals (4) + the combined ranking card (6)
@@ -667,6 +717,9 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .tourney-loc { order: 1; }
   .tourney-date { order: 2; }
   .tourney-original-link { order: 3; }
+  /* 3 cards per row is too cramped once the tournament columns have
+     already stacked to full width on a phone -- drop to 1. */
+  .swiss-round-grid { grid-template-columns: 1fr; }
 
   /* Power Rankings tab: filters/view-toggles/download collapse behind an
      Options button instead of sitting open above the grid by default. */

@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const glicko2 = require('./glicko2');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
-const { buildBracketData } = require('./build_bracket');
+const { buildBracketData, hashStr } = require('./build_bracket');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -627,6 +627,13 @@ function collectStartgg() {
         order: s.id,
         groupId: s.phaseGroup?.id != null ? s.phaseGroup.id : null,
         stageKind: bracketType === 'ROUND_ROBIN' || bracketType === 'SWISS' ? 'pool' : 'bracket',
+        // Distinguishes a swiss pool from a round-robin one when a
+        // tournament splits into multiple pool stages -- splitStages uses
+        // this to keep a swiss pool rendering as a round-list instead of
+        // being lumped in with round-robin's crosstable. Challonge has no
+        // per-match equivalent (its group-stage feature is always
+        // round-robin pools), so this stays unset there.
+        groupBracketType: bracketType === 'SWISS' ? 'swiss' : bracketType === 'ROUND_ROBIN' ? 'round robin' : null,
       });
     }
 
@@ -715,11 +722,12 @@ function splitStages(t) {
     const isBracketStage = groupId === null || stageMatches.every((m) => m.stageKind === 'bracket');
     const stageNames = new Set(stageMatches.flatMap((m) => [m.winnerName, m.loserName]).filter(Boolean));
     const stageParticipantList = t.participantList.filter((p) => stageNames.has(p.name));
+    const poolType = stageMatches.find((m) => m.groupBracketType)?.groupBracketType || 'round robin';
     return {
       label: isBracketStage && hasBracketGroup ? 'Playoff Bracket' : poolIds.length > 1 ? `Group ${i + 1}` : 'Group Stage',
       tLike: {
         ...t,
-        tournamentType: isBracketStage ? t.tournamentType : 'round robin',
+        tournamentType: isBracketStage ? t.tournamentType : poolType,
         matches: stageMatches,
         participantList: stageParticipantList,
       },
@@ -2161,21 +2169,51 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .tourney-columns { display: flex; align-items: flex-start; gap: 2.5rem; flex-wrap: wrap; }
 .tourney-standings { flex: 0 0 240px; }
 .tourney-matches { flex: 1 1 520px; min-width: 0; }
-.round-group { margin-bottom: 1.25rem; }
+.round-group { margin-bottom: 2rem; }
 .round-group h3 { font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin: 0 0 0.4rem; }
 .match-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid #161616; font-size: 0.95rem; }
 .match-winner { font-weight: 700; color: #f0f0f0; }
 .match-loser { color: #888; }
 .match-score { font-variant-numeric: tabular-nums; color: #3eff8b; font-weight: 700; margin-left: auto; }
 .match-dq { color: #ff5e5e; font-size: 0.8rem; }
+/* Swiss cards: a grid of one card per match (3 per row), left player |
+   score | right player -- left/right is decided the same way
+   build_bracket.js decides top/bottom for a bracket match (a stable hash
+   of the pairing, not win/loss), so a player isn't always shown on the
+   same side just for having won. Neither name is bolded; only the score
+   numbers are colored (green for whoever actually won, red for whoever
+   lost), independent of which side they landed on. A 3-column grid (not
+   flex) gives each side its own full-height cell -- padding included --
+   so the hover highlight (.player-active, via setActivePlayer) can fill
+   exactly that half of the card without touching the score or the other
+   player. Names crowd toward the score (right player's name left-aligned,
+   left player's right-aligned) with each side's flag at the outer edge --
+   flagAfter (see nameHtml/teamNameHtml) flips the flag to trail the name
+   for the right side so both flags land outermost instead of both
+   clustering next to the score. */
+.swiss-round-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+.swiss-match-card { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; border: 1px solid #1a1a1a; border-radius: 4px; background: #0d0d0d; font-size: 0.95rem; overflow: hidden; }
+.swiss-match-card .match-side { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f0f0f0; font-weight: 400; padding: 0.7rem 0.9rem; }
+.swiss-match-card .match-side:first-child { text-align: right; }
+.swiss-match-card .match-side:last-child { text-align: left; }
+/* The base .loc-flag rule only ever adds margin-right (it assumes a flag
+   always leads the name) -- on the right side the flag trails the name
+   instead (flagAfter, see nameHtml), so its gap needs to flip to
+   margin-left or the name and flag would sit flush against each other. */
+.swiss-match-card .match-side:last-child img.loc-flag { margin-right: 0; margin-left: 0.35em; }
+.swiss-match-card .match-score { display: flex; align-items: center; justify-content: center; gap: 0.25em; padding: 0.7rem 0.4rem; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.swiss-match-card .score-win { color: #3eff8b; }
+.swiss-match-card .score-loss { color: #ff5e5e; }
+.swiss-match-card .score-sep { color: #555; }
+.swiss-match-card .score-dq { color: #ff5e5e; }
 .standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; }
 .standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; cursor: pointer; transition: background-color 150ms ease; }
 .standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; flex-shrink: 0; }
 .standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
-/* Synced with the bracket: hovering or clicking a player in either place
-   highlights them in both (see setupBracketInteractivity in the bracket
-   head script). */
+/* Synced with the bracket/crosstable/round-list: hovering or clicking a
+   player anywhere highlights them everywhere (see setupPlayerInteractivity
+   in the always-loaded player-interactivity head script). */
 .standings-list li.player-active { background-color: rgba(62,255,139,0.12); }
 .stage-label { font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #3eff8b; margin: 1.5rem 0 0.75rem; }
 .stage-label:first-child { margin-top: 0; }
@@ -2183,13 +2221,33 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .crosstable-wrap { overflow-x: auto; }
 .crosstable { border-collapse: collapse; font-size: 0.85rem; }
 .crosstable th, .crosstable td { border: 1px solid #1a1a1a; padding: 0.4rem 0.6rem; text-align: center; white-space: nowrap; }
-.crosstable th { background: #111; color: #888; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
+/* Player names are real names, not fixed column labels like the rest of the
+   site's tables -- override the global uppercase th rule so they render in
+   their actual casing. */
+.crosstable th { background: #111; color: #888; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: none; cursor: pointer; }
 .crosstable th.row-name { text-align: left; color: #f0f0f0; }
 .crosstable td.cell-diag { background: #0a0a0a; }
 .crosstable td.cell-empty { color: #333; }
-.crosstable td.cell-win { color: #3eff8b; font-weight: 700; }
-.crosstable td.cell-loss { color: #ff5e5e; }
-.crosstable td.cell-draw { color: #ccc; }
+/* Result label -- W/L/D plus the actual game score (the score used to be
+   tooltip-only via the title attribute), plain colored text with no pill
+   background. */
+.crosstable-result { display: inline-flex; align-items: center; gap: 0.35em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.crosstable-result.cell-win { color: #3eff8b; }
+.crosstable-result.cell-loss { color: #ff5e5e; }
+.crosstable-result.cell-draw { color: #ccc; }
+/* Hovering/clicking a player (row header, column header, or standings row)
+   highlights their row-name th, every column th, and every cell of theirs
+   -- i.e. all of their games in the crosstable -- via data-player/
+   data-row-player/data-col-player attributes set in writeTournamentPages. */
+.crosstable th.player-active, .crosstable td.player-active { background: rgba(62,255,139,0.16); }
+/* Round-list entries and swiss cards get the same hover highlight on
+   whichever name was hovered. */
+.round-group .player-active { background-color: rgba(62,255,139,0.16); border-radius: 2px; }
+/* Swiss's own .match-side is already a full-height, padded grid cell (see
+   .swiss-match-card above) -- no radius of its own, so the card's outer
+   border-radius plus overflow:hidden is what actually rounds the highlight
+   at the card's edge instead of a mismatched inner corner mid-card. */
+.swiss-match-card .player-active { border-radius: 0; }
 h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .alias-list { color: #888; font-size: 0.9rem; }
 /* 13-column grid so Record (3) + Goals (4) + the combined ranking card (6)
@@ -2396,6 +2454,9 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .tourney-loc { order: 1; }
   .tourney-date { order: 2; }
   .tourney-original-link { order: 3; }
+  /* 3 cards per row is too cramped once the tournament columns have
+     already stacked to full width on a phone -- drop to 1. */
+  .swiss-round-grid { grid-template-columns: 1fr; }
 
   /* Power Rankings tab: filters/view-toggles/download collapse behind an
      Options button instead of sitting open above the grid by default. */
@@ -4532,6 +4593,22 @@ function matchScoreLabel(m) {
   return '';
 }
 
+// Same underlying score as matchScoreLabel, but kept as the raw {winner,
+// loser} pair instead of formatted winner-first -- for a display that
+// orients a match to a fixed left/right side rather than assuming the
+// winner reads first (see the swiss card layout in writeTournamentPages),
+// the two numbers need to land next to whichever side actually earned
+// them. Returns null for a DQ (no real score) or a match with no score data.
+function matchScoreParts(m) {
+  if (m.isDQ) return null;
+  if (m.games) {
+    const w = m.games.filter((g) => g.winnerGoals > g.loserGoals).length;
+    return { winner: w, loser: m.games.length - w };
+  }
+  if (m.winnerSets != null && m.loserSets != null) return { winner: m.winnerSets, loser: m.loserSets };
+  return null;
+}
+
 const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
 <script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
 <style>
@@ -4861,19 +4938,30 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
       opponents.appendChild(icon);
     }
   }
+</script>`;
 
+// Always loaded on every tournament page (unlike BRACKETS_VIEWER_HEAD, which
+// only loads when a stage actually has a reconstructed bracket) -- wires up
+// player hover/click highlighting across the standings list, crosstable
+// (round-robin), round-list (swiss and any other non-crosstable stage), and
+// bracket viewer alike, since a tournament can have any mix of these stages.
+const PLAYER_INTERACTIVITY_HEAD = `<script>
   // Highlights one player everywhere they appear on the page — every
-  // bracket match they're in (across every stage/container, in case a
-  // tournament has more than one) and their standings row — or clears the
-  // highlight when called with null. Matched by canonical display name
-  // (the same string both the standings list and every bracket participant
-  // were rendered with), since bracket participant ids are only unique
-  // within their own stage's render, not across the whole page.
+  // bracket match, crosstable row/column, round-list entry (across every
+  // stage/container, in case a tournament has more than one), and their
+  // standings row — or clears the highlight when called with null. Matched
+  // by canonical display name (the same string the standings list,
+  // crosstable, round-list, and bracket participants were all rendered
+  // with), since bracket participant ids are only unique within their own
+  // stage's render, not across the whole page.
   function setActivePlayer(name) {
     for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
     if (!name) return;
     const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
     if (li) li.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable td[data-row-player="' + CSS.escape(name) + '"], .crosstable td[data-col-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.round-group [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
     for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
       const nameEl = p.querySelector('.name');
       if (!nameEl || nameEl.textContent.trim() !== name) continue;
@@ -4881,20 +4969,21 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
     }
   }
 
-  // Wires up: (1) hover/click sync between the standings list and every
-  // bracket on the page via setActivePlayer, with click "pinning" the
-  // highlight so it survives the mouse moving away — otherwise there'd be
-  // no way to highlight a run and then actually look at it; (2) click-and-
-  // drag panning and left/right-arrow scrolling for each bracket container,
-  // since a wide bracket only exposes a horizontal scrollbar that's easy to
-  // miss. Called once per page, after every stage has rendered.
-  function setupBracketInteractivity() {
+  // Wires up: (1) hover/click sync between the standings list, crosstable,
+  // round-list, and every bracket on the page via setActivePlayer, with
+  // click "pinning" the highlight so it survives the mouse moving away —
+  // otherwise there'd be no way to highlight a run and then actually look
+  // at it; (2) click-and-drag panning and left/right-arrow scrolling for
+  // each bracket container, since a wide bracket only exposes a horizontal
+  // scrollbar that's easy to miss. Called once per page, after every stage
+  // has rendered.
+  function setupPlayerInteractivity() {
     let pinned = null;
     let dragMoved = false; // suppresses the click a drag-release generates
 
     function playerNameAt(el) {
-      const li = el.closest('.standings-list li[data-player]');
-      if (li) return li.dataset.player;
+      const withName = el.closest('[data-player]');
+      if (withName) return withName.dataset.player;
       const p = el.closest('.brackets-viewer .participant[data-participant-id]');
       if (!p) return null;
       const nameEl = p.querySelector('.name');
@@ -4957,12 +5046,20 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
 </script>`;
 
 // Renders a raw in-tournament name as canonical-name-plus-flag markup.
-function nameHtml(rawName, tournamentUrl) {
+// `opts.noLink` skips the player-page <a> wrapper -- used for match displays
+// (crosstable, round-list) where the standings list is meant to be the only
+// clickable path to a player's page, same as the brackets-viewer bracket
+// (which never links names at all, having no HTML hook to do so).
+// `opts.flagAfter` trails the flag after the name instead of leading with
+// it -- used for the right-hand side of a swiss card so both cards' flags
+// land at the card's outer edges instead of both clustering next to the
+// score in the middle.
+function nameHtml(rawName, tournamentUrl, opts = {}) {
   if (!rawName) return escapeHtml('?');
   const { id, name, flag } = resolveDisplayName(rawName, tournamentUrl);
   const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
-  const href = playerHref(id, '../');
-  const inner = `${flagImg}${escapeHtml(name)}`;
+  const href = opts.noLink ? null : playerHref(id, '../');
+  const inner = opts.flagAfter ? `${escapeHtml(name)}${flagImg}` : `${flagImg}${escapeHtml(name)}`;
   return href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner;
 }
 
@@ -4971,15 +5068,16 @@ function nameHtml(rawName, tournamentUrl) {
 // (clicking either name goes to that player's own page), always joined by
 // "&" regardless of what separator the source bracket actually used. Falls
 // back to nameHtml itself if the raw string can't be split (e.g. a name
-// with no + or & wasn't a proper doubles entry).
-function teamNameHtml(rawTeamName, tournamentUrl) {
+// with no + or & wasn't a proper doubles entry). See nameHtml for
+// `opts.noLink`/`opts.flagAfter`.
+function teamNameHtml(rawTeamName, tournamentUrl, opts = {}) {
   const parts = parseTeamName(rawTeamName);
-  if (!parts) return nameHtml(rawTeamName, tournamentUrl);
+  if (!parts) return nameHtml(rawTeamName, tournamentUrl, opts);
   const spans = parts.map((raw) => {
     const { id, name, flag } = resolveDisplayName(raw, tournamentUrl);
     const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
-    const href = playerHref(id, '../');
-    const inner = `${flagImg}${escapeHtml(name)}`;
+    const href = opts.noLink ? null : playerHref(id, '../');
+    const inner = opts.flagAfter ? `${escapeHtml(name)}${flagImg}` : `${flagImg}${escapeHtml(name)}`;
     return href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner;
   });
   return spans.join(' <span class="doubles-amp">&amp;</span> ');
@@ -5033,6 +5131,11 @@ function writeTournamentPages(allTournaments) {
     // clickable player links (teamNameHtml) instead of one opaque team-name
     // link (nameHtml) -- see requirement in teamNameHtml's own comment.
     const teamAware = (raw) => (t.isDoubles ? teamNameHtml(raw, t.url) : nameHtml(raw, t.url));
+    // The standings list is meant to be the only clickable path to a
+    // player's page from a tournament page -- the crosstable/round-list
+    // (like the brackets-viewer bracket, which never links at all) show
+    // plain name+flag markup instead.
+    const matchAware = (raw, opts) => (t.isDoubles ? teamNameHtml(raw, t.url, { noLink: true, ...opts }) : nameHtml(raw, t.url, { noLink: true, ...opts }));
 
     const standingsHtml = standings.length
       ? `<ol class="standings-list">
@@ -5040,13 +5143,19 @@ ${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span clas
     </ol>`
       : '<p>No standings available.</p>';
 
-    let extraHead = '';
+    let usesBracketViewer = false;
+    // Raw match winnerName/loserName aren't canonicalized (aliases/splits
+    // resolved) the way standings/crosstable names are -- canonicalize here
+    // too so a round-list entry's data-player attribute matches the same
+    // string the standings list and crosstable use, letting hover/click
+    // highlighting sync across all three.
+    const canon = (rawName) => resolveIdentity(rawName, t.url).name;
     const stageSections = t.stages.map((stage) => {
       const heading = stage.label ? `<h3 class="stage-label">${escapeHtml(stage.label)}</h3>\n` : '';
       const st = stage.tLike;
 
       if (stage.bracketData) {
-        extraHead = BRACKETS_VIEWER_HEAD;
+        usesBracketViewer = true;
         const containerId = `bv-${stage.label ? slugify(stage.label) : 'main'}`;
         const { incomplete, participants, ...rest } = stage.bracketData;
         const renderData = { ...rest, participants: participants.map(({ flag, ...p }) => p) };
@@ -5063,19 +5172,25 @@ ${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span clas
 </script>`;
       }
 
-      if (st.tournamentType === 'round robin' || st.tournamentType === 'swiss') {
+      // Round robin plays everyone against everyone, so a dense crosstable
+      // reads naturally. Swiss only pairs a handful of opponents per player
+      // across a few rounds -- the same crosstable would be mostly empty
+      // dots -- so it renders as a round-by-round match list instead (same
+      // shape as the elimination round-list below).
+      if (st.tournamentType === 'round robin') {
         const stageStandings = stage.label ? buildStandings(st) : standings;
         const { names, cell } = buildCrosstable(st, stageStandings);
         return `${heading}<div class="crosstable-wrap">
   <table class="crosstable">
-    <thead><tr><th></th>${names.map((n) => `<th>${teamAware(rawNameForCanonical(t, n))}</th>`).join('')}</tr></thead>
+    <thead><tr><th></th>${names.map((n) => `<th data-player="${escapeHtml(n)}">${matchAware(rawNameForCanonical(t, n))}</th>`).join('')}</tr></thead>
     <tbody>
-${names.map((rowName) => `      <tr><th class="row-name">${teamAware(rawNameForCanonical(t, rowName))}</th>${names.map((colName) => {
+${names.map((rowName) => `      <tr><th class="row-name" data-player="${escapeHtml(rowName)}">${matchAware(rawNameForCanonical(t, rowName))}</th>${names.map((colName) => {
           const c = cell(rowName, colName);
-          if (c === null) return '<td class="cell-diag">&mdash;</td>';
-          if (c.empty) return '<td class="cell-empty">&middot;</td>';
+          const attrs = `data-row-player="${escapeHtml(rowName)}" data-col-player="${escapeHtml(colName)}"`;
+          if (c === null) return `<td class="cell-diag" ${attrs}>&mdash;</td>`;
+          if (c.empty) return `<td class="cell-empty" ${attrs}>&middot;</td>`;
           const cls = c.label === 'W' ? 'cell-win' : c.label === 'L' ? 'cell-loss' : 'cell-draw';
-          return `<td class="${cls}" title="${escapeHtml(c.title)}">${c.label}</td>`;
+          return `<td class="${cls}" ${attrs}><span class="crosstable-result ${cls}">${c.label} ${escapeHtml(c.title)}</span></td>`;
         }).join('')}</tr>`).join('\n')}
     </tbody>
   </table>
@@ -5083,11 +5198,49 @@ ${names.map((rowName) => `      <tr><th class="row-name">${teamAware(rawNameForC
       }
 
       const roundGroups = buildRoundGroups(st);
+      const isSwiss = st.tournamentType === 'swiss';
+      if (!isSwiss) {
+        return `${heading}${roundGroups.map((g) => `<div class="round-group">
+      <h3>${escapeHtml(g.label)}</h3>
+${g.matches.map((m) => `      <div class="match-row"><span class="match-winner" data-player="${escapeHtml(canon(m.winnerName))}">${matchAware(m.winnerName)}</span><span> def. </span><span class="match-loser" data-player="${escapeHtml(canon(m.loserName))}">${matchAware(m.loserName)}</span>${m.isDQ ? '<span class="match-dq">(DQ)</span>' : ''}<span class="match-score">${escapeHtml(matchScoreLabel(m))}</span></div>`).join('\n')}
+    </div>`).join('\n')}`;
+      }
+
+      // Swiss renders as a grid of cards (3 per row) rather than a stacked
+      // list -- a round can have many matches, and a card grid reads faster
+      // than a tall column of rows. Left/right side is decided the same way
+      // build_bracket.js decides top/bottom for a bracket match slot: a
+      // stable hash of the pairing, not who won -- so, like a real bracket,
+      // a player isn't pinned to one side just because they won. The score
+      // is re-oriented to match: `matchScoreParts` keeps the winner/loser
+      // numbers separate so whichever side actually earned a number is the
+      // side it's shown on, instead of always printing winner-first.
       return `${heading}${roundGroups.map((g) => `<div class="round-group">
       <h3>${escapeHtml(g.label)}</h3>
-${g.matches.map((m) => `      <div class="match-row"><span class="match-winner">${teamAware(m.winnerName)}</span><span> def. </span><span class="match-loser">${teamAware(m.loserName)}</span>${m.isDQ ? '<span class="match-dq">(DQ)</span>' : ''}<span class="match-score">${escapeHtml(matchScoreLabel(m))}</span></div>`).join('\n')}
+      <div class="swiss-round-grid">
+${g.matches.map((m) => {
+        const key = `${(m.winnerName || '').toLowerCase()}|${(m.loserName || '').toLowerCase()}|${m.groupId ?? ''}:${m.round ?? ''}`;
+        const swap = hashStr(key) % 2 === 1;
+        const left = swap ? m.loserName : m.winnerName;
+        const right = swap ? m.winnerName : m.loserName;
+        const leftWon = !swap;
+        const parts = matchScoreParts(m);
+        let scoreHtml;
+        if (m.isDQ) {
+          scoreHtml = '<span class="score-dq">DQ</span>';
+        } else if (parts) {
+          const leftNum = leftWon ? parts.winner : parts.loser;
+          const rightNum = leftWon ? parts.loser : parts.winner;
+          scoreHtml = `<span class="score-num ${leftWon ? 'score-win' : 'score-loss'}">${leftNum}</span><span class="score-sep">-</span><span class="score-num ${leftWon ? 'score-loss' : 'score-win'}">${rightNum}</span>`;
+        } else {
+          scoreHtml = '';
+        }
+        return `      <div class="swiss-match-card"><span class="match-side" data-player="${escapeHtml(canon(left))}">${matchAware(left)}</span><span class="match-score">${scoreHtml}</span><span class="match-side" data-player="${escapeHtml(canon(right))}">${matchAware(right, { flagAfter: true })}</span></div>`;
+      }).join('\n')}
+      </div>
     </div>`).join('\n')}`;
     }).join('\n');
+    const extraHead = PLAYER_INTERACTIVITY_HEAD + (usesBracketViewer ? BRACKETS_VIEWER_HEAD : '');
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -5117,7 +5270,7 @@ ${extraHead}
   <div class="tourney-section tourney-matches">
     <h2>Matches</h2>
     ${stageSections}
-    ${extraHead ? '<script>setupBracketInteractivity();</script>' : ''}
+    <script>setupPlayerInteractivity();</script>
   </div>
 </div>
 ${siteFooter('../')}

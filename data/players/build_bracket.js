@@ -425,4 +425,4 @@ async function buildBracketData(t) {
   };
 }
 
-module.exports = { buildBracketData };
+module.exports = { buildBracketData, hashStr };

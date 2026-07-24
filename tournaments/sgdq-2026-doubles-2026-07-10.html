@@ -13,7 +13,105 @@
 <meta name="twitter:title" content="SGDQ 2026 Doubles — DeathBall Tournament" />
 <meta name="twitter:description" content="Tournament results for SGDQ 2026 Doubles. July 10, 2026 — Minneapolis, MN" />
 <link rel="stylesheet" href="../index.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
+<script>
+  // Highlights one player everywhere they appear on the page — every
+  // bracket match, crosstable row/column, round-list entry (across every
+  // stage/container, in case a tournament has more than one), and their
+  // standings row — or clears the highlight when called with null. Matched
+  // by canonical display name (the same string the standings list,
+  // crosstable, round-list, and bracket participants were all rendered
+  // with), since bracket participant ids are only unique within their own
+  // stage's render, not across the whole page.
+  function setActivePlayer(name) {
+    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
+    if (!name) return;
+    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
+    if (li) li.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable td[data-row-player="' + CSS.escape(name) + '"], .crosstable td[data-col-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.round-group [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.textContent.trim() !== name) continue;
+      p.classList.add('player-active');
+    }
+  }
+
+  // Wires up: (1) hover/click sync between the standings list, crosstable,
+  // round-list, and every bracket on the page via setActivePlayer, with
+  // click "pinning" the highlight so it survives the mouse moving away —
+  // otherwise there'd be no way to highlight a run and then actually look
+  // at it; (2) click-and-drag panning and left/right-arrow scrolling for
+  // each bracket container, since a wide bracket only exposes a horizontal
+  // scrollbar that's easy to miss. Called once per page, after every stage
+  // has rendered.
+  function setupPlayerInteractivity() {
+    let pinned = null;
+    let dragMoved = false; // suppresses the click a drag-release generates
+
+    function playerNameAt(el) {
+      const withName = el.closest('[data-player]');
+      if (withName) return withName.dataset.player;
+      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
+      if (!p) return null;
+      const nameEl = p.querySelector('.name');
+      return nameEl ? nameEl.textContent.trim() : null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      if (pinned) return;
+      const name = playerNameAt(e.target);
+      if (name) setActivePlayer(name);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (pinned) return;
+      if (!playerNameAt(e.target)) return;
+      // Moving between child elements of the same row shouldn't flicker
+      // the highlight off and back on.
+      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
+      setActivePlayer(null);
+    });
+    document.addEventListener('click', (e) => {
+      if (dragMoved) { dragMoved = false; return; }
+      const name = playerNameAt(e.target);
+      if (!name) {
+        if (pinned) { pinned = null; setActivePlayer(null); }
+        return;
+      }
+      if (pinned === name) { pinned = null; setActivePlayer(null); }
+      else { pinned = name; setActivePlayer(name); }
+    });
+
+    for (const bv of document.querySelectorAll('.brackets-viewer')) {
+      bv.setAttribute('tabindex', '0');
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+      bv.addEventListener('mousedown', (e) => {
+        dragging = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = bv.scrollLeft;
+        bv.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 4) dragMoved = true;
+        bv.scrollLeft = startScroll - dx;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        bv.classList.remove('dragging');
+      });
+      bv.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
+      });
+    }
+  }
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
 <script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
 <style>
   .brackets-viewer {
@@ -342,99 +440,6 @@
       opponents.appendChild(icon);
     }
   }
-
-  // Highlights one player everywhere they appear on the page — every
-  // bracket match they're in (across every stage/container, in case a
-  // tournament has more than one) and their standings row — or clears the
-  // highlight when called with null. Matched by canonical display name
-  // (the same string both the standings list and every bracket participant
-  // were rendered with), since bracket participant ids are only unique
-  // within their own stage's render, not across the whole page.
-  function setActivePlayer(name) {
-    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
-    if (!name) return;
-    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
-    if (li) li.classList.add('player-active');
-    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
-      const nameEl = p.querySelector('.name');
-      if (!nameEl || nameEl.textContent.trim() !== name) continue;
-      p.classList.add('player-active');
-    }
-  }
-
-  // Wires up: (1) hover/click sync between the standings list and every
-  // bracket on the page via setActivePlayer, with click "pinning" the
-  // highlight so it survives the mouse moving away — otherwise there'd be
-  // no way to highlight a run and then actually look at it; (2) click-and-
-  // drag panning and left/right-arrow scrolling for each bracket container,
-  // since a wide bracket only exposes a horizontal scrollbar that's easy to
-  // miss. Called once per page, after every stage has rendered.
-  function setupBracketInteractivity() {
-    let pinned = null;
-    let dragMoved = false; // suppresses the click a drag-release generates
-
-    function playerNameAt(el) {
-      const li = el.closest('.standings-list li[data-player]');
-      if (li) return li.dataset.player;
-      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
-      if (!p) return null;
-      const nameEl = p.querySelector('.name');
-      return nameEl ? nameEl.textContent.trim() : null;
-    }
-
-    document.addEventListener('mouseover', (e) => {
-      if (pinned) return;
-      const name = playerNameAt(e.target);
-      if (name) setActivePlayer(name);
-    });
-    document.addEventListener('mouseout', (e) => {
-      if (pinned) return;
-      if (!playerNameAt(e.target)) return;
-      // Moving between child elements of the same row shouldn't flicker
-      // the highlight off and back on.
-      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
-      setActivePlayer(null);
-    });
-    document.addEventListener('click', (e) => {
-      if (dragMoved) { dragMoved = false; return; }
-      const name = playerNameAt(e.target);
-      if (!name) {
-        if (pinned) { pinned = null; setActivePlayer(null); }
-        return;
-      }
-      if (pinned === name) { pinned = null; setActivePlayer(null); }
-      else { pinned = name; setActivePlayer(name); }
-    });
-
-    for (const bv of document.querySelectorAll('.brackets-viewer')) {
-      bv.setAttribute('tabindex', '0');
-      let dragging = false;
-      let startX = 0;
-      let startScroll = 0;
-      bv.addEventListener('mousedown', (e) => {
-        dragging = true;
-        dragMoved = false;
-        startX = e.clientX;
-        startScroll = bv.scrollLeft;
-        bv.classList.add('dragging');
-      });
-      window.addEventListener('mousemove', (e) => {
-        if (!dragging) return;
-        const dx = e.clientX - startX;
-        if (Math.abs(dx) > 4) dragMoved = true;
-        bv.scrollLeft = startScroll - dx;
-      });
-      window.addEventListener('mouseup', () => {
-        if (!dragging) return;
-        dragging = false;
-        bv.classList.remove('dragging');
-      });
-      bv.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
-        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
-      });
-    }
-  }
 </script>
 </head>
 <body>
@@ -465,15 +470,15 @@
     <h3 class="stage-label">Group Stage</h3>
 <div class="crosstable-wrap">
   <table class="crosstable">
-    <thead><tr><th></th><th><a href="../players/dirtd.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/gb.svg" title="United Kingdom" alt="United Kingdom">dirtd</a> <span class="doubles-amp">&amp;</span> <a href="../players/rheastargirl.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Flag_of_Chicago%2C_Illinois.svg" title="Chicago" alt="Chicago">RheaStarGirl</a></th><th><a href="../players/mrlink2k.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">Mrlink2k</a> <span class="doubles-amp">&amp;</span> <a href="../players/something-dumber.html">something_dumber</a></th><th><a href="../players/willyjwillyj.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">willyjwillyj</a> <span class="doubles-amp">&amp;</span> <a href="../players/samueljh.html">SamuelJH</a></th><th><a href="../players/dmt-goobz.html">Dmt Goobz</a> <span class="doubles-amp">&amp;</span> <a href="../players/eddy.html">Eddy</a></th><th><a href="../players/kiaraxchr.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">kiaraxchr</a> <span class="doubles-amp">&amp;</span> <a href="../players/jaq3.html">Jaq3</a></th><th><a href="../players/30aces.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">30Aces</a> <span class="doubles-amp">&amp;</span> <a href="../players/queen-magnolia.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Queen_Magnolia</a></th><th><a href="../players/ava.html">Ava</a> <span class="doubles-amp">&amp;</span> <a href="../players/nambo.html">Nambo_</a></th></tr></thead>
+    <thead><tr><th></th><th data-player="Danny + Rhea"><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/gb.svg" title="United Kingdom" alt="United Kingdom">dirtd <span class="doubles-amp">&amp;</span> <img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Flag_of_Chicago%2C_Illinois.svg" title="Chicago" alt="Chicago">RheaStarGirl</th><th data-player="Link + Ellie"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">Mrlink2k <span class="doubles-amp">&amp;</span> something_dumber</th><th data-player="Willy + Sam"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">willyjwillyj <span class="doubles-amp">&amp;</span> SamuelJH</th><th data-player="Goobz + Eddy">Dmt Goobz <span class="doubles-amp">&amp;</span> Eddy</th><th data-player="Keucher + Jaq"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">kiaraxchr <span class="doubles-amp">&amp;</span> Jaq3</th><th data-player="Aces + Magnolia"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">30Aces <span class="doubles-amp">&amp;</span> <img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Queen_Magnolia</th><th data-player="Ava + Nambo">Ava <span class="doubles-amp">&amp;</span> Nambo_</th></tr></thead>
     <tbody>
-      <tr><th class="row-name"><a href="../players/dirtd.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/gb.svg" title="United Kingdom" alt="United Kingdom">dirtd</a> <span class="doubles-amp">&amp;</span> <a href="../players/rheastargirl.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Flag_of_Chicago%2C_Illinois.svg" title="Chicago" alt="Chicago">RheaStarGirl</a></th><td class="cell-diag">&mdash;</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/mrlink2k.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">Mrlink2k</a> <span class="doubles-amp">&amp;</span> <a href="../players/something-dumber.html">something_dumber</a></th><td class="cell-win" title="1-0">W</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/willyjwillyj.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">willyjwillyj</a> <span class="doubles-amp">&amp;</span> <a href="../players/samueljh.html">SamuelJH</a></th><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/dmt-goobz.html">Dmt Goobz</a> <span class="doubles-amp">&amp;</span> <a href="../players/eddy.html">Eddy</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/kiaraxchr.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">kiaraxchr</a> <span class="doubles-amp">&amp;</span> <a href="../players/jaq3.html">Jaq3</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/30aces.html"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">30Aces</a> <span class="doubles-amp">&amp;</span> <a href="../players/queen-magnolia.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Queen_Magnolia</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-loss" title="0-1">L</td></tr>
-      <tr><th class="row-name"><a href="../players/ava.html">Ava</a> <span class="doubles-amp">&amp;</span> <a href="../players/nambo.html">Nambo_</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-diag">&mdash;</td></tr>
+      <tr><th class="row-name" data-player="Danny + Rhea"><img class="loc-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/gb.svg" title="United Kingdom" alt="United Kingdom">dirtd <span class="doubles-amp">&amp;</span> <img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9b/Flag_of_Chicago%2C_Illinois.svg" title="Chicago" alt="Chicago">RheaStarGirl</th><td class="cell-diag" data-row-player="Danny + Rhea" data-col-player="Danny + Rhea">&mdash;</td><td class="cell-loss" data-row-player="Danny + Rhea" data-col-player="Link + Ellie"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Danny + Rhea" data-col-player="Willy + Sam"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Danny + Rhea" data-col-player="Goobz + Eddy"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Danny + Rhea" data-col-player="Keucher + Jaq"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Danny + Rhea" data-col-player="Aces + Magnolia"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Danny + Rhea" data-col-player="Ava + Nambo"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Link + Ellie"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">Mrlink2k <span class="doubles-amp">&amp;</span> something_dumber</th><td class="cell-win" data-row-player="Link + Ellie" data-col-player="Danny + Rhea"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-diag" data-row-player="Link + Ellie" data-col-player="Link + Ellie">&mdash;</td><td class="cell-win" data-row-player="Link + Ellie" data-col-player="Willy + Sam"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Link + Ellie" data-col-player="Goobz + Eddy"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Link + Ellie" data-col-player="Keucher + Jaq"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Link + Ellie" data-col-player="Aces + Magnolia"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Link + Ellie" data-col-player="Ava + Nambo"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Willy + Sam"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg" title="Michigan" alt="Michigan">willyjwillyj <span class="doubles-amp">&amp;</span> SamuelJH</th><td class="cell-win" data-row-player="Willy + Sam" data-col-player="Danny + Rhea"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Willy + Sam" data-col-player="Link + Ellie"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Willy + Sam" data-col-player="Willy + Sam">&mdash;</td><td class="cell-loss" data-row-player="Willy + Sam" data-col-player="Goobz + Eddy"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Willy + Sam" data-col-player="Keucher + Jaq"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Willy + Sam" data-col-player="Aces + Magnolia"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Willy + Sam" data-col-player="Ava + Nambo"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Goobz + Eddy">Dmt Goobz <span class="doubles-amp">&amp;</span> Eddy</th><td class="cell-loss" data-row-player="Goobz + Eddy" data-col-player="Danny + Rhea"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Goobz + Eddy" data-col-player="Link + Ellie"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Goobz + Eddy" data-col-player="Willy + Sam"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-diag" data-row-player="Goobz + Eddy" data-col-player="Goobz + Eddy">&mdash;</td><td class="cell-win" data-row-player="Goobz + Eddy" data-col-player="Keucher + Jaq"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Goobz + Eddy" data-col-player="Aces + Magnolia"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Goobz + Eddy" data-col-player="Ava + Nambo"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Keucher + Jaq"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">kiaraxchr <span class="doubles-amp">&amp;</span> Jaq3</th><td class="cell-loss" data-row-player="Keucher + Jaq" data-col-player="Danny + Rhea"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Keucher + Jaq" data-col-player="Link + Ellie"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Keucher + Jaq" data-col-player="Willy + Sam"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Keucher + Jaq" data-col-player="Goobz + Eddy"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Keucher + Jaq" data-col-player="Keucher + Jaq">&mdash;</td><td class="cell-win" data-row-player="Keucher + Jaq" data-col-player="Aces + Magnolia"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Keucher + Jaq" data-col-player="Ava + Nambo"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Aces + Magnolia"><img class="loc-flag" src="https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg" title="Ohio" alt="Ohio">30Aces <span class="doubles-amp">&amp;</span> <img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_Portland%2C_Oregon.svg" title="Portland" alt="Portland">Queen_Magnolia</th><td class="cell-loss" data-row-player="Aces + Magnolia" data-col-player="Danny + Rhea"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Aces + Magnolia" data-col-player="Link + Ellie"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Aces + Magnolia" data-col-player="Willy + Sam"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Aces + Magnolia" data-col-player="Goobz + Eddy"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Aces + Magnolia" data-col-player="Keucher + Jaq"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Aces + Magnolia" data-col-player="Aces + Magnolia">&mdash;</td><td class="cell-loss" data-row-player="Aces + Magnolia" data-col-player="Ava + Nambo"><span class="crosstable-result cell-loss">L 0-1</span></td></tr>
+      <tr><th class="row-name" data-player="Ava + Nambo">Ava <span class="doubles-amp">&amp;</span> Nambo_</th><td class="cell-loss" data-row-player="Ava + Nambo" data-col-player="Danny + Rhea"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Ava + Nambo" data-col-player="Link + Ellie"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Ava + Nambo" data-col-player="Willy + Sam"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Ava + Nambo" data-col-player="Goobz + Eddy"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Ava + Nambo" data-col-player="Keucher + Jaq"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Ava + Nambo" data-col-player="Aces + Magnolia"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-diag" data-row-player="Ava + Nambo" data-col-player="Ava + Nambo">&mdash;</td></tr>
     </tbody>
   </table>
 </div>
@@ -486,7 +491,7 @@
   layoutBrackets();
   markPendingMatches();
 </script>
-    <script>setupBracketInteractivity();</script>
+    <script>setupPlayerInteractivity();</script>
   </div>
 </div>
 <footer class="site-footer">

@@ -13,7 +13,105 @@
 <meta name="twitter:title" content="DeathBall 10/16 — DeathBall Tournament" />
 <meta name="twitter:description" content="Tournament results for DeathBall 10/16. October 16, 2025 — TX" />
 <link rel="stylesheet" href="../index.css">
+<script>
+  // Highlights one player everywhere they appear on the page — every
+  // bracket match, crosstable row/column, round-list entry (across every
+  // stage/container, in case a tournament has more than one), and their
+  // standings row — or clears the highlight when called with null. Matched
+  // by canonical display name (the same string the standings list,
+  // crosstable, round-list, and bracket participants were all rendered
+  // with), since bracket participant ids are only unique within their own
+  // stage's render, not across the whole page.
+  function setActivePlayer(name) {
+    for (const el of document.querySelectorAll('.player-active')) el.classList.remove('player-active');
+    if (!name) return;
+    const li = document.querySelector('.standings-list li[data-player="' + CSS.escape(name) + '"]');
+    if (li) li.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.crosstable td[data-row-player="' + CSS.escape(name) + '"], .crosstable td[data-col-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const el of document.querySelectorAll('.round-group [data-player="' + CSS.escape(name) + '"]')) el.classList.add('player-active');
+    for (const p of document.querySelectorAll('.brackets-viewer .participant[data-participant-id]')) {
+      const nameEl = p.querySelector('.name');
+      if (!nameEl || nameEl.textContent.trim() !== name) continue;
+      p.classList.add('player-active');
+    }
+  }
 
+  // Wires up: (1) hover/click sync between the standings list, crosstable,
+  // round-list, and every bracket on the page via setActivePlayer, with
+  // click "pinning" the highlight so it survives the mouse moving away —
+  // otherwise there'd be no way to highlight a run and then actually look
+  // at it; (2) click-and-drag panning and left/right-arrow scrolling for
+  // each bracket container, since a wide bracket only exposes a horizontal
+  // scrollbar that's easy to miss. Called once per page, after every stage
+  // has rendered.
+  function setupPlayerInteractivity() {
+    let pinned = null;
+    let dragMoved = false; // suppresses the click a drag-release generates
+
+    function playerNameAt(el) {
+      const withName = el.closest('[data-player]');
+      if (withName) return withName.dataset.player;
+      const p = el.closest('.brackets-viewer .participant[data-participant-id]');
+      if (!p) return null;
+      const nameEl = p.querySelector('.name');
+      return nameEl ? nameEl.textContent.trim() : null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      if (pinned) return;
+      const name = playerNameAt(e.target);
+      if (name) setActivePlayer(name);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (pinned) return;
+      if (!playerNameAt(e.target)) return;
+      // Moving between child elements of the same row shouldn't flicker
+      // the highlight off and back on.
+      if (e.relatedTarget && e.target.contains(e.relatedTarget)) return;
+      setActivePlayer(null);
+    });
+    document.addEventListener('click', (e) => {
+      if (dragMoved) { dragMoved = false; return; }
+      const name = playerNameAt(e.target);
+      if (!name) {
+        if (pinned) { pinned = null; setActivePlayer(null); }
+        return;
+      }
+      if (pinned === name) { pinned = null; setActivePlayer(null); }
+      else { pinned = name; setActivePlayer(name); }
+    });
+
+    for (const bv of document.querySelectorAll('.brackets-viewer')) {
+      bv.setAttribute('tabindex', '0');
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+      bv.addEventListener('mousedown', (e) => {
+        dragging = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = bv.scrollLeft;
+        bv.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 4) dragMoved = true;
+        bv.scrollLeft = startScroll - dx;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        bv.classList.remove('dragging');
+      });
+      bv.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { bv.scrollLeft -= 200; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { bv.scrollLeft += 200; e.preventDefault(); }
+      });
+    }
+  }
+</script>
 </head>
 <body>
 <h1>DeathBall 10/16</h1>
@@ -42,19 +140,19 @@
     <h2>Matches</h2>
     <div class="crosstable-wrap">
   <table class="crosstable">
-    <thead><tr><th></th><th><a href="../players/jordan-3.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Jordan</a></th><th><a href="../players/bryan-m.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Bryan M</a></th><th><a href="../players/vernon.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Vernon</a></th><th><a href="../players/seth-2.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Seth</a></th><th><a href="../players/elena.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Elena</a></th><th><a href="../players/greggoblin.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">greggoblin</a></th><th><a href="../players/armando.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Armando</a></th></tr></thead>
+    <thead><tr><th></th><th data-player="Jordan"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Jordan</th><th data-player="Bryan M"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Bryan M</th><th data-player="Vernon"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Vernon</th><th data-player="Seth"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Seth</th><th data-player="Elena"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Elena</th><th data-player="greggoblin"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">greggoblin</th><th data-player="Armando"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Armando</th></tr></thead>
     <tbody>
-      <tr><th class="row-name"><a href="../players/jordan-3.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Jordan</a></th><td class="cell-diag">&mdash;</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/bryan-m.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Bryan M</a></th><td class="cell-win" title="1-0">W</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/vernon.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Vernon</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/seth-2.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Seth</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/elena.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Elena</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/greggoblin.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">greggoblin</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-win" title="1-0">W</td><td class="cell-diag">&mdash;</td><td class="cell-win" title="1-0">W</td></tr>
-      <tr><th class="row-name"><a href="../players/armando.html"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Armando</a></th><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-loss" title="0-1">L</td><td class="cell-diag">&mdash;</td></tr>
+      <tr><th class="row-name" data-player="Jordan"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Jordan</th><td class="cell-diag" data-row-player="Jordan" data-col-player="Jordan">&mdash;</td><td class="cell-loss" data-row-player="Jordan" data-col-player="Bryan M"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Jordan" data-col-player="Vernon"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Jordan" data-col-player="Seth"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Jordan" data-col-player="Elena"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Jordan" data-col-player="greggoblin"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Jordan" data-col-player="Armando"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Bryan M"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Bryan M</th><td class="cell-win" data-row-player="Bryan M" data-col-player="Jordan"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-diag" data-row-player="Bryan M" data-col-player="Bryan M">&mdash;</td><td class="cell-win" data-row-player="Bryan M" data-col-player="Vernon"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Bryan M" data-col-player="Seth"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Bryan M" data-col-player="Elena"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Bryan M" data-col-player="greggoblin"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Bryan M" data-col-player="Armando"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Vernon"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Vernon</th><td class="cell-loss" data-row-player="Vernon" data-col-player="Jordan"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Vernon" data-col-player="Bryan M"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Vernon" data-col-player="Vernon">&mdash;</td><td class="cell-win" data-row-player="Vernon" data-col-player="Seth"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Vernon" data-col-player="Elena"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Vernon" data-col-player="greggoblin"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Vernon" data-col-player="Armando"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Seth"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Seth</th><td class="cell-loss" data-row-player="Seth" data-col-player="Jordan"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Seth" data-col-player="Bryan M"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Seth" data-col-player="Vernon"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Seth" data-col-player="Seth">&mdash;</td><td class="cell-win" data-row-player="Seth" data-col-player="Elena"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Seth" data-col-player="greggoblin"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-win" data-row-player="Seth" data-col-player="Armando"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Elena"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Elena</th><td class="cell-loss" data-row-player="Elena" data-col-player="Jordan"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Elena" data-col-player="Bryan M"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-loss" data-row-player="Elena" data-col-player="Vernon"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Elena" data-col-player="Seth"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Elena" data-col-player="Elena">&mdash;</td><td class="cell-loss" data-row-player="Elena" data-col-player="greggoblin"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="Elena" data-col-player="Armando"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="greggoblin"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">greggoblin</th><td class="cell-loss" data-row-player="greggoblin" data-col-player="Jordan"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="greggoblin" data-col-player="Bryan M"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="greggoblin" data-col-player="Vernon"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="greggoblin" data-col-player="Seth"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-win" data-row-player="greggoblin" data-col-player="Elena"><span class="crosstable-result cell-win">W 1-0</span></td><td class="cell-diag" data-row-player="greggoblin" data-col-player="greggoblin">&mdash;</td><td class="cell-win" data-row-player="greggoblin" data-col-player="Armando"><span class="crosstable-result cell-win">W 1-0</span></td></tr>
+      <tr><th class="row-name" data-player="Armando"><img class="loc-flag" src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_Dallas.svg" title="Dallas/Fort Worth" alt="Dallas/Fort Worth">Armando</th><td class="cell-loss" data-row-player="Armando" data-col-player="Jordan"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Armando" data-col-player="Bryan M"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Armando" data-col-player="Vernon"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Armando" data-col-player="Seth"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Armando" data-col-player="Elena"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-loss" data-row-player="Armando" data-col-player="greggoblin"><span class="crosstable-result cell-loss">L 0-1</span></td><td class="cell-diag" data-row-player="Armando" data-col-player="Armando">&mdash;</td></tr>
     </tbody>
   </table>
 </div>
-    
+    <script>setupPlayerInteractivity();</script>
   </div>
 </div>
 <footer class="site-footer">
