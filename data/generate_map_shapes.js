@@ -19,6 +19,7 @@ const path = require('path');
 const https = require('https');
 const { geoMercator, geoPath } = require('d3-geo');
 const { feature } = require('topojson-client');
+const { countryCodes } = require('./location-flags.json');
 
 const FIPS_TO_USPS = {
   '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA', '08': 'CO', '09': 'CT',
@@ -50,10 +51,63 @@ function fetchJson(url) {
   });
 }
 
+// Name for a world country as given by world-atlas's countries-50m.json
+// occasionally differs from the key used in data/location-flags.json's
+// countryCodes (e.g. "United States of America" vs "United States") --
+// normalize the handful of cases that matter so a tracked country's map
+// shape gets the same id (its countryCodes abbr, e.g. "DEU"/"UK") as
+// regionAbbr() resolves a player/tournament's country to at runtime.
+const WORLD_NAME_TO_COUNTRY_KEY = {
+  'United States of America': 'United States',
+};
+
+// Strips antimeridian-wrapped points (longitude below `threshold`) out of
+// every ring, point-by-point rather than dropping whole rings -- unlike the
+// dedicated Alaska island-dropper below, some countries (Russia in
+// particular) have their dateline-crossing tail welded onto the *same* ring
+// as the rest of the mainland, not living in a separate polygon. Russia's
+// Chukotka peninsula is a single ~320-point contiguous run within its
+// 4894-point mainland ring, wrapped to about -169..-180 (its true westmost
+// point, the Kaliningrad exclave, sits at a positive ~19.7, so a threshold
+// safely below that only ever catches the wrapped tail); removing just that
+// run and reconnecting its neighbors directly leaves the rest of the
+// mainland intact, at the cost of a flat chord where the peninsula's tip
+// used to be instead of the real coastline. A ring that's mostly or
+// entirely below the threshold (a small offshore island fully on the wrong
+// side, e.g. Alaska-style tail islands) has too few points left afterward
+// to remain a real ring and is dropped outright.
+function clipAntimeridianTail(geometry, threshold) {
+  function fixRing(ring) {
+    const kept = ring.filter((pt) => pt[0] >= threshold);
+    if (kept.length < 4) return null;
+    const first = kept[0];
+    const last = kept[kept.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) kept.push(first);
+    return kept;
+  }
+  if (geometry.type === 'Polygon') {
+    geometry.coordinates = geometry.coordinates.map(fixRing).filter(Boolean);
+  } else if (geometry.type === 'MultiPolygon') {
+    geometry.coordinates = geometry.coordinates
+      .map((polygon) => polygon.map(fixRing).filter(Boolean))
+      .filter((polygon) => polygon.length > 0);
+  }
+}
+
 async function main() {
   const usTopo = await fetchJson('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json');
   const usGeo = feature(usTopo, usTopo.objects.states);
   const caGeo = await fetchJson('https://cdn.jsdelivr.net/gh/codeforgermany/click_that_hood@master/public/data/canada.geojson');
+  // 50m resolution: coarser than the US/Canada sources above (which get
+  // drawn at state/province granularity), but detailed enough that small
+  // countries like the UK still read as a recognizable shape once panned
+  // into view. Every country except the US and Canada gets a single
+  // whole-country outline -- those two already have full coverage from
+  // their state/province shapes above, so adding their (much coarser)
+  // world-atlas outline on top would just draw a mismatched extra shape in
+  // the same space.
+  const worldTopo = await fetchJson('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json');
+  const worldGeo = feature(worldTopo, worldTopo.objects.countries);
 
   // Alaska's westernmost Aleutian islands cross the antimeridian (180th
   // meridian) and are stored with positive longitudes (e.g. 172, really
@@ -85,6 +139,31 @@ async function main() {
     if (!abbr) continue;
     features.push({ ...f, properties: { id: abbr, country: 'CA' } });
   }
+  for (const f of worldGeo.features) {
+    const rawName = f.properties.name;
+    // Not a real country, and its geometry reaches lat -90 where Mercator's
+    // y diverges to infinity -- would poison the projected path with
+    // Infinity/NaN coordinates.
+    if (rawName === 'Antarctica') continue;
+    const ourName = WORLD_NAME_TO_COUNTRY_KEY[rawName] || rawName;
+    if (ourName === 'United States' || ourName === 'Canada') continue;
+    if (rawName === 'Russia') clipAntimeridianTail(f.geometry, -1);
+    // Same antimeridian problem as Russia/Alaska, just mirrored: these
+    // countries' main landmass sits at positive longitude close to 180,
+    // with a handful of small outlying islands unwrapped to negative
+    // longitude on the other side of the dateline (Chatham Islands for NZ,
+    // Fiji's minor islets, Kiribati's Phoenix/Line island groups). Kiribati
+    // in particular has no way to render as one contiguous non-crossing
+    // shape in Mercator at all -- its real territory spans a third of the
+    // globe -- so this keeps its main Gilbert Islands cluster and drops the
+    // distant remainder, same trade-off as Alaska's dropped tail islands.
+    if (rawName === 'New Zealand' || rawName === 'Fiji' || rawName === 'Kiribati') {
+      clipAntimeridianTail(f.geometry, 0);
+    }
+    const tracked = countryCodes[ourName];
+    const id = tracked ? tracked.abbr : rawName;
+    features.push({ ...f, properties: { id, country: 'world', name: rawName } });
+  }
 
   const fc = { type: 'FeatureCollection', features };
 
@@ -114,8 +193,10 @@ async function main() {
   const shapes = features.map((f) => {
     const d = pathGen(f);
     const [cx, cy] = pathGen.centroid(f);
-    return { id: f.properties.id, country: f.properties.country, d, cx, cy };
-  }).filter((s) => s.d);
+    const shape = { id: f.properties.id, country: f.properties.country, d, cx, cy };
+    if (f.properties.name) shape.name = f.properties.name;
+    return shape;
+  }).filter((s) => s.d && !/(Infinity|NaN)/.test(s.d));
 
   const out = { width: WIDTH, height: HEIGHT, shapes };
   fs.writeFileSync(path.join(__dirname, 'map-shapes.json'), JSON.stringify(out));

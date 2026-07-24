@@ -159,11 +159,18 @@ const MAP_HOME_VIEWBOX = [35, 150, 685, 450];
 
 // Normalizes a raw state value (a USPS/province abbreviation like "TX", or a
 // full name like "Ontario" as used by some player-info.json/tournament-locations.json
-// entries) to its abbreviation, for keying into mapShapes/STATE_NAMES.
-function regionAbbr(raw) {
-  if (!raw) return '';
-  if (STATE_NAMES[raw]) return raw;
-  return STATE_ABBR_BY_NAME[raw] || '';
+// entries) to its abbreviation, for keying into mapShapes/STATE_NAMES. Falls
+// back to a country-level region (matching mapShapes' non-US/CA shapes,
+// keyed by COUNTRY_CODES' abbr, e.g. "DEU"/"UK") when there's no state --
+// the normal case for players/tournaments outside the US and Canada, which
+// only get whole-country shapes rather than state/province-level ones.
+function regionAbbr(rawState, country) {
+  if (rawState) {
+    if (STATE_NAMES[rawState]) return rawState;
+    if (STATE_ABBR_BY_NAME[rawState]) return STATE_ABBR_BY_NAME[rawState];
+  }
+  if (country) return (COUNTRY_CODES[country] || {}).abbr || '';
+  return '';
 }
 
 // ---------------------------------
@@ -1455,6 +1462,7 @@ function buildPlayerMeta(id, p, lastActiveById) {
     locAbbr: abbrevForInfo(info),
     locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
     state: info.state || '',
+    country: info.country || '',
     color: info.color || '',
     lastActive: lastActiveById ? formatMonthYearHuman(lastActiveById.get(id)) : '',
   };
@@ -1814,7 +1822,8 @@ a:hover { text-decoration: underline; }
 .map-canvas { min-width: 0; }
 /* Fixed pixel height (not width-relative "auto") so the map never changes
    size — only its width, via the 4fr column, flexes with viewport width. */
-.map-svg { width: 100%; height: 600px; display: block; }
+.map-svg { width: 100%; height: 600px; display: block; cursor: grab; }
+.map-svg.dragging { cursor: grabbing; }
 .map-region { fill: rgba(255, 255, 255, 0.05); stroke: #050505; stroke-width: 0.75; transition: fill 200ms ease, stroke 150ms ease; cursor: pointer; }
 .map-region:hover { stroke: #3eff8b; stroke-width: 1.5; }
 .map-region.selected { stroke: #3eff8b; stroke-width: 2; }
@@ -2848,13 +2857,47 @@ function writeJs() {
     updateMap(panel, active ? active.dataset.view : 'players');
   }
 
+  // Hand-picked box (same tuning approach as MAP_HOME_VIEWBOX in
+  // aggregate_players.js) padding out mapShapes' actual world content bbox
+  // (roughly x: -611..3784, y: -1142..1767, per every shape's projected
+  // path) so panning/zooming out can reach every region -- including
+  // Russia's mainland and Fiji/Kiribati/New Zealand's remaining islands --
+  // without ever revealing empty space past the edge of the world. Doubles
+  // as the zoomed-all-the-way-out box: MAP_ZOOM_OUT_MAX_WIDTH below equals
+  // its own width, so at max zoom-out the viewBox exactly fills these
+  // bounds and there's nowhere left to pan.
+  const MAP_WORLD_BOUNDS = { minX: -700, minY: -1200, maxX: 3900, maxY: 1950 };
+  const MAP_ZOOM_OUT_MAX_WIDTH = MAP_WORLD_BOUNDS.maxX - MAP_WORLD_BOUNDS.minX;
+
+  // Clamps a candidate viewBox (as x, y, width, height) so it never drifts
+  // outside MAP_WORLD_BOUNDS -- used by every pan/zoom entry point (drag,
+  // wheel, pinch, click-to-zoom, the home reset) so none of them can
+  // individually put the user somewhere with nothing to look at. If the box
+  // itself is wider/taller than the bounds (shouldn't normally happen since
+  // MAP_ZOOM_OUT_MAX_WIDTH is sized to fit, but the pinch-zoom path derives
+  // height from a live aspect ratio that could theoretically overshoot),
+  // that dimension is centered in the bounds instead of clamped, since a
+  // min/max clamp is undefined when the box is bigger than the range.
+  function clampMapBox(x, y, width, height) {
+    const boundsW = MAP_WORLD_BOUNDS.maxX - MAP_WORLD_BOUNDS.minX;
+    const boundsH = MAP_WORLD_BOUNDS.maxY - MAP_WORLD_BOUNDS.minY;
+    const cx = width >= boundsW
+      ? MAP_WORLD_BOUNDS.minX + (boundsW - width) / 2
+      : Math.min(Math.max(x, MAP_WORLD_BOUNDS.minX), MAP_WORLD_BOUNDS.maxX - width);
+    const cy = height >= boundsH
+      ? MAP_WORLD_BOUNDS.minY + (boundsH - height) / 2
+      : Math.min(Math.max(y, MAP_WORLD_BOUNDS.minY), MAP_WORLD_BOUNDS.maxY - height);
+    return [cx, cy, width, height];
+  }
+
   function animateViewBox(svg, toBox, duration) {
+    const clampedTo = clampMapBox(toBox[0], toBox[1], toBox[2], toBox[3]);
     const fromBox = svg.getAttribute('viewBox').split(' ').map(Number);
     const start = performance.now();
     function step(now) {
       const t = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - t, 3);
-      const box = fromBox.map((v, i) => v + (toBox[i] - v) * eased);
+      const box = fromBox.map((v, i) => v + (clampedTo[i] - v) * eased);
       svg.setAttribute('viewBox', box.join(' '));
       if (t < 1) requestAnimationFrame(step);
     }
@@ -3027,13 +3070,15 @@ function writeJs() {
   // stops the browser from treating this as a page-level gesture first.
   // Zoom is anchored at the pinch midpoint (converted to the SVG's own user
   // space via getScreenCTM, not just the viewBox center) so the point under
-  // the fingers stays under the fingers as the box shrinks/grows, clamped to
-  // between the full home extent and 15% of it so a pinch can't zoom out
-  // past the map's natural bounds or in until it's a meaningless close-up.
+  // the fingers stays under the fingers as the box shrinks/grows. Zooming in
+  // is capped at 15% of the home width (any closer stops being useful); zoom
+  // *out* goes much farther than the home view, all the way to
+  // MAP_ZOOM_OUT_MAX_WIDTH (the whole-world box) -- pinching out is the
+  // touch equivalent of the wheel-zoom-out below.
   function enableMapPinchZoom(svg) {
     const home = (svg.dataset.home || '').split(' ').map(Number);
     if (home.length !== 4 || home.some((n) => isNaN(n))) return;
-    const maxW = home[2];
+    const maxW = MAP_ZOOM_OUT_MAX_WIDTH;
     const minW = home[2] * 0.15;
     let startDist = null;
     let startBox = null;
@@ -3076,11 +3121,108 @@ function writeJs() {
       const newH = newW * (startBox.height / startBox.width);
       const fx = (anchor.x - startBox.x) / startBox.width;
       const fy = (anchor.y - startBox.y) / startBox.height;
-      svg.setAttribute('viewBox', (anchor.x - fx * newW).toFixed(2) + ' ' + (anchor.y - fy * newH).toFixed(2) + ' ' + newW.toFixed(2) + ' ' + newH.toFixed(2));
+      const [cx, cy, cw, ch] = clampMapBox(anchor.x - fx * newW, anchor.y - fy * newH, newW, newH);
+      svg.setAttribute('viewBox', cx.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + cw.toFixed(2) + ' ' + ch.toFixed(2));
     }, { passive: false });
 
     svg.addEventListener('touchend', (e) => { if (e.touches.length < 2) endPinch(); });
     svg.addEventListener('touchcancel', endPinch);
+  }
+
+  // Scrolling/trackpad-swiping while the cursor is over the map zooms it
+  // in/out instead of scrolling the page -- anchored at the cursor position
+  // (same getScreenCTM technique as pinch zoom above) so the point under the
+  // cursor stays under the cursor as the box shrinks/grows. Zooming in is
+  // capped at 15% of the home width, same as pinch zoom, but zooming *out*
+  // goes much farther than the home view -- all the way out to
+  // MAP_ZOOM_OUT_MAX_WIDTH, the whole-world box -- since scrolling out to
+  // get an overview is a much more common thing to want than the reverse.
+  function enableMapWheelZoom(svg) {
+    const home = (svg.dataset.home || '').split(' ').map(Number);
+    if (home.length !== 4 || home.some((n) => isNaN(n))) return;
+    const maxW = MAP_ZOOM_OUT_MAX_WIDTH;
+    const minW = home[2] * 0.15;
+
+    svg.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return;
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const anchor = pt.matrixTransform(ctm.inverse());
+      const vb = svg.viewBox.baseVal;
+      // Positive deltaY (scroll down / two-finger swipe down) zooms out,
+      // negative zooms in -- matches the usual map-UI scroll convention.
+      const factor = Math.exp(e.deltaY * 0.0015);
+      const newW = Math.max(minW, Math.min(maxW, vb.width * factor));
+      const newH = newW * (vb.height / vb.width);
+      const fx = (anchor.x - vb.x) / vb.width;
+      const fy = (anchor.y - vb.y) / vb.height;
+      const [cx, cy, cw, ch] = clampMapBox(anchor.x - fx * newW, anchor.y - fy * newH, newW, newH);
+      svg.setAttribute('viewBox', cx + ' ' + cy + ' ' + cw + ' ' + ch);
+    }, { passive: false });
+  }
+
+  // Click-and-drag panning with the mouse (desktop only -- touch already has
+  // pinch-zoom above, and a single-finger drag there is reserved for tapping
+  // a region). Panning only translates the viewBox's x/y, never its
+  // width/height, so it never changes zoom level. A drag is distinguished
+  // from a plain click by total pointer movement: past DRAG_THRESHOLD px,
+  // panel._mapWasDragged is set so enableMapRegions' click handler (added
+  // below) can ignore the click a real drag's mouseup would otherwise fire
+  // on whatever region element the cursor ends up over.
+  const MAP_DRAG_THRESHOLD = 4;
+  function enableMapDrag(panel, svg) {
+    let dragging = false;
+    let moved = false;
+    let startClientX = 0;
+    let startClientY = 0;
+    let startBox = null;
+
+    function svgUnitsPerPixel() {
+      const ctm = svg.getScreenCTM();
+      if (!ctm || !ctm.a || !ctm.d) return { x: 1, y: 1 };
+      return { x: 1 / ctm.a, y: 1 / ctm.d };
+    }
+
+    svg.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      moved = false;
+      startClientX = e.clientX;
+      startClientY = e.clientY;
+      const vb = svg.viewBox.baseVal;
+      startBox = { x: vb.x, y: vb.y, width: vb.width, height: vb.height };
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging || !startBox) return;
+      const dxClient = e.clientX - startClientX;
+      const dyClient = e.clientY - startClientY;
+      if (!moved) {
+        if (Math.hypot(dxClient, dyClient) < MAP_DRAG_THRESHOLD) return;
+        moved = true;
+        panel._mapWasDragged = true;
+        svg.classList.add('dragging');
+      }
+      const scale = svgUnitsPerPixel();
+      const dx = dxClient * scale.x;
+      const dy = dyClient * scale.y;
+      const [cx, cy, cw, ch] = clampMapBox(startBox.x - dx, startBox.y - dy, startBox.width, startBox.height);
+      svg.setAttribute('viewBox', cx + ' ' + cy + ' ' + cw + ' ' + ch);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      startBox = null;
+      svg.classList.remove('dragging');
+      // Cleared on the next tick rather than immediately so the click event
+      // that follows this same mouseup (if any) still sees it set.
+      if (moved) setTimeout(() => { panel._mapWasDragged = false; }, 0);
+    });
   }
 
   function enableMapRegions(panel) {
@@ -3090,6 +3232,8 @@ function writeJs() {
     const backBtn = panel.querySelector('.map-sidebar-back');
     let selectedId = '__ALL__';
     enableMapPinchZoom(svg);
+    enableMapDrag(panel, svg);
+    enableMapWheelZoom(svg);
 
     function currentView() {
       const active = panel.querySelector('.view-btn.active');
@@ -3103,14 +3247,30 @@ function writeJs() {
       renderMapSidebar(panel, selectedId, currentView());
     }
 
+    // Re-clicking the already-selected region deselects it (back to the
+    // full map) -- but the browser fires two ordinary click events for a
+    // double-click before the dblclick event itself, so double-clicking a
+    // region to zoom further in would otherwise immediately trigger this
+    // same deselect on its second click. Give the deselect a brief grace
+    // period to be canceled by a following dblclick instead of firing it
+    // immediately, so a double-click just leaves the region zoomed in.
+    let pendingDeselect = null;
     regions.forEach((r) => {
       r.addEventListener('click', () => {
-        if (selectedId === r.dataset.id) { deselect(); return; }
+        if (panel._mapWasDragged) return;
+        if (selectedId === r.dataset.id) {
+          if (pendingDeselect) clearTimeout(pendingDeselect);
+          pendingDeselect = setTimeout(() => { pendingDeselect = null; deselect(); }, 300);
+          return;
+        }
         regions.forEach((other) => other.classList.remove('selected'));
         r.classList.add('selected');
         selectedId = r.dataset.id;
         zoomToRegion(svg, r);
         renderMapSidebar(panel, selectedId, currentView());
+      });
+      r.addEventListener('dblclick', () => {
+        if (pendingDeselect) { clearTimeout(pendingDeselect); pendingDeselect = null; }
       });
     });
     if (backBtn) backBtn.addEventListener('click', deselect);
@@ -5775,12 +5935,12 @@ async function main() {
     flag: p.flag,
   });
   const locatedPlayersAlpha = rankingRows
-    .filter((p) => p.state)
+    .filter((p) => p.state || p.country)
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   const mapAllPlayers = locatedPlayersAlpha.map(toMapPlayer);
   const regionPlayers = new Map();
   for (const p of locatedPlayersAlpha) {
-    const abbr = regionAbbr(p.state);
+    const abbr = regionAbbr(p.state, p.country);
     if (!abbr) continue;
     if (!regionPlayers.has(abbr)) regionPlayers.set(abbr, []);
     regionPlayers.get(abbr).push(toMapPlayer(p));
@@ -5793,7 +5953,7 @@ async function main() {
   const mapAllTournaments = [...allTournaments].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(toMapTournament);
   const regionTournamentsRaw = new Map();
   for (const t of allTournaments) {
-    const abbr = regionAbbr(t.state);
+    const abbr = regionAbbr(t.state, t.country);
     if (!abbr) continue;
     if (!regionTournamentsRaw.has(abbr)) regionTournamentsRaw.set(abbr, []);
     regionTournamentsRaw.get(abbr).push(t);
@@ -5816,7 +5976,7 @@ async function main() {
     const [dx, dy] = LABEL_OFFSETS[s.id] || [0, 0];
     return {
       id: s.id,
-      name: STATE_NAMES[s.id] || s.id,
+      name: s.name || STATE_NAMES[s.id] || s.id,
       d: s.d,
       cx: Math.round((s.cx + dx) * 10) / 10,
       cy: Math.round((s.cy + dy) * 10) / 10,
