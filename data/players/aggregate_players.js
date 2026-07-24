@@ -50,9 +50,9 @@ function embedMetaTags(title, description, urlPath) {
 // (separately) the download feature's own image-inlining step can't fetch()
 // a file:// resource at all. Baking them in removes the runtime dependency
 // entirely, for both cases.
-function assetDataUri(relativePath) {
+function assetDataUri(relativePath, mime) {
   const buf = fs.readFileSync(path.join(REPO_ROOT, relativePath));
-  return `data:image/png;base64,${buf.toString('base64')}`;
+  return `data:${mime || 'image/png'};base64,${buf.toString('base64')}`;
 }
 
 // --- Glicko-2 tuning constants ---
@@ -223,6 +223,10 @@ const tournamentDoubles = readJson(path.join(DATA_ROOT, 'tournament-doubles.json
 function isDoublesTournament(url) {
   return !!tournamentDoubles[url];
 }
+// Flat map of tournament URL -> YouTube video URL, for tournaments with a
+// VOD available -- optional, powers the "Watch on YouTube" pill on the
+// tournament page alongside the "View on Challonge/start.gg" source pill.
+const tournamentVideos = readJson(path.join(DATA_ROOT, 'tournament-videos.json'), {});
 
 // Splits a doubles participant/team raw name (e.g. "PlayerA + PlayerB" or
 // "PlayerA & PlayerB") into its two component raw player names. Returns
@@ -417,6 +421,29 @@ function locationHtml(disp) {
   const sep = disp.venue && disp.cityState ? '<span class="loc-sep">&middot;</span>' : '';
   const cityStateSpan = disp.cityState ? `<span class="loc-citystate">${escapeHtml(disp.cityState)}</span>` : '';
   return `${flagImg}${venueSpan}${sep}${cityStateSpan}`;
+}
+
+// Real favicons for the source pills, embedded once as data URIs -- see
+// assetDataUri(). Challonge's is their site favicon.ico (flame mark);
+// start.gg's is their apple-touch-icon.png (the blue/pink "S" mark), which
+// is much higher-res than their favicon.ico (a near-blank 4bpp icon).
+const CHALLONGE_ICON_URI = assetDataUri('assets/challonge-icon.ico', 'image/x-icon');
+const STARTGG_ICON_URI = assetDataUri('assets/startgg-icon.png');
+
+// "View on Challonge/start.gg" pill for the tournament-page header -- the
+// source's real favicon plus its name, styled like .doubles-pill.
+function sourcePillHtml(url, source) {
+  const isChallonge = source === 'Challonge';
+  const cls = isChallonge ? 'source-pill-challonge' : 'source-pill-startgg';
+  const icon = `<img src="${isChallonge ? CHALLONGE_ICON_URI : STARTGG_ICON_URI}" alt="">`;
+  return `<a class="source-pill ${cls}" href="${escapeHtml(url)}" target="_blank" rel="noopener">${icon}${escapeHtml(source)}</a>`;
+}
+
+// "Watch on YouTube" pill, shown next to the source pill when a VOD is
+// registered in data/tournament-videos.json for this tournament's URL.
+function youtubePillHtml(videoUrl) {
+  const icon = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="3" width="14" height="10" rx="3" fill="#FF0000"/><path d="M6.5 5.5l4 2.5-4 2.5z" fill="#fff"/></svg>';
+  return `<a class="source-pill source-pill-youtube" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener">${icon}YouTube</a>`;
 }
 
 function resolveDate(url, builtIn) {
@@ -2114,6 +2141,17 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .tourney-meta { display: flex; align-items: center; gap: 1.25rem; color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
 .tourney-meta a { margin: 0; }
 .ext-link { font-size: 0.8rem; margin-left: 0.4rem; opacity: 0.7; }
+.source-pills { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+.source-pill { display: inline-flex; align-items: center; gap: 5px; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.01em; padding: 3px 10px; border-radius: 3px; text-decoration: none; border: 1px solid transparent; transition: background-color 0.15s ease; }
+.source-pill img, .source-pill svg { width: 14px; height: 14px; flex-shrink: 0; }
+.source-pill img { border-radius: 2px; }
+.source-pill-challonge { color: #f96332; border-color: rgba(249, 99, 50, 0.5); }
+.source-pill-challonge:hover { background: rgba(249, 99, 50, 0.15); }
+.source-pill-startgg { color: #3f80ff; border-color: rgba(63, 128, 255, 0.5); }
+.source-pill-startgg:hover { background: rgba(63, 128, 255, 0.15); }
+.source-pill-youtube { color: #ff4d4d; border-color: rgba(255, 0, 0, 0.5); }
+.source-pill-youtube:hover { background: rgba(255, 0, 0, 0.15); }
+.source-pills .doubles-pill { margin-left: 0; font-size: 0.85rem; padding: 3px 10px; }
 .tourney-section { margin-bottom: 2rem; }
 .tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
 /* Rating-over-time chart (player pages). Fixed pixel height with a
@@ -2453,7 +2491,7 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .tourney-meta > * { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tourney-loc { order: 1; }
   .tourney-date { order: 2; }
-  .tourney-original-link { order: 3; }
+  .source-pills { display: flex; order: 3; white-space: normal; flex-wrap: wrap; }
   /* 3 cards per row is too cramped once the tournament columns have
      already stacked to full width on a phone -- drop to 1. */
   .swiss-round-grid { grid-template-columns: 1fr; }
@@ -5253,11 +5291,11 @@ ${embedMetaTags(`${t.label} — DeathBall Tournament`, `Tournament results for $
 ${extraHead}
 </head>
 <body>
-<h1>${escapeHtml(t.label)}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</h1>
+<h1>${escapeHtml(t.label)}</h1>
 <div class="tourney-meta">
   <span class="tourney-date">${escapeHtml(formatDateHuman(t.date))}</span>
   ${t.locationDisplay.venue || t.locationDisplay.cityState ? `<span class="tourney-loc">${locationHtml(t.locationDisplay)}</span>` : ''}
-  <a class="tourney-original-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener">View original on ${escapeHtml(t.source)} &#8599;</a>
+  <span class="source-pills">${sourcePillHtml(t.url, t.source)}${tournamentVideos[t.url] ? youtubePillHtml(tournamentVideos[t.url]) : ''}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</span>
 </div>
 <a class="back-link" href="../index.html">&larr; Back to rankings</a>
 

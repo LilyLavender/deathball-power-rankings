@@ -377,6 +377,17 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .tourney-meta { display: flex; align-items: center; gap: 1.25rem; color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
 .tourney-meta a { margin: 0; }
 .ext-link { font-size: 0.8rem; margin-left: 0.4rem; opacity: 0.7; }
+.source-pills { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+.source-pill { display: inline-flex; align-items: center; gap: 5px; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.01em; padding: 3px 10px; border-radius: 3px; text-decoration: none; border: 1px solid transparent; transition: background-color 0.15s ease; }
+.source-pill img, .source-pill svg { width: 14px; height: 14px; flex-shrink: 0; }
+.source-pill img { border-radius: 2px; }
+.source-pill-challonge { color: #f96332; border-color: rgba(249, 99, 50, 0.5); }
+.source-pill-challonge:hover { background: rgba(249, 99, 50, 0.15); }
+.source-pill-startgg { color: #3f80ff; border-color: rgba(63, 128, 255, 0.5); }
+.source-pill-startgg:hover { background: rgba(63, 128, 255, 0.15); }
+.source-pill-youtube { color: #ff4d4d; border-color: rgba(255, 0, 0, 0.5); }
+.source-pill-youtube:hover { background: rgba(255, 0, 0, 0.15); }
+.source-pills .doubles-pill { margin-left: 0; font-size: 0.85rem; padding: 3px 10px; }
 .tourney-section { margin-bottom: 2rem; }
 .tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
 /* Rating-over-time chart (player pages). Fixed pixel height with a
@@ -716,7 +727,7 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .tourney-meta > * { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tourney-loc { order: 1; }
   .tourney-date { order: 2; }
-  .tourney-original-link { order: 3; }
+  .source-pills { display: flex; order: 3; white-space: normal; flex-wrap: wrap; }
   /* 3 cards per row is too cramped once the tournament columns have
      already stacked to full width on a phone -- drop to 1. */
   .swiss-round-grid { grid-template-columns: 1fr; }
