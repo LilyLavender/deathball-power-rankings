@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { slugify } = require('../slugify');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const STORE_PATH = path.join(__dirname, 'tournaments.json');
@@ -174,7 +175,7 @@ async function main() {
       };
 
       const date = (t.started_at || t.created_at).slice(0, 10);
-      const nameSlug = t.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const nameSlug = slugify(t.name);
       const csvPath = path.join(CSV_DIR, `${date}_${nameSlug}.csv`);
       fs.writeFileSync(csvPath, toCsv(t));
 

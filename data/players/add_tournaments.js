@@ -46,6 +46,7 @@ const {
   displayName, collectChallonge, collectStartgg, buildPlayerStats, parseTeamName,
 } = require('./aggregate_players');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
+const { slugify } = require('../slugify');
 
 const IDENTITIES_PATH = path.join(DATA_ROOT, 'player-identities.json');
 const PLAYER_INFO_PATH = path.join(DATA_ROOT, 'player-info.json');
@@ -181,10 +182,6 @@ function similarity(a, b) {
 }
 
 // --- Id generation ---
-
-function slugify(s) {
-  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
 
 function monthYearSlug(dateStr) {
   const d = dateStr ? new Date(dateStr) : new Date();
@@ -557,5 +554,3 @@ async function main() {
 }
 
 if (require.main === module) main();
-
-module.exports = { saveIdentities, savePlayerInfo, saveTournamentLocations, saveTournamentDoubles };

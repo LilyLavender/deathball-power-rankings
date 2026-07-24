@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { resolveParticipantName } = require('./resolve_participant_name');
+const { slugify } = require('../slugify');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -145,7 +146,7 @@ async function main() {
       fetched += 1;
 
       const date = (t.started_at || t.created_at).slice(0, 10);
-      const nameSlug = t.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const nameSlug = slugify(t.name);
       const csvPath = path.join(CSV_DIR, `${date}_${nameSlug}.csv`);
       fs.writeFileSync(csvPath, toCsv(t));
 
@@ -159,9 +160,13 @@ async function main() {
       };
       console.error(`failed: ${url} -> ${err.message}`);
     }
+
+    // Save after every tournament (not just at the end of the batch) so a
+    // crash or interrupt partway through doesn't lose already-fetched data
+    // and burn the rate-limited API budget re-fetching it next run.
+    fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 1));
   }
 
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 1));
   console.log(`\nDone. Fetched ${fetched}, skipped ${skipped} (already had data), store: ${STORE_PATH}`);
 }
 

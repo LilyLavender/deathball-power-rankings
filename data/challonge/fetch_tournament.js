@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { slugify } = require('../slugify');
 
 const [subdomain, slug] = process.argv.slice(2);
 
@@ -90,7 +91,7 @@ https.get(url, (res) => {
       .join('\n');
 
     const date = (t.started_at || t.created_at).slice(0, 10);
-    const nameSlug = t.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const nameSlug = slugify(t.name);
     const csvPath = path.join(__dirname, `${date}_${nameSlug}.csv`);
     fs.writeFileSync(csvPath, csv);
 

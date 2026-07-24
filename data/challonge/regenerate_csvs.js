@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { resolveParticipantName } = require('./resolve_participant_name');
+const { slugify } = require('../slugify');
 
 const STORE_PATH = path.join(__dirname, 'tournaments.json');
 const CSV_DIR = __dirname;
@@ -50,7 +51,7 @@ for (const entry of Object.values(store)) {
   if (!t) continue;
 
   const date = (t.started_at || t.created_at).slice(0, 10);
-  const nameSlug = t.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const nameSlug = slugify(t.name);
   const csvPath = path.join(CSV_DIR, `${date}_${nameSlug}.csv`);
   fs.writeFileSync(csvPath, toCsv(t));
   written += 1;

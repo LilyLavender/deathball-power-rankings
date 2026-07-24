@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { slugify } = require('../slugify');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -243,9 +244,8 @@ async function main() {
       fetched += 1;
 
       const date = new Date(ev.tournament.startAt * 1000).toISOString().slice(0, 10);
-      const nameSlug = ev.tournament.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const locSlug = [ev.tournament.city, ev.tournament.addrState]
-        .filter(Boolean).join('-').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const nameSlug = slugify(ev.tournament.name);
+      const locSlug = slugify([ev.tournament.city, ev.tournament.addrState].filter(Boolean).join('-'));
       const csvPath = path.join(CSV_DIR, `${date}_${nameSlug}${locSlug ? `_${locSlug}` : ''}.csv`);
       fs.writeFileSync(csvPath, toCsv(entrants, sets));
 
