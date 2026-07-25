@@ -1452,7 +1452,7 @@ function buildPlayerRows(players, tournamentMetaByUrl, lastActiveById) {
           ? (STATE_NAMES[info.state] || info.state)
           : (info.country || ''),
         flag: flagForInfo(info),
-        locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
+        locationSort: [info.state || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
         state: info.state || '',
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
@@ -1482,7 +1482,7 @@ function buildPlayerMeta(id, p, lastActiveById) {
       : (info.country || ''),
     flag: flagForInfo(info),
     locAbbr: abbrevForInfo(info),
-    locationSort: [info.state, info.city].filter(Boolean).join('|').toLowerCase(),
+    locationSort: [info.state || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
     state: info.state || '',
     country: info.country || '',
     color: info.color || '',
