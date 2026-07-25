@@ -107,6 +107,16 @@
     scrambleHeading(heading, label);
   }
 
+  // Keeps the URL's ?tab= param in sync with whichever tab is active, so the
+  // address bar can be copied/bookmarked/shared and reopen on the same tab.
+  // replaceState (not pushState) so clicking through tabs doesn't fill up
+  // browser history with one entry per tab switch.
+  function updateUrlForTab(tabId) {
+    const url = new URL(location.href);
+    url.searchParams.set('tab', tabId.replace(/-tab$/, ''));
+    history.replaceState(null, '', url);
+  }
+
   function enableTabs() {
     const buttons = [...document.querySelectorAll('.tab-button')];
     const panels = [...document.querySelectorAll('.tab-panel')];
@@ -121,6 +131,7 @@
         panel.classList.add('active');
         moveIndicator(underline, tabsEl, btn);
         setHeaderForTab(btn.dataset.tab);
+        updateUrlForTab(btn.dataset.tab);
         updateDownloadVisibility();
         // Deferred to a rAF instead of running inline: this panel can hold
         // hundreds of cards, and fitText's measure-shrink-remeasure loop
@@ -147,6 +158,19 @@
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
+  }
+
+  // Lets a link into the site land on a specific tab via a query string,
+  // e.g. index.html?tab=tournaments -- used by the tournament pages' back
+  // link so it returns to Tournaments instead of always Power Rankings.
+  // Reuses the tab button's own click handler (rather than duplicating its
+  // active-state/indicator/header logic here) so behavior stays identical
+  // to a real click.
+  function activateTabFromQuery() {
+    const requested = new URLSearchParams(location.search).get('tab');
+    if (!requested) return;
+    const btn = document.querySelector('.tab-button[data-tab="' + requested + '-tab"]');
+    if (btn && !btn.classList.contains('active')) btn.click();
   }
 
   // Mobile-only hamburger toggle for the tab row (see .tabs-toggle in
@@ -1498,6 +1522,7 @@
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
   enableTabsMenu();
+  activateTabFromQuery();
   enableOptionsToggle();
   initPanel('players-tab');
   initPanel('rankings-tab');

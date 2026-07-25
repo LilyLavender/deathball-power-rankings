@@ -3183,7 +3183,7 @@ ${extraHead}
   ${t.locationDisplay.venue || t.locationDisplay.cityState ? `<span class="tourney-loc">${locationHtml(t.locationDisplay)}</span>` : ''}
   <span class="source-pills">${sourcePillHtml(t.url, t.source)}${tournamentVideos[t.url] ? youtubePillHtml(tournamentVideos[t.url]) : ''}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</span>
 </div>
-<a class="back-link" href="../index.html">&larr; Back to rankings</a>
+<a class="back-link" href="../index.html?tab=tournaments">&larr; Back to tournaments</a>
 
 <div class="tourney-columns">
   <div class="tourney-section tourney-standings">
