@@ -425,6 +425,24 @@ function locationHtml(disp) {
   return `${flagImg}${venueSpan}${sep}${cityStateSpan}`;
 }
 
+// A CSV-export button, styled/iconed identically to the PR tab's PNG
+// download button (see .download-btn-boxed in generate_output.js) but kept
+// off the .download-btn class so it isn't swept into that button's
+// grid-view-only show/hide logic (updateDownloadVisibility) -- this one gets
+// its own, separate show/hide rule for the Power Rankings tab instance (see
+// updateCsvDownloadVisibility in writeJs). datasetKey selects which embedded
+// JSON blob (see CSV_PLAYER_DATA/CSV_TOURNAMENT_DATA in writeHtml) to export
+// at click time (see enableCsvDownloadButtons in writeJs) -- the Power
+// Rankings tab's button deliberately shares the Players tab's 'players'
+// dataset (rather than building its own), so both "return the same data"
+// per product ask. startHidden marks the one instance (Power Rankings tab)
+// whose default view on load (Grid) should NOT show it, avoiding a flash of
+// a visible button before enableViewToggle's first updateCsvDownloadVisibility
+// call hides it.
+function csvDownloadButtonHtml(datasetKey, filenamePrefix, startHidden) {
+  return `<button class="csv-download-btn download-btn-boxed" type="button" data-csv-key="${escapeHtml(datasetKey)}" data-csv-filename="${escapeHtml(filenamePrefix)}"${startHidden ? ' hidden' : ''}><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download CSV</span></button>`;
+}
+
 // Real favicons for the source pills, embedded once as data URIs -- see
 // assetDataUri(). Challonge's is their site favicon.ico (flame mark);
 // start.gg's is their apple-touch-icon.png (the blue/pink "S" mark), which
@@ -587,8 +605,10 @@ function collectChallonge() {
       date: resolveDate(url, (t.started_at || t.created_at || '').slice(0, 10)),
       location: formatLocation(locInfo),
       locationDisplay: locationDisplay(locInfo),
+      venue: locInfo?.location || '',
+      city: locInfo?.city || '',
       state: locInfo?.state || '',
-      country: locInfo?.country || '',
+      country: locInfo?.country || 'United States',
       participants: t.participants.length,
       matchCount: matches.length,
       source: 'Challonge',
@@ -663,6 +683,12 @@ function collectStartgg() {
         // per-match equivalent (its group-stage feature is always
         // round-robin pools), so this stays unset there.
         groupBracketType: bracketType === 'SWISS' ? 'swiss' : bracketType === 'ROUND_ROBIN' ? 'round robin' : null,
+        // Raw start.gg bracketType (e.g. "DOUBLE_ELIMINATION"), kept
+        // separately from groupBracketType above -- that field only ever
+        // captures the pool-stage type (swiss/round robin), never the
+        // playoff bracket's own elimination format. Used by
+        // bracketTypeLabel() for the CSV export's "Bracket type" column.
+        bracketType: bracketType || null,
       });
     }
 
@@ -679,8 +705,10 @@ function collectStartgg() {
       date: resolveDate(url, rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : ''),
       location: formatLocation(locInfo),
       locationDisplay: locationDisplay(locInfo),
+      venue: locInfo?.location || '',
+      city: locInfo?.city || '',
       state: locInfo?.state || '',
-      country: locInfo?.country || '',
+      country: locInfo?.country || 'United States',
       participants: rec.entrants.length,
       matchCount: matches.length,
       source: 'start.gg',
@@ -707,6 +735,54 @@ function assignSlugs(allTournaments) {
     used.add(slug);
     t.slug = slug;
   }
+}
+
+const BRACKET_TYPE_LABELS = {
+  'single elimination': 'Single Elimination',
+  'double elimination': 'Double Elimination',
+  'round robin': 'Round Robin',
+  swiss: 'Swiss',
+  'free for all': 'Free For All',
+  SINGLE_ELIMINATION: 'Single Elimination',
+  DOUBLE_ELIMINATION: 'Double Elimination',
+  ROUND_ROBIN: 'Round Robin',
+  SWISS: 'Swiss',
+};
+function humanizeBracketType(raw) {
+  if (!raw) return null;
+  return BRACKET_TYPE_LABELS[raw] || BRACKET_TYPE_LABELS[String(raw).toLowerCase()] || null;
+}
+
+function mostCommon(values) {
+  if (!values.length) return null;
+  const counts = new Map();
+  for (const v of values) counts.set(v, (counts.get(v) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// Human-readable match format for the CSV export's "Bracket type" column --
+// e.g. "Double Elimination" for a single-stage bracket, or "Round Robin →
+// Single Elimination" when a pool stage feeds into a separate playoff
+// bracket (same pool/bracket split splitStages below detects for
+// tournament-page rendering, kept independent here to avoid touching that
+// shared render path). Challonge's tournament_type covers its own bracket
+// stage directly; start.gg has no tournament-level equivalent, so its
+// bracket stage's type is inferred from the most common raw bracketType
+// among that stage's own matches (see the `bracketType` field added to each
+// start.gg match in collectStartgg). Returns null (blank in the CSV) when
+// the format can't be determined -- older Challonge fetches predate
+// tournament_type capture.
+function bracketTypeLabel(t) {
+  const poolMatches = t.matches.filter((m) => m.groupId != null);
+  const bracketMatches = t.matches.filter((m) => m.groupId == null);
+  const poolType = poolMatches.length
+    ? humanizeBracketType(poolMatches.find((m) => m.groupBracketType)?.groupBracketType || 'round robin')
+    : null;
+  const bracketRaw = t.tournamentType || mostCommon(bracketMatches.map((m) => m.bracketType).filter(Boolean));
+  const bracketType = humanizeBracketType(bracketRaw);
+  if (poolType && bracketMatches.length) return bracketType ? `${poolType} → ${bracketType}` : poolType;
+  if (poolType) return poolType;
+  return bracketType;
 }
 
 // Splits a tournament into its constituent stages (e.g. round-robin group
@@ -1453,7 +1529,12 @@ function buildPlayerRows(players, tournamentMetaByUrl, lastActiveById) {
           : (info.country || ''),
         flag: flagForInfo(info),
         locationSort: [info.state || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
+        city: info.city || '',
         state: info.state || '',
+        // Same default as flagForInfo's flag lookup -- player-info.json's
+        // own schema documents `country` as optional, defaulting to United
+        // States when omitted (see player-info.json's _schema).
+        country: info.country || 'United States',
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
           label,
@@ -2003,6 +2084,62 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
     </tr>`;
   }).join('\n');
 
+  // Data behind both CSV-export buttons (see csvDownloadButtonHtml/
+  // enableCsvDownloadButtons) -- built independently of the on-page tables
+  // rather than scraped from them, so the CSV's column set and sort order
+  // (seed-ascending here) can differ from what the visible table shows
+  // (alphabetical). Seed is each player's current Power Ranking placement
+  // (rankingRows is already sorted by conservativeRating descending, so
+  // index+1 is exactly the rank number shown in the PR tab) -- null for
+  // players with no ranked games (e.g. doubles-only), who sort after every
+  // seeded player, then alphabetically among themselves.
+  const rankingById = new Map(rankingRows.map((r, i) => [r.id, { ...r, seed: i + 1 }]));
+  const csvPlayerData = [...playerRows]
+    .map((p) => {
+      const rr = rankingById.get(p.id);
+      return {
+        seed: rr ? rr.seed : null,
+        name: p.name,
+        rating: rr ? Math.round(rr.r) : null,
+        rd: rr ? Math.round(rr.rd) : null,
+        city: p.city,
+        state: p.state,
+        country: p.country,
+        wins: p.wins,
+        losses: p.losses,
+        games: p.games,
+        winPct: p.games > 0 ? +(p.winPct * 100).toFixed(1) : null,
+        lastActive: p.lastActive,
+        tournamentCount: p.tournaments.length,
+      };
+    })
+    .sort((a, b) => {
+      if (a.seed != null && b.seed != null) return a.seed - b.seed;
+      if (a.seed != null) return -1;
+      if (b.seed != null) return 1;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+
+  // Oldest-to-newest (opposite of the on-page table's newest-first sort) --
+  // reads better as a chronological export.
+  const csvTournamentData = [...allTournaments]
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .map((t) => ({
+      name: t.label,
+      date: t.date,
+      venue: t.venue,
+      city: t.city,
+      state: t.state,
+      country: t.country,
+      source: t.source,
+      participants: t.participants,
+      matches: t.matchCount,
+      tournamentType: t.isDoubles ? 'Doubles' : 'Singles',
+      bracketType: bracketTypeLabel(t) || '',
+      bracketUrl: t.url || '',
+      videoUrl: tournamentVideos[t.url] || '',
+    }));
+
   const tournamentTableRows = [...allTournaments]
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .map((t) => `<tr>
@@ -2187,6 +2324,8 @@ ${embedMetaTags('DeathBall Power Rankings', 'Glicko-2 power rankings, player sta
   <span class="tab-underline"></span>
 </div>
 <div class="tabs-backdrop"></div>
+<script type="application/json" id="csv-player-data">${JSON.stringify(csvPlayerData)}</script>
+<script type="application/json" id="csv-tournament-data">${JSON.stringify(csvTournamentData)}</script>
 
 <div id="events-tab" class="tab-panel">
 ${buildEventsTabHtml(upcomingEvents)}
@@ -2200,6 +2339,7 @@ ${buildEventsTabHtml(upcomingEvents)}
       </select>
     </label>
     <span class="filter-count">${playerRows.length} unique players. Click a column header to sort.</span>
+    ${csvDownloadButtonHtml('players', 'deathball-players', false)}
   </div>
   <div class="table-wrap">
   <table data-sortable>
@@ -2224,7 +2364,10 @@ ${playerTableRows}
 </div>
 
 <div id="tournaments-tab" class="tab-panel">
-  <div id="count">${allTournaments.length} tournaments. Click a column header to sort.</div>
+  <div class="tab-controls">
+    <span id="count">${allTournaments.length} tournaments. Click a column header to sort.</span>
+    ${csvDownloadButtonHtml('tournaments', 'deathball-tournaments', false)}
+  </div>
   <div class="table-wrap">
   <table data-sortable>
     <thead>
@@ -2323,7 +2466,8 @@ ${mapLabels}
     <label>Rankings at:
       <select class="pr-history-select"></select>
     </label>
-    <button class="download-btn download-btn-boxed" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download PR</span></button>
+    <button class="download-btn download-btn-boxed" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download Top 100</span></button>
+    ${csvDownloadButtonHtml('players', 'deathball-players', true)}
   </div>
   <div class="pr-grid">
 ${prSquareHtml}

@@ -1034,6 +1034,79 @@
     }
   }
 
+  // Data behind both CSV-export buttons -- see CSV_PLAYER_DATA/
+  // CSV_TOURNAMENT_DATA below and csvPlayerData/csvTournamentData in
+  // aggregate_players.js, which build these with their own column set and
+  // sort order (seed-ascending for players, oldest-first for tournaments)
+  // independent of whatever the visible tables show.
+  const CSV_PLAYER_DATA = JSON.parse(document.getElementById('csv-player-data')?.textContent || '[]');
+  const CSV_TOURNAMENT_DATA = JSON.parse(document.getElementById('csv-tournament-data')?.textContent || '[]');
+
+  const CSV_DATASETS = {
+    players: {
+      headers: ['Seed', 'Player', 'Rating', 'RD', 'City', 'State', 'Country', 'Wins', 'Losses', 'Games', 'Win %', 'Last Active', 'Tournaments Attended'],
+      rows: () => CSV_PLAYER_DATA.map((p) => [
+        p.seed ?? '', p.name, p.rating ?? '', p.rd ?? '', p.city, p.state, p.country, p.wins, p.losses, p.games,
+        p.winPct != null ? p.winPct.toFixed(1) + '%' : '', p.lastActive, p.tournamentCount,
+      ]),
+    },
+    tournaments: {
+      headers: ['Tournament', 'Date', 'Venue', 'City', 'State', 'Country', 'Source', 'Participants', 'Matches', 'Tournament Type', 'Bracket Type', 'Bracket URL', 'VOD URL'],
+      rows: () => CSV_TOURNAMENT_DATA.map((t) => [
+        t.name, t.date, t.venue, t.city, t.state, t.country, t.source, t.participants, t.matches,
+        t.tournamentType, t.bracketType, t.bracketUrl, t.videoUrl,
+      ]),
+    },
+  };
+
+  function csvEscape(value) {
+    const s = String(value ?? '');
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function downloadCsvDataset(datasetKey, filenamePrefix) {
+    const dataset = CSV_DATASETS[datasetKey];
+    if (!dataset) throw new Error('Unknown CSV dataset: ' + datasetKey);
+    const csv = [dataset.headers, ...dataset.rows()].map((row) => row.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    // Local date parts, not toISOString() -- same reasoning as the PNG
+    // export's dateStamp (UTC can read as tomorrow/yesterday depending on
+    // the visitor's timezone).
+    const now = new Date();
+    const dateStamp = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    a.href = url;
+    a.download = filenamePrefix + '-' + dateStamp + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // Wires every .csv-download-btn on the page (Power Rankings, Players, and
+  // Tournaments tabs -- see csvDownloadButtonHtml in aggregate_players.js).
+  // Each button's data-csv-key picks which CSV_DATASETS entry to export --
+  // the Power Rankings tab's button deliberately shares the Players tab's
+  // 'players' key, so both buttons export identical data.
+  function enableCsvDownloadButtons() {
+    document.querySelectorAll('.csv-download-btn').forEach((btn) => {
+      const label = btn.querySelector('.download-btn-label');
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        try {
+          downloadCsvDataset(btn.dataset.csvKey, btn.dataset.csvFilename || 'deathball-export');
+        } catch (err) {
+          btn.classList.add('failed');
+          if (label) label.textContent = 'Failed — Retry';
+          return;
+        }
+        btn.classList.remove('failed');
+        if (label) label.textContent = 'Download CSV';
+      });
+    });
+  }
+
   // Two download buttons exist in the DOM at once -- .download-btn-boxed
   // (desktop, inside the Power Rankings tab-controls row) and
   // .download-btn-icon (mobile, top-right of .page-title-row, so it stays
@@ -1050,6 +1123,21 @@
     const gridActive = !!rankingsPanel && !!rankingsPanel.querySelector('.view-btn[data-view="grid"].active');
     const hide = !(rankingsActive && gridActive);
     btns.forEach((btn) => { btn.hidden = hide; });
+  }
+
+  // The Power Rankings tab's CSV button (unlike the Players/Tournaments
+  // tabs' own, which are always shown) is grid/table-gated the opposite way
+  // to the PNG button above -- a full CSV export of every player doesn't
+  // pair with "top 100 grid" the way the PNG image does, so it only makes
+  // sense once Table view is active. Scoped to #rankings-tab specifically so
+  // it never touches the Players/Tournaments tabs' own CSV buttons.
+  function updateCsvDownloadVisibility() {
+    const rankingsPanel = document.getElementById('rankings-tab');
+    if (!rankingsPanel) return;
+    const csvBtn = rankingsPanel.querySelector('.csv-download-btn');
+    if (!csvBtn) return;
+    const tableActive = !!rankingsPanel.querySelector('.view-btn[data-view="table"].active');
+    csvBtn.hidden = !tableActive;
   }
 
   function enableViewToggle(panel) {
@@ -1082,7 +1170,7 @@
         if (downloadLabel) downloadLabel.textContent = 'Preparing…';
         try {
           await downloadRankingsImage(panel);
-          if (downloadLabel) downloadLabel.textContent = 'Download PR';
+          if (downloadLabel) downloadLabel.textContent = 'Download Top 100';
         } catch (err) {
           downloadBtn.classList.add('failed');
           if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
@@ -1100,6 +1188,7 @@
         if (grid) grid.style.display = view === 'grid' ? '' : 'none';
         if (table) table.style.display = view === 'table' ? '' : 'none';
         updateDownloadVisibility();
+        updateCsvDownloadVisibility();
         // Desktop collapses this pill entirely on Table view (see
         // .rank-delta-toggle[hidden] in writeCss); mobile overrides that
         // same [hidden] rule back to display:flex + visibility:hidden so it
@@ -1114,6 +1203,7 @@
     });
     const activeBtn = buttons.find((b) => b.classList.contains('active'));
     updateDownloadVisibility();
+    updateCsvDownloadVisibility();
     if (rankDeltaToggle) rankDeltaToggle.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
     moveIndicator(indicator, toggleEl, activeBtn);
   }
@@ -1411,6 +1501,7 @@
   enableOptionsToggle();
   initPanel('players-tab');
   initPanel('rankings-tab');
+  enableCsvDownloadButtons();
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));
   setupLiveEventFiltering();

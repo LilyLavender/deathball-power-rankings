@@ -711,6 +711,12 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
      display toggles here, not their visibility logic. */
   .download-btn-boxed { display: none; }
   .download-btn-icon { display: inline-flex; }
+  /* .csv-download-btn reuses .download-btn-boxed's styling but, unlike the
+     PR image export, has no separate icon-only counterpart for mobile (it's
+     not tied to updateDownloadVisibility's grid/PR-tab-only visibility) --
+     override the boxed-only display:none back on for it specifically so it
+     doesn't disappear on narrow viewports. */
+  .csv-download-btn.download-btn-boxed { display: inline-flex; margin-left: 0; }
 
   /* Fixed 240px standings column (see .tourney-standings above) can pinch
      the bracket column on a narrow phone -- stack them instead, same as
