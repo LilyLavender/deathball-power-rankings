@@ -52,19 +52,59 @@
     indicator.style.width = targetRect.width + 'px';
   }
 
-  const TAB_HEADERS = { 'players-tab': 'Players', 'tournaments-tab': 'Tournaments', 'doubles-tab': 'Doubles Teams', 'rankings-tab': 'Power Rankings', 'map-tab': 'Map', 'events-tab': 'Upcoming Events' };
+  const TAB_HEADERS = { 'players-tab': 'DeathBall Players', 'tournaments-tab': 'DeathBall Tournaments', 'doubles-tab': 'DeathBall Doubles', 'rankings-tab': 'DeathBall Power Rankings', 'map-tab': 'DeathBall Map', 'events-tab': 'Upcoming DeathBall Events' };
 
-  // Cross-fades just the variable part of the page heading ("DeathBall" is
-  // static) to the tab's own heading instead of snapping straight to it.
+  const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const SCRAMBLE_WINDOW = 8;
+  const SCRAMBLE_STEP_MS = 30;
+
+  // Sweeps a small window of characters left to right across the heading:
+  // characters inside the window flicker through random letters each tick,
+  // characters the window has already passed settle onto the new heading's
+  // text, and characters not yet reached still show the old heading's text.
+  // The first frame is drawn synchronously (not on the first interval tick)
+  // so the sweep visibly starts the instant the tab is clicked.
+  function scrambleHeading(el, target) {
+    if (el._scrambleTimer) clearInterval(el._scrambleTimer);
+    const from = el.textContent;
+    const len = Math.max(from.length, target.length);
+    const fromPadded = from.padEnd(len, ' ');
+    const targetPadded = target.padEnd(len, ' ');
+    const maxPos = len + SCRAMBLE_WINDOW;
+    let pos = 0;
+    function drawFrame() {
+      let out = '';
+      for (let i = 0; i < len; i++) {
+        if (i < pos - SCRAMBLE_WINDOW) {
+          out += targetPadded[i];
+        } else if (i <= pos) {
+          out += fromPadded[i] === targetPadded[i]
+            ? targetPadded[i]
+            : SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        } else {
+          out += fromPadded[i];
+        }
+      }
+      el.textContent = out.replace(/\s+$/, '');
+    }
+    drawFrame();
+    el._scrambleTimer = setInterval(() => {
+      pos++;
+      if (pos > maxPos) {
+        clearInterval(el._scrambleTimer);
+        el._scrambleTimer = null;
+        el.textContent = target;
+        return;
+      }
+      drawFrame();
+    }, SCRAMBLE_STEP_MS);
+  }
+
   function setHeaderForTab(tabId) {
     const heading = document.getElementById('tab-heading');
     const label = TAB_HEADERS[tabId] || TAB_HEADERS['rankings-tab'];
     if (!heading || heading.textContent === label) return;
-    heading.classList.add('h1-swap');
-    setTimeout(() => {
-      heading.textContent = label;
-      heading.classList.remove('h1-swap');
-    }, 180);
+    scrambleHeading(heading, label);
   }
 
   function enableTabs() {
@@ -82,19 +122,28 @@
         moveIndicator(underline, tabsEl, btn);
         setHeaderForTab(btn.dataset.tab);
         updateDownloadVisibility();
-        // Cards were sized while this panel was display:none (offsetWidth 0
-        // at page load, or never resized since last becoming visible), so
-        // names need a fresh fit now that the panel actually has layout.
-        fitCardNames(panel);
-        // Same story for any view-toggle pill(s) inside this panel (e.g. the
-        // Map tab's Players/Tournaments switch, or the Rankings tab's
-        // Grid/Table and rank-delta Hide/Show switches) — indicators were
-        // positioned against a zero-width rect while hidden.
-        for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
-          const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
-          const innerActive = innerToggle.querySelector('.view-btn.active, .delta-btn.active');
-          if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
-        }
+        // Deferred to a rAF instead of running inline: this panel can hold
+        // hundreds of cards, and fitText's measure-shrink-remeasure loop
+        // forces a synchronous reflow per element, which was blocking the
+        // main thread and starving the heading scramble's setInterval ticks
+        // -- the animation would stall, then jump once this finished. Off
+        // the critical path, it now runs after the browser has already
+        // painted the tab switch and the scramble is free to animate.
+        requestAnimationFrame(() => {
+          // Cards were sized while this panel was display:none (offsetWidth
+          // 0 at page load, or never resized since last becoming visible),
+          // so names need a fresh fit now that the panel actually has layout.
+          fitCardNames(panel);
+          // Same story for any view-toggle pill(s) inside this panel (e.g.
+          // the Map tab's Players/Tournaments switch, or the Rankings tab's
+          // Grid/Table and rank-delta Hide/Show switches) — indicators were
+          // positioned against a zero-width rect while hidden.
+          for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
+            const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
+            const innerActive = innerToggle.querySelector('.view-btn.active, .delta-btn.active');
+            if (innerIndicator && innerActive) moveIndicator(innerIndicator, innerToggle, innerActive);
+          }
+        });
       });
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
