@@ -946,8 +946,22 @@ function writeJs(glickoUncertainRdThreshold) {
     const len = Math.max(from.length, target.length);
     const fromPadded = from.padEnd(len, ' ');
     const targetPadded = target.padEnd(len, ' ');
-    const maxPos = len + SCRAMBLE_WINDOW;
-    let pos = 0;
+    // Skip straight past a shared prefix/suffix: pos starts at the first
+    // differing character (instead of 0) and the sweep stops once the last
+    // differing character has cleared the window (instead of walking all
+    // the way to len), so headers sharing most of their text (e.g. every
+    // "DeathBall ..." tab) don't pay for ticking through characters that
+    // were never going to change on screen.
+    let firstDiff = 0;
+    while (firstDiff < len && fromPadded[firstDiff] === targetPadded[firstDiff]) firstDiff++;
+    if (firstDiff === len) {
+      el.textContent = target;
+      return;
+    }
+    let lastDiff = len - 1;
+    while (lastDiff > firstDiff && fromPadded[lastDiff] === targetPadded[lastDiff]) lastDiff--;
+    const maxPos = lastDiff + SCRAMBLE_WINDOW;
+    let pos = firstDiff;
     function drawFrame() {
       let out = '';
       for (let i = 0; i < len; i++) {
