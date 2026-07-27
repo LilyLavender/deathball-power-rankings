@@ -1512,7 +1512,9 @@
     const grid = document.getElementById('events-grid');
     if (grid) {
       const cards = [...grid.querySelectorAll('.event-card[data-date]')];
-      cards.forEach((card) => { card.hidden = card.dataset.date < today; });
+      // A blank data-date (no date on file for that event) can't be checked
+      // against today, so it's always kept rather than treated as expired.
+      cards.forEach((card) => { card.hidden = Boolean(card.dataset.date) && card.dataset.date < today; });
       const anyVisible = cards.some((card) => !card.hidden);
       grid.hidden = !anyVisible;
       const empty = document.getElementById('events-empty');
@@ -1524,7 +1526,9 @@
     const candidatesWrap = document.getElementById('pr-square-next-candidates');
     if (candidatesWrap) {
       const candidates = [...candidatesWrap.querySelectorAll('.next-event-candidate[data-date]')];
-      const chosen = candidates.find((c) => c.dataset.date >= today);
+      // Same blank-date carve-out as the grid above -- a dateless candidate
+      // never "expires" client-side.
+      const chosen = candidates.find((c) => !c.dataset.date || c.dataset.date >= today);
       candidates.forEach((c) => { c.hidden = c !== chosen; });
       const single = document.getElementById('pr-square-latest-single');
       const plural = document.getElementById('pr-square-latest-plural');

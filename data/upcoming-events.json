@@ -1,6 +1,6 @@
 {
-  "_schema": "Upcoming events shown in the site's Upcoming Events tab, as a flat list (not keyed by URL, since these are announced events rather than scraped tournaments). Each entry needs `date` (YYYY-MM-DD) and `link` at minimum; `city`/`state`/`location` (venue) and `name` are optional but should be filled in for a real listing. `image` (optional) is a logo URL rendered in the right 2/5 of the card -- omit it and the card stays full-width text. `color` (optional) is an \"H, S%, L%\" hue triple (e.g. \"205, 80%, 55%\") the card derives its background/border/date-color from; omit to use the default amber. Events whose `date` has already passed are dropped automatically at generation time -- no manual cleanup needed after an event happens.",
-  "_events_example": "{ \"date\": \"YYYY-MM-DD\", \"link\": \"LINK\", \"city\": \"CITY\", \"state\": \"STATE\", \"location\": \"LOCATION\", \"name\": \"NAME\", \"image\": \"IMAGE-URL\", \"color\": \"H, S%, L%\" }",
+  "_schema": "Upcoming events shown in the site's Upcoming Events tab, as a flat list (not keyed by URL, since these are announced events rather than scraped tournaments). All fields are optional and every one degrades gracefully if left blank: a missing `date` skips the passed-event filtering (the event is always kept and sorts after every dated event, in both the tab and the pr-square's Next Tournament callout) and shows \"Date TBA\"; a missing `name` shows \"Future Tournament\"; a missing `link` renders the card as inert (non-clickable) instead of a broken link; `city`/`state`/`location` (venue) are dropped from the card line individually if blank. `description` (optional) renders as a line directly below the name. `image` (optional) is a logo URL rendered in the right 2/5 of the card -- omit it and the card stays full-width text. `color` (optional) is an \"H, S%, L%\" hue triple (e.g. \"205, 80%, 55%\") the card derives its background/border/date-color from; omit to use the default amber. Events whose `date` has already passed are dropped automatically at generation time -- no manual cleanup needed after an event happens.",
+  "_events_example": "{ \"date\": \"YYYY-MM-DD\", \"link\": \"LINK\", \"city\": \"CITY\", \"state\": \"STATE\", \"location\": \"LOCATION\", \"name\": \"NAME\", \"description\": \"DESCRIPTION\", \"image\": \"IMAGE-URL\", \"color\": \"H, S%, L%\" }",
   "events": [
     {
       "date": "2026-07-07",
@@ -10,6 +10,16 @@
       "name": "SGDQ 2026",
       "image": "https://static0.colliderimages.com/wordpress/wp-content/uploads/2020/07/sgdq-2020-slice.png",
       "color": "205, 80%, 55%"
+    },
+    {
+      "date": "2026-08-16",
+      "link": "",
+      "city": "Madison",
+      "state": "WI",
+      "name": "",
+      "image": "https://images.squarespace-cdn.com/content/v1/58c4533403596e9dc421ecf4/1523550561829-0I2WW6TPCTT8LIY2PWFO/clearsmall.png?format=1500w",
+      "color": "48, 100%, 50%",
+      "description": "An inaugural tournament for I/O's 4-player cab. More info to come..."
     }
   ]
 }

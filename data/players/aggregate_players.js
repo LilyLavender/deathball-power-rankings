@@ -1844,11 +1844,19 @@ function writeCsv(rows) {
 // setupLiveEventFiltering() in writeJs()) can re-filter against the
 // *visitor's* today at page-load time and hide anything that's since
 // passed, without needing a rebuild.
+// A blank date can't be checked against "today", so an event with no date
+// is always kept (rather than silently dropped) and sorts after every dated
+// event, since there's no way to know if/when it's already passed.
 function sortedUpcomingEvents(events) {
   const today = todayIso();
   return events
-    .filter((e) => (e.date || '') >= today)
-    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    .filter((e) => !e.date || e.date >= today)
+    .sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.localeCompare(b.date);
+    });
 }
 
 function buildEventsTabHtml(events) {
@@ -1869,18 +1877,27 @@ function buildEventsTabHtml(events) {
     const hsl = parseHsl(e.color);
     const styleAttr = hsl ? ` style="--eh:${hsl.h};--es:${hsl.s};--el:${hsl.l}"` : '';
     const imageImg = e.image ? `<div class="event-image-wrap"><img class="event-image" src="${escapeHtml(e.image)}" alt=""></div>` : '';
+    const dateDisplay = e.date ? formatDateHuman(e.date) : 'Date TBA';
+    const descriptionHtml = e.description ? `<div class="event-description">${escapeHtml(e.description)}</div>` : '';
+    // A card with no link can't be an <a> (an empty/missing href either does
+    // nothing or, worse, re-navigates to the current page) -- render it as a
+    // plain <div> instead so it's inert rather than a broken link.
+    const hasLink = Boolean(e.link);
+    const tag = hasLink ? 'a' : 'div';
+    const linkAttrs = hasLink ? ` href="${escapeHtml(e.link)}" target="_blank" rel="noopener"` : '';
     // data-date lets client-side JS (setupLiveEventFiltering() in writeJs())
     // re-check this card against the *visitor's* today at page-load time --
     // the server-side filter above only reflects the build machine's today,
     // which goes stale between rebuilds.
-    return `<a class="event-card${e.image ? ' has-image' : ''}" data-date="${escapeHtml(e.date || '')}" href="${escapeHtml(e.link || '')}" target="_blank" rel="noopener"${styleAttr}>
+    return `<${tag} class="event-card${e.image ? ' has-image' : ''}${hasLink ? '' : ' no-link'}" data-date="${escapeHtml(e.date || '')}"${linkAttrs}${styleAttr}>
   <div class="event-body">
-    <div class="event-date">${escapeHtml(formatDateHuman(e.date))}</div>
-    <div class="event-name">${escapeHtml(e.name || '')}</div>
+    <div class="event-date">${escapeHtml(dateDisplay)}</div>
+    <div class="event-name">${escapeHtml(e.name || 'Future Tournament')}</div>
+    ${descriptionHtml}
     ${venueLine ? `<div class="event-venue">${flagImg}${venueLine}</div>` : ''}
   </div>
   ${imageImg}
-</a>`;
+</${tag}>`;
   }).join('\n');
 
   // Grid/footer/empty-message are all always emitted (rather than one or
@@ -2211,7 +2228,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
     : '';
   const nextCandidatesHtml = upcomingSorted.map((e, i) => `<div class="pr-square-latest-group next-event-candidate" data-date="${escapeHtml(e.date || '')}"${i === 0 ? '' : ' hidden'}>
   <div class="pr-square-label">Next Tournament</div>
-  <div class="pr-square-latest-item">${escapeHtml(e.name || '')} &mdash; ${escapeHtml(formatDateHuman(e.date))}</div>
+  <div class="pr-square-latest-item">${escapeHtml(e.name || 'Future Tournament')} &mdash; ${escapeHtml(e.date ? formatDateHuman(e.date) : 'Date TBA')}</div>
 </div>`).join('\n');
   // allTournaments is sorted ascending by date (see main()), so the last
   // entries are the most recent; reverse so newest shows first.
