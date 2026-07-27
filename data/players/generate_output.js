@@ -31,6 +31,15 @@ a:hover { text-decoration: underline; }
 .tab-button { background: none; border: none; border-bottom: 2px solid transparent; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.6rem 1.2rem; cursor: pointer; margin-bottom: -1px; transition: color 150ms ease; }
 .tab-button:hover { color: #bbb; }
 .tab-button.active { color: #3eff8b; }
+/* A plain navigation link to the player-graph.html page, not a real tab (no
+   panel, no data-tab) -- kept out of the .tab-button class so
+   enableTabs()'s querySelectorAll('.tab-button') never picks it up and
+   tries to activate a nonexistent panel. Sits inline with the rest of the
+   tab buttons (no margin-left: auto) and is styled the same, just
+   underlined on hover since it has no sliding .tab-underline indicator of
+   its own to show which one is "active". */
+.tab-external-link { display: inline-flex; align-items: center; gap: 0.35em; background: none; border: none; border-bottom: 2px solid transparent; color: #555; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; padding: 0.6rem 1.2rem; margin-bottom: -1px; transition: color 150ms ease; }
+.tab-external-link:hover { color: #bbb; text-decoration: underline; }
 /* Positioned/sized by JS (enableTabs) to sit under whichever tab is active,
    sliding there via the left/width transition instead of the underline
    just appearing under the newly-clicked tab and disappearing from the old
@@ -714,6 +723,7 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .tabs { flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; width: 78%; max-width: 300px; background: #0a0a0a; border-right: 1px solid #222; z-index: 50; padding: 4rem 1.25rem 1.5rem; margin-bottom: 0; transform: translateX(-100%); transition: transform 220ms ease; }
   .tabs.mobile-open { transform: translateX(0); }
   .tab-button { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid #161616; margin-bottom: 0; }
+  .tab-external-link { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid #161616; margin-bottom: 0; margin-left: 0; }
   .tab-underline { display: none; }
   .tabs-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 40; }
   .tabs-backdrop.mobile-open { display: block; }

@@ -2321,6 +2321,7 @@ ${embedMetaTags('DeathBall Power Rankings', 'Glicko-2 power rankings, player sta
   <button class="tab-button" data-tab="doubles-tab">Doubles Teams</button>
   <button class="tab-button" data-tab="map-tab">Map</button>
   <button class="tab-button" data-tab="events-tab">Upcoming Events</button>
+  <a class="tab-external-link" href="player-graph.html">Connections Graph</a>
   <span class="tab-underline"></span>
 </div>
 <div class="tabs-backdrop"></div>
@@ -4093,4 +4094,8 @@ module.exports = {
   collectStartgg,
   buildPlayerStats,
   parseTeamName,
+  cardAccent,
+  lookupPlayerInfo,
+  flagForInfo,
+  STATE_NAMES,
 };
