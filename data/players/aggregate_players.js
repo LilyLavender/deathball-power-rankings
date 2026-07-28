@@ -2577,6 +2577,15 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
        its own inset box. */
     padding: 0;
   }
+  /* Doubles brackets show two names per box ("PlayerA & PlayerB") instead
+     of one -- the library's default 150px --match-width (with .name's own
+     80%-width + ellipsis) truncates a team name far more readily than a
+     solo one. Widened only for doubles tournaments (see the
+     .doubles-bracket class added in writeTournamentPages) so singles
+     brackets keep their normal, more compact box size. */
+  .brackets-viewer.doubles-bracket {
+    --match-width: 260px;
+  }
   /* The stage name the library prints as its own <h1> above the bracket
      duplicates the page's actual title (already shown once, larger, at the
      very top of the page) — hide the library's copy rather than carry a
@@ -3104,7 +3113,7 @@ ${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span clas
         const flagById = {};
         for (const p of participants) if (p.flag) flagById[p.id] = { src: p.flag.src, title: p.flag.title };
         const note = incomplete ? '<p class="bracket-incomplete-note">&#9888; This bracket was not finished — some matches are missing from the source data, so results past that point aren\'t shown.</p>' : '';
-        return `${heading}${note}<div class="brackets-viewer" id="${containerId}"></div>
+        return `${heading}${note}<div class="brackets-viewer${t.isDoubles ? ' doubles-bracket' : ''}" id="${containerId}"></div>
 <script>
   window.bracketsViewer.render(${JSON.stringify(renderData)}, { selector: '#${containerId}' });
   addBracketFlags('#${containerId}', ${JSON.stringify(flagById)});
@@ -3833,7 +3842,27 @@ async function main() {
         // The flag rides along for the bracket page to render next to the
         // name; it's stripped back out of the payload handed to
         // brackets-viewer (see writeTournamentPages).
+        //
+        // A doubles participant is a whole team string (e.g. "Danny + Rhea")
+        // -- resolving it as a single raw player name (as below) never
+        // matches any alias/split entry (those are keyed on individual raw
+        // player names), so it silently passed through unresolved, showing
+        // each team's raw in-tournament spelling in the bracket instead of
+        // canonical player names -- inconsistent with every other view of
+        // the same tournament (crosstable, standings), which split and
+        // resolve each half individually via teamNameHtml/parseTeamName.
+        // Do the same split-then-resolve-then-rejoin here.
         for (const p of stage.bracketData.participants) {
+          if (t.isDoubles) {
+            const parts = parseTeamName(p.name);
+            if (parts) {
+              const resolvedParts = parts.map((raw) => resolveDisplayName(raw, t.url));
+              p.name = resolvedParts.map((r) => r.name).join(' & ');
+              const flags = resolvedParts.map((r) => r.flag).filter(Boolean);
+              p.flag = (flags.length === 1 || (flags.length === 2 && flags[0].src === flags[1].src)) ? flags[0] : null;
+              continue;
+            }
+          }
           const resolved = resolveDisplayName(p.name, t.url);
           p.name = resolved.name;
           p.flag = resolved.flag || null;
@@ -4115,4 +4144,6 @@ module.exports = {
   lookupPlayerInfo,
   flagForInfo,
   STATE_NAMES,
+  embedMetaTags,
+  escapeHtml,
 };

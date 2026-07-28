@@ -525,8 +525,8 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 /* Player names are real names, not fixed column labels like the rest of the
    site's tables -- override the global uppercase th rule so they render in
    their actual casing. */
-.crosstable th { background: #111; color: #888; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: none; cursor: pointer; }
-.crosstable th.row-name { text-align: left; color: #f0f0f0; }
+.crosstable th { background: #111; color: #f0f0f0; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: none; cursor: pointer; }
+.crosstable th.row-name { text-align: left; }
 .crosstable td.cell-diag { background: #0a0a0a; }
 .crosstable td.cell-empty { color: #333; }
 /* Result label -- W/L/D plus the actual game score (the score used to be

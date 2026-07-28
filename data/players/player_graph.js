@@ -18,6 +18,7 @@ const {
   lookupPlayerInfo,
   flagForInfo,
   STATE_NAMES,
+  embedMetaTags,
 } = require('./aggregate_players.js');
 const { louvain, refineCommunities, computeInternalRatio } = require('./louvain.js');
 
@@ -497,6 +498,7 @@ function writePage(graph) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DeathBall Player Connections</title>
+${embedMetaTags('DeathBall Player Connections', 'An interactive graph of who has played who across DeathBall tournaments', 'player-graph.html')}
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');

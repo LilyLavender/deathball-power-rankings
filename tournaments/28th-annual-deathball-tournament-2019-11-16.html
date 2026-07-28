@@ -137,6 +137,15 @@
        its own inset box. */
     padding: 0;
   }
+  /* Doubles brackets show two names per box ("PlayerA & PlayerB") instead
+     of one -- the library's default 150px --match-width (with .name's own
+     80%-width + ellipsis) truncates a team name far more readily than a
+     solo one. Widened only for doubles tournaments (see the
+     .doubles-bracket class added in writeTournamentPages) so singles
+     brackets keep their normal, more compact box size. */
+  .brackets-viewer.doubles-bracket {
+    --match-width: 260px;
+  }
   /* The stage name the library prints as its own <h1> above the bracket
      duplicates the page's actual title (already shown once, larger, at the
      very top of the page) — hide the library's copy rather than carry a

@@ -137,6 +137,15 @@
        its own inset box. */
     padding: 0;
   }
+  /* Doubles brackets show two names per box ("PlayerA & PlayerB") instead
+     of one -- the library's default 150px --match-width (with .name's own
+     80%-width + ellipsis) truncates a team name far more readily than a
+     solo one. Widened only for doubles tournaments (see the
+     .doubles-bracket class added in writeTournamentPages) so singles
+     brackets keep their normal, more compact box size. */
+  .brackets-viewer.doubles-bracket {
+    --match-width: 260px;
+  }
   /* The stage name the library prints as its own <h1> above the bracket
      duplicates the page's actual title (already shown once, larger, at the
      very top of the page) — hide the library's copy rather than carry a
@@ -483,10 +492,10 @@
   </table>
 </div>
 <h3 class="stage-label">Playoff Bracket</h3>
-<div class="brackets-viewer" id="bv-playoff-bracket"></div>
+<div class="brackets-viewer doubles-bracket" id="bv-playoff-bracket"></div>
 <script>
-  window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"SGDQ 2026 Doubles","type":"single_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":1,"score":0,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":3,"score":0,"result":"loss"},"opponent2":{"id":2,"score":2,"result":"win"}},{"id":2,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":0,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"Danny + Rhea"},{"id":1,"tournament_id":0,"name":"Willy + Sam"},{"id":2,"tournament_id":0,"name":"Link + Ellie"},{"id":3,"tournament_id":0,"name":"Goobz + Eddy"}]}, { selector: '#bv-playoff-bracket' });
-  addBracketFlags('#bv-playoff-bracket', {});
+  window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"SGDQ 2026 Doubles","type":"single_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":1,"score":0,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":3,"score":0,"result":"loss"},"opponent2":{"id":2,"score":2,"result":"win"}},{"id":2,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":0,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"dirtd & RheaStarGirl"},{"id":1,"tournament_id":0,"name":"willyjwillyj & SamuelJH"},{"id":2,"tournament_id":0,"name":"Mrlink2k & something_dumber"},{"id":3,"tournament_id":0,"name":"Dmt Goobz & Eddy"}]}, { selector: '#bv-playoff-bracket' });
+  addBracketFlags('#bv-playoff-bracket', {"1":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Michigan.svg","title":"Michigan"},"2":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Ohio.svg","title":"Ohio"}});
   pluralizeBracketNames();
   layoutBrackets();
   markPendingMatches();
