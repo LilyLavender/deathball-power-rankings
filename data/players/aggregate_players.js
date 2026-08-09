@@ -236,7 +236,7 @@ const tournamentVideos = readJson(path.join(DATA_ROOT, 'tournament-videos.json')
 function parseTeamName(rawName) {
   const trimmed = normName(rawName);
   if (!trimmed) return null;
-  const parts = trimmed.split(/\s*[+&]\s*/).map((s) => s.trim()).filter(Boolean);
+  const parts = trimmed.split(/\s*[+&/]\s*/).map((s) => s.trim()).filter(Boolean);
   return parts.length === 2 ? parts : null;
 }
 // Manually maintained list for the "Upcoming Events" tab -- each entry is

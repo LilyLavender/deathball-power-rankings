@@ -251,9 +251,10 @@ async function ask(rl, question) {
   return (await rl.question(question)).trim();
 }
 
-async function askChoice(rl, question, maxIndex) {
+async function askChoice(rl, question, maxIndex, defaultChoice = null) {
   while (true) {
     const answer = await ask(rl, question);
+    if (answer === '' && defaultChoice !== null) return defaultChoice;
     const n = parseInt(answer, 10);
     if (!isNaN(n) && n >= 0 && n <= maxIndex) return n;
     console.log(`  Enter a number from 0 to ${maxIndex}.`);
@@ -404,7 +405,7 @@ async function handleUnresolvedName(rl, rawName, tournament, knownById) {
   console.log(`\n"${rawName}" (${tournament.label}, ${tournament.date}) — possible matches:`);
   console.log('  0 - New player');
   candidates.forEach((c, i) => console.log(`  ${i + 1} - ${describeCandidate(c)}`));
-  const choice = await askChoice(rl, 'Choice: ', candidates.length);
+  const choice = await askChoice(rl, 'Choice (blank = 0): ', candidates.length, 0);
 
   if (choice === 0) {
     const info = await askLocationAndColor(rl, `${rawName} (${tournament.label}, ${tournament.date})`);
