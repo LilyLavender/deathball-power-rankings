@@ -9,7 +9,19 @@ Requires Node.js, No other dependencies.
 ## Build
 
 ```
-node data/players/aggregate_players.js
+.\regenerate_site.bat
 ```
 
+Runs: `node data\players\aggregate_players.js` & `node data\players\player_graph.js`.
+
 Rebuilds `index.html`/`index.css`/`index.js`, `players.csv`, and every `tournaments/<slug>.html` / `players/<slug>.html` page from the cached tournament data and the manual config files below. Use this after changing any generation logic or manual config, without re-fetching anything.
+
+## Adding tournaments
+
+1. Add new tournaments to the bottom of `tours-all-challonge.md` or `tours-all-startgg.md`.
+2. Run:
+```
+node data/players/add_tournaments.js
+```
+
+This command fetches tournaments via their url from either service, asks some player-related questions via a text-based wizard, and then aggregates all new data. You may need to add additional data to the many `.json` files after adding a tournament.
