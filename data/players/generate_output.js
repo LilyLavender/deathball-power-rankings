@@ -6,11 +6,141 @@
 // Comments inside the generated CSS/JS below must never contain a backtick --
 // this whole file's output is a JS template literal, and a stray backtick
 // closes it early and throws a syntax error at generation time (see CLAUDE.md).
+//
+// The comments themselves exist for whoever is reading/editing this source
+// file, not for whoever opens index.css/index.js in a browser devtools tab --
+// stripJsComments/stripCssComments below strip them out of the actual
+// written files (bloat + no reason to ship internal rationale to visitors),
+// so write comments here freely without worrying about output size.
 
 const fs = require('fs');
 const path = require('path');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
+
+// Strips /* */ comments (CSS has no line-comment syntax) while leaving
+// quoted strings -- e.g. the data:image/svg+xml URLs -- untouched, then
+// collapses the blank lines comment removal leaves behind.
+function stripCssComments(code) {
+  let out = '';
+  let i = 0;
+  while (i < code.length) {
+    const c = code[i];
+    if (c === "'" || c === '"') {
+      const quote = c;
+      let j = i + 1;
+      while (j < code.length && code[j] !== quote) {
+        if (code[j] === '\\') j++;
+        j++;
+      }
+      out += code.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+    if (c === '/' && code[i + 1] === '*') {
+      const close = code.indexOf('*/', i + 2);
+      i = close === -1 ? code.length : close + 2;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{2,}/g, '\n');
+}
+
+// Strips // and /* */ comments from the generated client-side JS while
+// leaving string/template-literal/regex-literal content untouched -- a
+// naive strip would truncate string literals that happen to contain "//"
+// (e.g. 'http://www.w3.org/2000/svg') or eat a division operator it
+// mistook for the start of a regex. Regex-vs-division is disambiguated by
+// checking whether the last meaningful token before the "/" is one that a
+// value can't follow (an operator/punctuator/keyword), same heuristic
+// simple JS tokenizers use.
+const JS_REGEX_PRECEDING_KEYWORDS = new Set([
+  'return', 'typeof', 'case', 'in', 'of', 'new', 'delete', 'void', 'throw',
+  'instanceof', 'yield', 'do', 'else',
+]);
+
+function isJsRegexContext(outSoFar) {
+  const trimmed = outSoFar.replace(/\s+$/, '');
+  if (trimmed === '') return true;
+  const lastChar = trimmed[trimmed.length - 1];
+  if ('([{,;:=!&|?+-*%^~<>'.includes(lastChar)) return true;
+  const wordMatch = trimmed.match(/[A-Za-z_$][A-Za-z0-9_$]*$/);
+  return !!(wordMatch && JS_REGEX_PRECEDING_KEYWORDS.has(wordMatch[0]));
+}
+
+function stripJsComments(code) {
+  let out = '';
+  let i = 0;
+  const n = code.length;
+  while (i < n) {
+    const c = code[i];
+    const c2 = code[i + 1];
+    if (c === '/' && c2 === '/') {
+      i += 2;
+      while (i < n && code[i] !== '\n') i++;
+      continue;
+    }
+    if (c === '/' && c2 === '*') {
+      const close = code.indexOf('*/', i + 2);
+      i = close === -1 ? n : close + 2;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      const quote = c;
+      let j = i + 1;
+      while (j < n && code[j] !== quote) {
+        j += code[j] === '\\' ? 2 : 1;
+      }
+      out += code.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+    if (c === '`') {
+      let j = i + 1;
+      while (j < n && code[j] !== '`') {
+        if (code[j] === '\\') { j += 2; continue; }
+        if (code[j] === '$' && code[j + 1] === '{') {
+          j += 2;
+          let depth = 1;
+          while (j < n && depth > 0) {
+            if (code[j] === '{') depth++;
+            else if (code[j] === '}') depth--;
+            j++;
+          }
+          continue;
+        }
+        j++;
+      }
+      out += code.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+    if (c === '/' && isJsRegexContext(out)) {
+      let j = i + 1;
+      let inClass = false;
+      while (j < n) {
+        if (code[j] === '\\') { j += 2; continue; }
+        if (code[j] === '[') inClass = true;
+        else if (code[j] === ']') inClass = false;
+        else if (code[j] === '/' && !inClass) { j++; break; }
+        j++;
+      }
+      while (j < n && /[a-z]/i.test(code[j])) j++;
+      out += code.slice(i, j);
+      i = j;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{2,}/g, '\n');
+}
 
 function writeCss() {
   const css = `@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
@@ -866,7 +996,7 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   ol.map-cols-players li > span:nth-child(3) { display: none; }
 }
 `;
-  fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), css);
+  fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), stripCssComments(css));
 }
 
 function writeJs(glickoUncertainRdThreshold) {
@@ -2456,7 +2586,19 @@ function writeJs(glickoUncertainRdThreshold) {
   });
 })();
 `;
-  fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), js);
+  fs.writeFileSync(path.join(REPO_ROOT, 'index.js'), stripJsComments(js));
 }
 
-module.exports = { writeCss, writeJs };
+// Strips comments out of the <style>/<script> blocks inside an HTML
+// fragment while leaving the surrounding markup untouched -- running
+// stripJsComments over raw HTML directly is unsafe (a "</script>" tag's "/"
+// reads as regex-context to the JS tokenizer and it goes hunting for a
+// closing "/" through the rest of the markup), so each block's inner text
+// is extracted and stripped with the matching CSS/JS stripper instead.
+function stripCommentsInHeadBlocks(html) {
+  return html
+    .replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/g, (m, open, body, close) => open + stripCssComments(body) + close)
+    .replace(/(<script[^>]*>)([\s\S]*?)(<\/script>)/g, (m, open, body, close) => open + stripJsComments(body) + close);
+}
+
+module.exports = { writeCss, writeJs, stripCssComments, stripJsComments, stripCommentsInHeadBlocks };

@@ -99,11 +99,6 @@
       if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
     });
   });
-
-  // Mobile-only AKA disclosure (see .aka-toggle/.aka-content in writeCss) --
-  // a plain button + a separate content block, not <details>, so the toggle
-  // itself never moves and the alias list lands in its own full-width row
-  // below the location/active line instead of right next to the button.
   (() => {
     const toggle = document.querySelector('.aka-toggle');
     const content = document.getElementById('aka-content');
@@ -114,11 +109,6 @@
       toggle.setAttribute('aria-expanded', String(open));
     });
   })();
-
-  // Historical-rating chart: hover/focus a tournament point to show its
-  // tooltip, positioned against the chart's inner box (its actual
-  // containing block, not the viewport or the padded outer card), so it
-  // scales correctly with the SVG's own preserveAspectRatio scaling.
   document.querySelectorAll('.rating-chart-inner').forEach((wrap) => {
     const tooltip = wrap.querySelector('.chart-tooltip');
     const svg = wrap.querySelector('.rating-chart');
@@ -141,9 +131,6 @@
       point.addEventListener('focus', () => show(point));
       point.addEventListener('blur', hide);
     });
-    // Nearest-point-by-x detection across the whole chart (not just when
-    // hovering a point's small hit circle) — find the closest marker to the
-    // mouse's x position anywhere over the SVG and show its tooltip.
     svg.addEventListener('mousemove', (e) => {
       if (!points.length) return;
       let nearest = points[0];

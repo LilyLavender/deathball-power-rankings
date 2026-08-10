@@ -20,7 +20,7 @@ const glicko2 = require('./glicko2');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
 const { buildBracketData, hashStr } = require('./build_bracket');
 const { slugify } = require('../slugify');
-const { writeCss, writeJs } = require('./generate_output');
+const { writeCss, writeJs, stripCommentsInHeadBlocks } = require('./generate_output');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -2535,7 +2535,7 @@ ${siteFooter('')}
 </html>
 `;
 
-  fs.writeFileSync(path.join(REPO_ROOT, 'index.html'), html);
+  fs.writeFileSync(path.join(REPO_ROOT, 'index.html'), stripCommentsInHeadBlocks(html));
 }
 
 function matchScoreLabel(m) {
@@ -2565,7 +2565,7 @@ function matchScoreParts(m) {
   return null;
 }
 
-const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
+const BRACKETS_VIEWER_HEAD = stripCommentsInHeadBlocks(`<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css">
 <script src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"></script>
 <style>
   .brackets-viewer {
@@ -2903,14 +2903,14 @@ const BRACKETS_VIEWER_HEAD = `<link rel="stylesheet" href="https://cdn.jsdelivr.
       opponents.appendChild(icon);
     }
   }
-</script>`;
+</script>`);
 
 // Always loaded on every tournament page (unlike BRACKETS_VIEWER_HEAD, which
 // only loads when a stage actually has a reconstructed bracket) -- wires up
 // player hover/click highlighting across the standings list, crosstable
 // (round-robin), round-list (swiss and any other non-crosstable stage), and
 // bracket viewer alike, since a tournament can have any mix of these stages.
-const PLAYER_INTERACTIVITY_HEAD = `<script>
+const PLAYER_INTERACTIVITY_HEAD = stripCommentsInHeadBlocks(`<script>
   // Highlights one player everywhere they appear on the page — every
   // bracket match, crosstable row/column, round-list entry (across every
   // stage/container, in case a tournament has more than one), and their
@@ -3008,7 +3008,7 @@ const PLAYER_INTERACTIVITY_HEAD = `<script>
       });
     }
   }
-</script>`;
+</script>`);
 
 // Renders a raw in-tournament name as canonical-name-plus-flag markup.
 // `opts.noLink` skips the player-page <a> wrapper -- used for match displays
@@ -3244,7 +3244,7 @@ ${siteFooter('../')}
 `;
 
     keep.add(`${t.slug}.html`);
-    fs.writeFileSync(path.join(dir, `${t.slug}.html`), html);
+    fs.writeFileSync(path.join(dir, `${t.slug}.html`), stripCommentsInHeadBlocks(html));
   }
 
   cleanStaleHtml(dir, keep);
@@ -3792,7 +3792,7 @@ ${siteFooter('../')}
 `;
 
     keep.add(`${slug}.html`);
-    fs.writeFileSync(path.join(dir, `${slug}.html`), html);
+    fs.writeFileSync(path.join(dir, `${slug}.html`), stripCommentsInHeadBlocks(html));
   }
 
   cleanStaleHtml(dir, keep);

@@ -5,7 +5,6 @@
   const PR_META = PR_HISTORY_DATA.players || {};
   const PR_HISTORY = PR_HISTORY_DATA.checkpoints || [];
   const PR_UNCERTAIN_RD_THRESHOLD = 150;
-
   function enableSorting(table) {
     const tbody = table.tBodies[0];
     const headers = [...table.querySelectorAll('th')];
@@ -15,7 +14,6 @@
         const asc = !th.classList.contains('sorted-asc');
         headers.forEach((h) => h.classList.remove('sorted-asc', 'sorted-desc'));
         th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
-
         const rows = [...tbody.rows];
         const type = th.dataset.type;
         rows.sort((a, b) => {
@@ -39,11 +37,6 @@
       });
     });
   }
-
-  // Positions indicator (a .tab-underline or .view-toggle-indicator) to
-  // sit under/behind target within container, sized to match — called on
-  // init and again on every switch so it slides there via the element's
-  // own CSS transition instead of just appearing in the new spot.
   function moveIndicator(indicator, container, target) {
     if (!indicator || !container || !target) return;
     const containerRect = container.getBoundingClientRect();
@@ -51,31 +44,16 @@
     indicator.style.left = (targetRect.left - containerRect.left) + 'px';
     indicator.style.width = targetRect.width + 'px';
   }
-
   const TAB_HEADERS = { 'players-tab': 'DeathBall Players', 'tournaments-tab': 'DeathBall Tournaments', 'doubles-tab': 'DeathBall Doubles', 'rankings-tab': 'DeathBall Power Rankings', 'map-tab': 'DeathBall Map', 'events-tab': 'Upcoming DeathBall Events' };
-
   const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   const SCRAMBLE_WINDOW = 8;
   const SCRAMBLE_STEP_MS = 30;
-
-  // Sweeps a small window of characters left to right across the heading:
-  // characters inside the window flicker through random letters each tick,
-  // characters the window has already passed settle onto the new heading's
-  // text, and characters not yet reached still show the old heading's text.
-  // The first frame is drawn synchronously (not on the first interval tick)
-  // so the sweep visibly starts the instant the tab is clicked.
   function scrambleHeading(el, target) {
     if (el._scrambleTimer) clearInterval(el._scrambleTimer);
     const from = el.textContent;
     const len = Math.max(from.length, target.length);
     const fromPadded = from.padEnd(len, ' ');
     const targetPadded = target.padEnd(len, ' ');
-    // Skip straight past a shared prefix/suffix: pos starts at the first
-    // differing character (instead of 0) and the sweep stops once the last
-    // differing character has cleared the window (instead of walking all
-    // the way to len), so headers sharing most of their text (e.g. every
-    // "DeathBall ..." tab) don't pay for ticking through characters that
-    // were never going to change on screen.
     let firstDiff = 0;
     while (firstDiff < len && fromPadded[firstDiff] === targetPadded[firstDiff]) firstDiff++;
     if (firstDiff === len) {
@@ -113,24 +91,17 @@
       drawFrame();
     }, SCRAMBLE_STEP_MS);
   }
-
   function setHeaderForTab(tabId) {
     const heading = document.getElementById('tab-heading');
     const label = TAB_HEADERS[tabId] || TAB_HEADERS['rankings-tab'];
     if (!heading || heading.textContent === label) return;
     scrambleHeading(heading, label);
   }
-
-  // Keeps the URL's ?tab= param in sync with whichever tab is active, so the
-  // address bar can be copied/bookmarked/shared and reopen on the same tab.
-  // replaceState (not pushState) so clicking through tabs doesn't fill up
-  // browser history with one entry per tab switch.
   function updateUrlForTab(tabId) {
     const url = new URL(location.href);
     url.searchParams.set('tab', tabId.replace(/-tab$/, ''));
     history.replaceState(null, '', url);
   }
-
   function enableTabs() {
     const buttons = [...document.querySelectorAll('.tab-button')];
     const panels = [...document.querySelectorAll('.tab-panel')];
@@ -147,22 +118,8 @@
         setHeaderForTab(btn.dataset.tab);
         updateUrlForTab(btn.dataset.tab);
         updateDownloadVisibility();
-        // Deferred to a rAF instead of running inline: this panel can hold
-        // hundreds of cards, and fitText's measure-shrink-remeasure loop
-        // forces a synchronous reflow per element, which was blocking the
-        // main thread and starving the heading scramble's setInterval ticks
-        // -- the animation would stall, then jump once this finished. Off
-        // the critical path, it now runs after the browser has already
-        // painted the tab switch and the scramble is free to animate.
         requestAnimationFrame(() => {
-          // Cards were sized while this panel was display:none (offsetWidth
-          // 0 at page load, or never resized since last becoming visible),
-          // so names need a fresh fit now that the panel actually has layout.
           fitCardNames(panel);
-          // Same story for any view-toggle pill(s) inside this panel (e.g.
-          // the Map tab's Players/Tournaments switch, or the Rankings tab's
-          // Grid/Table and rank-delta Hide/Show switches) — indicators were
-          // positioned against a zero-width rect while hidden.
           for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
             const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
             const innerActive = innerToggle.querySelector('.view-btn.active, .delta-btn.active');
@@ -173,25 +130,12 @@
     });
     moveIndicator(underline, tabsEl, buttons.find((b) => b.classList.contains('active')));
   }
-
-  // Lets a link into the site land on a specific tab via a query string,
-  // e.g. index.html?tab=tournaments -- used by the tournament pages' back
-  // link so it returns to Tournaments instead of always Power Rankings.
-  // Reuses the tab button's own click handler (rather than duplicating its
-  // active-state/indicator/header logic here) so behavior stays identical
-  // to a real click.
   function activateTabFromQuery() {
     const requested = new URLSearchParams(location.search).get('tab');
     if (!requested) return;
     const btn = document.querySelector('.tab-button[data-tab="' + requested + '-tab"]');
     if (btn && !btn.classList.contains('active')) btn.click();
   }
-
-  // Mobile-only hamburger toggle for the tab row (see .tabs-toggle in
-  // writeCss) -- .tabs-toggle is display:none above the mobile breakpoint,
-  // so this is inert on desktop even though the listener is always attached.
-  // .tabs slides in from the left as a fixed drawer over a dimming
-  // .tabs-backdrop, which also closes the drawer when tapped.
   function enableTabsMenu() {
     const toggle = document.querySelector('.tabs-toggle');
     const tabsEl = document.querySelector('.tabs');
@@ -204,18 +148,10 @@
     }
     toggle.addEventListener('click', () => setOpen(!tabsEl.classList.contains('mobile-open')));
     if (backdrop) backdrop.addEventListener('click', () => setOpen(false));
-    // Selecting a tab closes the drawer again rather than leaving it open
-    // over the newly-shown panel.
     tabsEl.querySelectorAll('.tab-button').forEach((btn) => {
       btn.addEventListener('click', () => setOpen(false));
     });
   }
-
-  // Mobile-only collapse for the Power Rankings tab's filter/action row (see
-  // .rankings-options-toggle in writeCss) -- off by default on mobile so the
-  // grid/table of rankings isn't pushed down by a wall of selects before
-  // anyone asks for them; the toggle itself is display:none on desktop,
-  // where the panel is always visible regardless of this class.
   function enableOptionsToggle() {
     const toggle = document.querySelector('.rankings-options-toggle');
     const panel = document.getElementById('rankings-options-panel');
@@ -224,12 +160,6 @@
       const open = panel.classList.toggle('options-open');
       toggle.classList.toggle('active', open);
       toggle.setAttribute('aria-expanded', String(open));
-      // The Grid/Table and Hide/Show-delta sliding pills were positioned (at
-      // page load and on every filter change) while this panel was
-      // display:none on mobile -- getBoundingClientRect on a display:none
-      // element's children is a zero-size rect, so both pills got stuck at
-      // left:0/width:0 until something recomputed them against real layout.
-      // Re-run that positioning now that the panel actually has size.
       if (open) {
         for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
           const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
@@ -239,7 +169,6 @@
       }
     });
   }
-
   function populateStateFilter(panel) {
     const select = panel.querySelector('.state-filter-select');
     const tbody = panel.querySelector('table tbody');
@@ -258,10 +187,8 @@
       opt.textContent = opt.dataset.label;
       select.appendChild(opt);
     }
-    // Stamp base label on the hardcoded "All locations" option too
     if (select.options[0]) select.options[0].dataset.label = select.options[0].textContent;
   }
-
   function applyFilters(panel) {
     const minGames = parseInt(panel.querySelector('.min-games-select')?.value || '0', 10);
     const maxRdVal = panel.querySelector('.max-rd-select')?.value || 'Infinity';
@@ -271,15 +198,8 @@
     const isRankingsTab = panel.id === 'rankings-tab';
     const DEFAULT_MIN_GAMES = 5;
     const DEFAULT_MAX_RD = 150;
-
-    // Use card grid as count source for rankings (avoids double-counting with table).
-    // Scoped to direct .pr-card children so the .pr-square promo tile (no
-    // data-games/data-rd, not a real ranked player) is never counted, ranked,
-    // or hidden by these filters.
     const grid = isRankingsTab ? panel.querySelector('.pr-grid') : null;
     const countSource = grid ? [...grid.querySelectorAll(':scope > .pr-card')] : (tbody ? [...tbody.rows] : []);
-
-    // First pass: count per state for items passing non-state filters
     const stateCounts = new Map();
     let totalPassingNonState = 0;
     for (const el of countSource) {
@@ -291,8 +211,6 @@
       stateCounts.set(rowState, (stateCounts.get(rowState) || 0) + 1);
       totalPassingNonState++;
     }
-
-    // Update dropdown option labels with counts
     const stateSelect = panel.querySelector('.state-filter-select');
     if (stateSelect) {
       for (const opt of stateSelect.options) {
@@ -301,8 +219,6 @@
         opt.textContent = label + ' (' + count + ')';
       }
     }
-
-    // Apply filters to table rows
     if (tbody) {
       let rank = 1;
       for (const row of tbody.rows) {
@@ -325,8 +241,6 @@
         }
       }
     }
-
-    // Apply filters to card grid (rankings tab only)
     let visible = 0;
     if (grid) {
       let rank = 1;
@@ -351,18 +265,14 @@
     } else if (tbody) {
       for (const row of tbody.rows) if (!row.hidden) visible++;
     }
-
     const countEl = panel.querySelector('.filter-count');
     if (countEl) {
       const noun = isRankingsTab ? 'players ranked' : 'unique players';
-      // The sort hint only applies while the sortable table is actually the
-      // visible view — grid mode has no columns to click.
       const table = panel.querySelector('table');
       const tableVisible = !grid || !table || table.style.display !== 'none';
       countEl.textContent = visible + ' ' + noun + (tableVisible ? '. Click a column header to sort.' : '.');
     }
   }
-
   function fitText(el, maxPx, minPx) {
     el.style.fontSize = maxPx + 'px';
     let size = maxPx;
@@ -371,22 +281,16 @@
       el.style.fontSize = size + 'px';
     }
   }
-
   function fitCardNames(panel) {
     const scope = panel || document;
     for (const el of scope.querySelectorAll('.prc-name')) fitText(el, 18, 9);
   }
-
-  // Sequential fill scale from dim (no data) up to bright green, using a
-  // sqrt scale so a handful of high-count hubs (e.g. Texas/Minnesota) don't
-  // wash out every other state to the same dim shade.
   function countColor(count, max) {
     if (!count) return 'rgba(255, 255, 255, 0.05)';
     const t = max > 0 ? Math.sqrt(count / max) : 0;
     const lightness = 16 + t * 44;
     return 'hsl(150, 70%, ' + lightness.toFixed(1) + '%)';
   }
-
   function updateMap(panel, view) {
     const regions = [...panel.querySelectorAll('.map-region')];
     const labels = [...panel.querySelectorAll('.map-label')];
@@ -401,7 +305,6 @@
       l.textContent = count > 0 ? count : '';
     });
   }
-
   function enableMapToggle(panel) {
     if (!panel) return;
     const buttons = [...panel.querySelectorAll('.view-btn')];
@@ -413,8 +316,6 @@
         btn.classList.add('active');
         moveIndicator(indicator, toggleEl, btn);
         updateMap(panel, btn.dataset.view);
-        // Keep an open region's sidebar in sync with whichever list (players
-        // vs tournaments) is now the active view, without touching zoom.
         if (panel._mapRefreshSidebar) panel._mapRefreshSidebar();
       });
     });
@@ -422,28 +323,8 @@
     moveIndicator(indicator, toggleEl, active);
     updateMap(panel, active ? active.dataset.view : 'players');
   }
-
-  // Hand-picked box (same tuning approach as MAP_HOME_VIEWBOX in
-  // aggregate_players.js) padding out mapShapes' actual world content bbox
-  // (roughly x: -611..3784, y: -1142..1767, per every shape's projected
-  // path) so panning/zooming out can reach every region -- including
-  // Russia's mainland and Fiji/Kiribati/New Zealand's remaining islands --
-  // without ever revealing empty space past the edge of the world. Doubles
-  // as the zoomed-all-the-way-out box: MAP_ZOOM_OUT_MAX_WIDTH below equals
-  // its own width, so at max zoom-out the viewBox exactly fills these
-  // bounds and there's nowhere left to pan.
   const MAP_WORLD_BOUNDS = { minX: -700, minY: -1200, maxX: 3900, maxY: 1950 };
   const MAP_ZOOM_OUT_MAX_WIDTH = MAP_WORLD_BOUNDS.maxX - MAP_WORLD_BOUNDS.minX;
-
-  // Clamps a candidate viewBox (as x, y, width, height) so it never drifts
-  // outside MAP_WORLD_BOUNDS -- used by every pan/zoom entry point (drag,
-  // wheel, pinch, click-to-zoom, the home reset) so none of them can
-  // individually put the user somewhere with nothing to look at. If the box
-  // itself is wider/taller than the bounds (shouldn't normally happen since
-  // MAP_ZOOM_OUT_MAX_WIDTH is sized to fit, but the pinch-zoom path derives
-  // height from a live aspect ratio that could theoretically overshoot),
-  // that dimension is centered in the bounds instead of clamped, since a
-  // min/max clamp is undefined when the box is bigger than the range.
   function clampMapBox(x, y, width, height) {
     const boundsW = MAP_WORLD_BOUNDS.maxX - MAP_WORLD_BOUNDS.minX;
     const boundsH = MAP_WORLD_BOUNDS.maxY - MAP_WORLD_BOUNDS.minY;
@@ -455,7 +336,6 @@
       : Math.min(Math.max(y, MAP_WORLD_BOUNDS.minY), MAP_WORLD_BOUNDS.maxY - height);
     return [cx, cy, width, height];
   }
-
   function animateViewBox(svg, toBox, duration) {
     const clampedTo = clampMapBox(toBox[0], toBox[1], toBox[2], toBox[3]);
     const fromBox = svg.getAttribute('viewBox').split(' ').map(Number);
@@ -469,14 +349,6 @@
     }
     requestAnimationFrame(step);
   }
-
-  // Mirrors the player page's tournament-history-list / recent-matches-list
-  // styling (standings-list / standings-rank / hist-tourney-name /
-  // standings-record) so this reads as the same kind of list elsewhere on
-  // the site, rather than a one-off sidebar design. The sidebar always
-  // shows a list — regionId '__ALL__' (the default) shows every
-  // player/tournament; clicking a region filters this same list down
-  // rather than swapping in a separate view.
   function mapFlagNameSpan(item) {
     const nameSpan = document.createElement('span');
     nameSpan.className = 'hist-tourney-name';
@@ -498,13 +370,6 @@
     }
     return nameSpan;
   }
-
-  // Column definitions per view -- key is the field on each item (see
-  // toMapPlayerJson/toMapTournamentJson in aggregate_players.js), type
-  // picks string vs numeric comparison. Tournament dates sort on the raw
-  // ISO field (di), not the pre-formatted display date (d), for the same
-  // reason as the main tables: comparing formatted strings would order by
-  // month name instead of chronologically.
   const MAP_SIDEBAR_COLUMNS = {
     players: [
       { label: 'Player', key: 'n', type: 'string' },
@@ -517,7 +382,6 @@
       { label: 'Date', key: 'di', type: 'string' },
     ],
   };
-
   function sortMapItems(items, sort, columns) {
     if (!sort) return items;
     const col = columns.find((c) => c.key === sort.key);
@@ -535,7 +399,6 @@
     });
     return sorted;
   }
-
   function renderMapSidebar(panel, regionId, view) {
     const data = MAP_REGION_DATA[regionId];
     if (!data) return;
@@ -545,7 +408,6 @@
     const backBtn = panel.querySelector('.map-sidebar-back');
     title.textContent = data.name;
     if (backBtn) backBtn.hidden = regionId === '__ALL__';
-
     const isTournaments = view === 'tournaments';
     list.classList.toggle('map-cols-players', !isTournaments);
     list.classList.toggle('map-cols-tournaments', isTournaments);
@@ -563,9 +425,6 @@
         span.classList.add(currentSort.asc ? 'sorted-asc' : 'sorted-desc');
       }
       span.addEventListener('click', () => {
-        // Cycles ascending -> descending -> unsorted (back to the default
-        // list order) rather than just flipping asc/desc forever, so there's
-        // a way back to the original ordering without a page reload.
         const prev = panel._mapSort[sortKey];
         if (!prev || prev.key !== col.key) {
           panel._mapSort[sortKey] = { key: col.key, asc: true };
@@ -579,7 +438,6 @@
       });
       colhead.appendChild(span);
     });
-
     list.innerHTML = '';
     const items = sortMapItems(isTournaments ? data.tournamentsList : data.playersList, currentSort, columns);
     if (!items.length) {
@@ -614,7 +472,6 @@
       list.appendChild(li);
     });
   }
-
   function zoomToRegion(svg, regionEl) {
     const bbox = regionEl.getBBox();
     const padFactor = 0.4;
@@ -625,22 +482,10 @@
     const cy = bbox.y + bbox.height / 2;
     animateViewBox(svg, [cx - w / 2, cy - h / 2, w, h], 450);
   }
-
   function zoomMapHome(svg) {
     const home = (svg.dataset.home || '').split(' ').map(Number);
     if (home.length === 4 && home.every((n) => !isNaN(n))) animateViewBox(svg, home, 450);
   }
-
-  // Two-finger pinch zoom on the map SVG specifically (touch-only — desktop
-  // mouse users are unaffected). touch-action:none on .map-svg (see writeCss)
-  // stops the browser from treating this as a page-level gesture first.
-  // Zoom is anchored at the pinch midpoint (converted to the SVG's own user
-  // space via getScreenCTM, not just the viewBox center) so the point under
-  // the fingers stays under the fingers as the box shrinks/grows. Zooming in
-  // is capped at 15% of the home width (any closer stops being useful); zoom
-  // *out* goes much farther than the home view, all the way to
-  // MAP_ZOOM_OUT_MAX_WIDTH (the whole-world box) -- pinching out is the
-  // touch equivalent of the wheel-zoom-out below.
   function enableMapPinchZoom(svg) {
     const home = (svg.dataset.home || '').split(' ').map(Number);
     if (home.length !== 4 || home.some((n) => isNaN(n))) return;
@@ -649,7 +494,6 @@
     let startDist = null;
     let startBox = null;
     let anchor = null;
-
     function touchDist(touches) {
       return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
     }
@@ -666,7 +510,6 @@
       startBox = null;
       anchor = null;
     }
-
     svg.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 2) return;
       e.preventDefault();
@@ -678,7 +521,6 @@
         (e.touches[0].clientY + e.touches[1].clientY) / 2
       );
     }, { passive: false });
-
     svg.addEventListener('touchmove', (e) => {
       if (e.touches.length !== 2 || !startDist || !startBox || !anchor) return;
       e.preventDefault();
@@ -690,25 +532,14 @@
       const [cx, cy, cw, ch] = clampMapBox(anchor.x - fx * newW, anchor.y - fy * newH, newW, newH);
       svg.setAttribute('viewBox', cx.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + cw.toFixed(2) + ' ' + ch.toFixed(2));
     }, { passive: false });
-
     svg.addEventListener('touchend', (e) => { if (e.touches.length < 2) endPinch(); });
     svg.addEventListener('touchcancel', endPinch);
   }
-
-  // Scrolling/trackpad-swiping while the cursor is over the map zooms it
-  // in/out instead of scrolling the page -- anchored at the cursor position
-  // (same getScreenCTM technique as pinch zoom above) so the point under the
-  // cursor stays under the cursor as the box shrinks/grows. Zooming in is
-  // capped at 15% of the home width, same as pinch zoom, but zooming *out*
-  // goes much farther than the home view -- all the way out to
-  // MAP_ZOOM_OUT_MAX_WIDTH, the whole-world box -- since scrolling out to
-  // get an overview is a much more common thing to want than the reverse.
   function enableMapWheelZoom(svg) {
     const home = (svg.dataset.home || '').split(' ').map(Number);
     if (home.length !== 4 || home.some((n) => isNaN(n))) return;
     const maxW = MAP_ZOOM_OUT_MAX_WIDTH;
     const minW = home[2] * 0.15;
-
     svg.addEventListener('wheel', (e) => {
       e.preventDefault();
       const ctm = svg.getScreenCTM();
@@ -718,8 +549,6 @@
       pt.y = e.clientY;
       const anchor = pt.matrixTransform(ctm.inverse());
       const vb = svg.viewBox.baseVal;
-      // Positive deltaY (scroll down / two-finger swipe down) zooms out,
-      // negative zooms in -- matches the usual map-UI scroll convention.
       const factor = Math.exp(e.deltaY * 0.0015);
       const newW = Math.max(minW, Math.min(maxW, vb.width * factor));
       const newH = newW * (vb.height / vb.width);
@@ -729,15 +558,6 @@
       svg.setAttribute('viewBox', cx + ' ' + cy + ' ' + cw + ' ' + ch);
     }, { passive: false });
   }
-
-  // Click-and-drag panning with the mouse (desktop only -- touch already has
-  // pinch-zoom above, and a single-finger drag there is reserved for tapping
-  // a region). Panning only translates the viewBox's x/y, never its
-  // width/height, so it never changes zoom level. A drag is distinguished
-  // from a plain click by total pointer movement: past DRAG_THRESHOLD px,
-  // panel._mapWasDragged is set so enableMapRegions' click handler (added
-  // below) can ignore the click a real drag's mouseup would otherwise fire
-  // on whatever region element the cursor ends up over.
   const MAP_DRAG_THRESHOLD = 4;
   function enableMapDrag(panel, svg) {
     let dragging = false;
@@ -745,13 +565,11 @@
     let startClientX = 0;
     let startClientY = 0;
     let startBox = null;
-
     function svgUnitsPerPixel() {
       const ctm = svg.getScreenCTM();
       if (!ctm || !ctm.a || !ctm.d) return { x: 1, y: 1 };
       return { x: 1 / ctm.a, y: 1 / ctm.d };
     }
-
     svg.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       dragging = true;
@@ -762,7 +580,6 @@
       startBox = { x: vb.x, y: vb.y, width: vb.width, height: vb.height };
       e.preventDefault();
     });
-
     window.addEventListener('mousemove', (e) => {
       if (!dragging || !startBox) return;
       const dxClient = e.clientX - startClientX;
@@ -779,18 +596,14 @@
       const [cx, cy, cw, ch] = clampMapBox(startBox.x - dx, startBox.y - dy, startBox.width, startBox.height);
       svg.setAttribute('viewBox', cx + ' ' + cy + ' ' + cw + ' ' + ch);
     });
-
     window.addEventListener('mouseup', () => {
       if (!dragging) return;
       dragging = false;
       startBox = null;
       svg.classList.remove('dragging');
-      // Cleared on the next tick rather than immediately so the click event
-      // that follows this same mouseup (if any) still sees it set.
       if (moved) setTimeout(() => { panel._mapWasDragged = false; }, 0);
     });
   }
-
   function enableMapRegions(panel) {
     if (!panel) return;
     const svg = panel.querySelector('.map-svg');
@@ -800,26 +613,16 @@
     enableMapPinchZoom(svg);
     enableMapDrag(panel, svg);
     enableMapWheelZoom(svg);
-
     function currentView() {
       const active = panel.querySelector('.view-btn.active');
       return active ? active.dataset.view : 'players';
     }
-
     function deselect() {
       regions.forEach((r) => r.classList.remove('selected'));
       selectedId = '__ALL__';
       zoomMapHome(svg);
       renderMapSidebar(panel, selectedId, currentView());
     }
-
-    // Re-clicking the already-selected region deselects it (back to the
-    // full map) -- but the browser fires two ordinary click events for a
-    // double-click before the dblclick event itself, so double-clicking a
-    // region to zoom further in would otherwise immediately trigger this
-    // same deselect on its second click. Give the deselect a brief grace
-    // period to be canceled by a following dblclick instead of firing it
-    // immediately, so a double-click just leaves the region zoomed in.
     let pendingDeselect = null;
     regions.forEach((r) => {
       r.addEventListener('click', () => {
@@ -840,19 +643,9 @@
       });
     });
     if (backBtn) backBtn.addEventListener('click', deselect);
-
-    // Sidebar always shows a list (the full unfiltered one by default), so
-    // populate it immediately rather than waiting for a region click.
     renderMapSidebar(panel, selectedId, currentView());
-
     panel._mapRefreshSidebar = () => renderMapSidebar(panel, selectedId, currentView());
   }
-
-  // html2canvas draws cross-origin <img> elements (CDN flags, the square's
-  // logo) via a raw ctx.drawImage, which silently no-ops on a tainted
-  // source instead of throwing -- the image just never appears. Pre-fetch
-  // each one and swap its src for a same-origin data: URI before capture
-  // sidesteps that entirely (see downloadRankingsImage).
   async function inlineImages(root) {
     const imgs = [...root.querySelectorAll('img')];
     await Promise.all(imgs.map(async (img) => {
@@ -867,26 +660,9 @@
         });
         img.src = dataUrl;
       } catch (_) {
-        // Leave the original src; ignoreElements below drops it from the
-        // render instead of leaving a broken/cross-origin image in place.
       }
     }));
   }
-
-  // html2canvas doesn't honor object-fit on <img> (a longstanding upstream
-  // limitation) -- it just stretches the source bitmap to fill the element's
-  // full box, ignoring .prc-flag's object-fit: contain. Live, that CSS
-  // letterboxes each flag to its own real aspect ratio inside the 1.5em x
-  // 1.15em box (so e.g. the UK flag's wider ~2:1 shape renders smaller than
-  // the box rather than stretched to fill it); in the export every flag was
-  // instead coming out uniformly squashed to the box's own ~1.3:1 shape.
-  // Bake the same contain math into real pixels instead: draw each flag
-  // (already same-origin after inlineImages) onto a canvas sized to the
-  // box's own rendered dimensions, scaled/centered exactly like
-  // object-fit: contain would, and swap the <img> src for that -- so the
-  // stretch has nothing left to distort. Must run after inlineImages (needs
-  // a decodable same-origin/data: src) and after the clone is attached with
-  // its final layout (needs real getBoundingClientRect() sizes).
   async function bakeFlagAspect(root) {
     const imgs = [...root.querySelectorAll('img.prc-flag')];
     await Promise.all(imgs.map(async (img) => {
@@ -908,18 +684,9 @@
       img.src = canvas.toDataURL('image/png');
     }));
   }
-
-  // Captures the top 100 ranked cards passing the default min-games/max-RD
-  // filter (same 5+/<=150 thresholds as the default view, regardless of
-  // whatever the live min-games/max-RD/state selects are currently set to)
-  // plus the .pr-square promo tile into an offscreen clone forced to the
-  // 8-column desktop layout, so the exported image is consistent regardless
-  // of the current viewport width or filter state.
   async function downloadRankingsImage(panel) {
     const grid = panel.querySelector('.pr-grid');
     if (!grid || !window.html2canvas) throw new Error('Power Ranking grid or html2canvas unavailable');
-    // Custom fonts may not have finished loading yet, and this also ensures
-    // the metrics fitCardNames() measures below are accurate.
     await document.fonts.ready;
     const square = grid.querySelector('.pr-square');
     const qualifying = [...grid.querySelectorAll(':scope > .pr-card')].filter((c) => {
@@ -929,20 +696,8 @@
     });
     const cards = qualifying.slice(0, 100);
     const clone = document.createElement('div');
-    // Carries the live rank-delta toggle state along into the export --
-    // .show-rank-delta isn't #rankings-tab-scoped specifically so this plain
-    // <body> child can match it too (see the CSS rule for why).
     clone.className = 'pr-grid pr-export-grid' + (panel.classList.contains('show-rank-delta') ? ' show-rank-delta' : '');
     clone.style.gridTemplateColumns = 'repeat(8, 1fr)';
-    // Pinned to this specific width (rather than the live grid's current
-    // width) so every download comes out identically sized -- this is
-    // whatever .pr-grid measured on the developer's own screen, not a
-    // computed/responsive value. Retune by hand if it ever needs to change.
-    // box-sizing is forced back to content-box here (overriding the site's
-    // global * { box-sizing: border-box } reset) so this width is the actual
-    // content/column width, matching .pr-grid's own measured width exactly --
-    // otherwise the padding below would eat into it and every card would
-    // render slightly narrower than the live site's.
     clone.style.boxSizing = 'content-box';
     clone.style.width = '1472px';
     clone.style.padding = '24px';
@@ -952,40 +707,16 @@
       squareClone.style.display = 'flex';
       clone.appendChild(squareClone);
     }
-    // Cards already passed the games/RD check above, but may still carry a
-    // hidden attribute from a live state-filter selection (cloneNode
-    // preserves it, and left alone it'd collapse the clone to zero size) --
-    // force every one of the top 100 visible and renumbered 1-100, since the
-    // export always shows all locations regardless of the live state filter.
     cards.forEach((c, idx) => {
       const cardClone = c.cloneNode(true);
       cardClone.hidden = false;
       cardClone.classList.remove('filter-dim', 'uncertain');
-      // Only the numeral, not the whole .prc-rank -- that would also wipe
-      // out the sibling .rank-delta badge (and rank-plain's color class),
-      // which should survive the renumbering since the rating-point change
-      // it shows isn't tied to rank position.
       const rankEl = cardClone.querySelector('.prc-rank .rank-plain');
       if (rankEl) rankEl.textContent = idx + 1;
       clone.appendChild(cardClone);
     });
     document.body.appendChild(clone);
-    // html2canvas's own gradient renderer doesn't size a radial-gradient's
-    // implicit farthest-corner extent correctly (tried it explicit, tried an
-    // explicit percentage size, tried hand-deriving and painting the
-    // ellipse ourselves via Canvas2D -- none matched the live page's actual
-    // rendered gradient). Instead of reimplementing it at all, literally
-    // copy the real thing: render an actual .pr-card.card-green/.card-purple
-    // through an SVG foreignObject, which uses the browser's own genuine CSS
-    // engine (not a reimplementation), rasterize that to a bitmap, and use
-    // it as a background-image -- html2canvas draws real images reliably,
-    // just not live CSS gradients.
     const glowCache = {};
-    // Same as .pr-card.card-green/.card-purple's CSS -- inlined directly
-    // rather than referenced by class, since the foreignObject below is
-    // serialized to a standalone SVG document with no access to the page's
-    // external stylesheet (a class name alone rendered with no styling at
-    // all, confirmed by sampling the result: flat, no color whatsoever).
     const glowBackgrounds = {
       'card-green': 'radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.22) 0%, #0f0f0f 65%)',
       'card-purple': 'radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%)',
@@ -1034,18 +765,9 @@
         c.style.background = '#0f0f0f';
       }
     }));
-    // cloneNode copies each name's live inline font-size (set by
-    // fitCardNames() against the ORIGINAL grid's column width) verbatim --
-    // that size is wrong whenever the live grid's current width doesn't
-    // match this clone's pinned export width, so names clipped fine on-page
-    // can overflow their card here. Re-fit against the clone's actual width
-    // now that it's attached to the DOM.
     fitCardNames(clone);
     await inlineImages(clone);
     await bakeFlagAspect(clone);
-    // Not wrapped in try/finally -- the caller (the download button's click
-    // handler) needs a genuine rejection on failure so it knows to flip back
-    // to a clickable, non-"loading" state rather than staying stuck.
     try {
       const canvas = await html2canvas(clone, {
         backgroundColor: '#050505',
@@ -1057,9 +779,6 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      // Local date parts (not toISOString(), which is UTC and can read as
-      // tomorrow/yesterday depending on the visitor's timezone) -- date
-      // only, no time, so repeated same-day downloads share one filename.
       const now = new Date();
       const dateStamp = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
       a.download = 'deathball-power-rankings-' + dateStamp + '.png';
@@ -1071,15 +790,8 @@
       clone.remove();
     }
   }
-
-  // Data behind both CSV-export buttons -- see CSV_PLAYER_DATA/
-  // CSV_TOURNAMENT_DATA below and csvPlayerData/csvTournamentData in
-  // aggregate_players.js, which build these with their own column set and
-  // sort order (seed-ascending for players, oldest-first for tournaments)
-  // independent of whatever the visible tables show.
   const CSV_PLAYER_DATA = JSON.parse(document.getElementById('csv-player-data')?.textContent || '[]');
   const CSV_TOURNAMENT_DATA = JSON.parse(document.getElementById('csv-tournament-data')?.textContent || '[]');
-
   const CSV_DATASETS = {
     players: {
       headers: ['Seed', 'Player', 'Rating', 'RD', 'City', 'State', 'Country', 'Wins', 'Losses', 'Games', 'Win %', 'Last Active', 'Tournaments Attended'],
@@ -1096,12 +808,10 @@
       ]),
     },
   };
-
   function csvEscape(value) {
     const s = String(value ?? '');
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
-
   function downloadCsvDataset(datasetKey, filenamePrefix) {
     const dataset = CSV_DATASETS[datasetKey];
     if (!dataset) throw new Error('Unknown CSV dataset: ' + datasetKey);
@@ -1109,9 +819,6 @@
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    // Local date parts, not toISOString() -- same reasoning as the PNG
-    // export's dateStamp (UTC can read as tomorrow/yesterday depending on
-    // the visitor's timezone).
     const now = new Date();
     const dateStamp = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     a.href = url;
@@ -1121,12 +828,6 @@
     a.remove();
     URL.revokeObjectURL(url);
   }
-
-  // Wires every .csv-download-btn on the page (Power Rankings, Players, and
-  // Tournaments tabs -- see csvDownloadButtonHtml in aggregate_players.js).
-  // Each button's data-csv-key picks which CSV_DATASETS entry to export --
-  // the Power Rankings tab's button deliberately shares the Players tab's
-  // 'players' key, so both buttons export identical data.
   function enableCsvDownloadButtons() {
     document.querySelectorAll('.csv-download-btn').forEach((btn) => {
       const label = btn.querySelector('.download-btn-label');
@@ -1144,15 +845,6 @@
       });
     });
   }
-
-  // Two download buttons exist in the DOM at once -- .download-btn-boxed
-  // (desktop, inside the Power Rankings tab-controls row) and
-  // .download-btn-icon (mobile, top-right of .page-title-row, so it stays
-  // reachable regardless of whether the mobile Options panel is collapsed)
-  // -- CSS shows exactly one of them per viewport (see writeCss), but both
-  // need the same show/hide state, which depends on which tab and which
-  // view (Grid vs Table) are active. Both enableTabs (tab switch) and
-  // enableViewToggle (view switch) call this after they change either one.
   function updateDownloadVisibility() {
     const btns = document.querySelectorAll('.download-btn');
     if (!btns.length) return;
@@ -1162,13 +854,6 @@
     const hide = !(rankingsActive && gridActive);
     btns.forEach((btn) => { btn.hidden = hide; });
   }
-
-  // The Power Rankings tab's CSV button (unlike the Players/Tournaments
-  // tabs' own, which are always shown) is grid/table-gated the opposite way
-  // to the PNG button above -- a full CSV export of every player doesn't
-  // pair with "top 100 grid" the way the PNG image does, so it only makes
-  // sense once Table view is active. Scoped to #rankings-tab specifically so
-  // it never touches the Players/Tournaments tabs' own CSV buttons.
   function updateCsvDownloadVisibility() {
     const rankingsPanel = document.getElementById('rankings-tab');
     if (!rankingsPanel) return;
@@ -1177,7 +862,6 @@
     const tableActive = !!rankingsPanel.querySelector('.view-btn[data-view="table"].active');
     csvBtn.hidden = !tableActive;
   }
-
   function enableViewToggle(panel) {
     const buttons = [...panel.querySelectorAll('.view-btn')];
     if (!buttons.length) return;
@@ -1185,19 +869,7 @@
     const table = panel.querySelector('table');
     const toggleEl = panel.querySelector('.view-toggle');
     const indicator = panel.querySelector('.view-toggle-indicator');
-    // The rank-delta badge only ever exists in the card markup (see
-    // rankDeltaHtml's call sites), so its show/hide pill is meaningless --
-    // and would sit there inert -- once the Table view is active.
     const rankDeltaToggle = panel.querySelector('.rank-delta-toggle');
-    // Loading state disables the button entirely (so a second click can't
-    // start a second concurrent export mid-generation, which is otherwise
-    // easy to trigger since generation takes a couple of seconds and gave
-    // no visible feedback before this). A failed attempt clears back to the
-    // normal enabled state (not "loading") so the button is clickable again
-    // to retry, rather than getting stuck disabled forever. Only one of the
-    // two buttons is ever visible/clickable at once (see writeCss), but the
-    // listener is attached to both independently -- each just drives its
-    // own loading/failed state and the same downloadRankingsImage call.
     document.querySelectorAll('.download-btn').forEach((downloadBtn) => {
       const downloadLabel = downloadBtn.querySelector('.download-btn-label');
       downloadBtn.addEventListener('click', async () => {
@@ -1227,15 +899,8 @@
         if (table) table.style.display = view === 'table' ? '' : 'none';
         updateDownloadVisibility();
         updateCsvDownloadVisibility();
-        // Desktop collapses this pill entirely on Table view (see
-        // .rank-delta-toggle[hidden] in writeCss); mobile overrides that
-        // same [hidden] rule back to display:flex + visibility:hidden so it
-        // still reserves its space instead of shifting the Min Games/Max RD
-        // controls next to it.
         if (rankDeltaToggle) rankDeltaToggle.hidden = view !== 'grid';
         moveIndicator(indicator, toggleEl, btn);
-        // Also refreshes the "Click a column header to sort." hint for the
-        // view just switched to.
         applyFilters(panel);
       });
     });
@@ -1245,12 +910,6 @@
     if (rankDeltaToggle) rankDeltaToggle.hidden = !activeBtn || activeBtn.dataset.view !== 'grid';
     moveIndicator(indicator, toggleEl, activeBtn);
   }
-
-  // Show/Hide pill for the rank-delta (up/down/new) badge on Power Ranking
-  // cards -- see #rankings-tab.show-rank-delta in the generated CSS, which
-  // is the only thing that actually reveals .rank-delta. Off by default
-  // (see the "hide" button's initial "active" class in writeHtml()) so the
-  // badge doesn't compete for attention on the grid every time.
   function enableRankDeltaToggle(panel) {
     const toggleEl = panel.querySelector('.rank-delta-toggle');
     if (!toggleEl) return;
@@ -1267,27 +926,17 @@
     const activeBtn = buttons.find((b) => b.classList.contains('active'));
     moveIndicator(indicator, toggleEl, activeBtn);
   }
-
-  // Rebuilds .pr-card/.pr-card accents and the rank-delta badge from raw
-  // row data -- mirrors cardAccent()/rankDeltaState()/rankDeltaHtml() in
-  // aggregate_players.js. Kept in sync by hand: the "View rankings at"
-  // dropdown (PR_HISTORY, see enablePrHistorySelect below) only ships each
-  // checkpoint's *data*, not pre-rendered HTML, so switching checkpoints
-  // re-renders the grid/table client-side the same way the map tab's
-  // sidebar re-renders from MAP_REGION_DATA.
   function prCardAccent(id, colorOverride) {
     if (colorOverride === 'green' || colorOverride === 'purple') return 'card-' + colorOverride;
     let h = 0;
     for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
     return (h & 1) ? 'card-purple' : 'card-green';
   }
-
   function prRankDeltaState(row) {
     if (row.isNew) return 'new';
     if (!row.placementChange) return null;
     return row.placementChange > 0 ? 'up' : 'down';
   }
-
   function prRankDeltaBadge(row) {
     const state = prRankDeltaState(row);
     if (!state) return null;
@@ -1304,7 +953,6 @@
     }
     return span;
   }
-
   function prFlagImg(flag, className) {
     if (!flag) return null;
     const img = document.createElement('img');
@@ -1314,17 +962,14 @@
     img.alt = flag.title;
     return img;
   }
-
   function buildRankingCard(row, meta, rank) {
     const card = document.createElement('div');
     card.className = 'pr-card ' + prCardAccent(row.id, meta.color) + (row.uncertain ? ' uncertain' : '');
     card.dataset.games = row.games;
     card.dataset.rd = row.rd;
     if (meta.state) card.dataset.state = meta.state;
-
     const top = document.createElement('div');
     top.className = 'prc-top';
-
     const rankSpan = document.createElement('span');
     rankSpan.className = 'prc-rank';
     const rankPlain = document.createElement('span');
@@ -1335,19 +980,15 @@
     const badge = prRankDeltaBadge(row);
     if (badge) rankSpan.appendChild(badge);
     top.appendChild(rankSpan);
-
     const nameEl = document.createElement(meta.href ? 'a' : 'span');
     nameEl.className = 'prc-name';
     nameEl.title = meta.name;
     nameEl.textContent = meta.name;
     if (meta.href) nameEl.href = meta.href;
     top.appendChild(nameEl);
-
     const flagImg = prFlagImg(meta.flag, 'prc-flag');
     if (flagImg) top.appendChild(flagImg);
-
     card.appendChild(top);
-
     const stats = document.createElement('div');
     stats.className = 'prc-stats';
     const addVal = (text, cls) => {
@@ -1375,26 +1016,22 @@
     card.appendChild(stats);
     return card;
   }
-
   function buildRankingTableRow(row, meta, rank) {
     const tr = document.createElement('tr');
     tr.dataset.games = row.games;
     tr.dataset.rd = row.rd;
     if (meta.state) tr.dataset.state = meta.state;
     if (row.uncertain) tr.className = 'uncertain';
-
     const rankTd = document.createElement('td');
     rankTd.className = 'rank-num';
     rankTd.textContent = rank;
     tr.appendChild(rankTd);
-
     const nameTd = document.createElement('td');
     const nameEl = document.createElement(meta.href ? 'a' : 'span');
     if (meta.href) nameEl.href = meta.href;
     nameEl.textContent = meta.name;
     nameTd.appendChild(nameEl);
     tr.appendChild(nameTd);
-
     const addNumeric = (text, sort) => {
       const td = document.createElement('td');
       td.className = 'numeric';
@@ -1408,11 +1045,9 @@
     addNumeric(String(row.losses), row.losses);
     addNumeric(String(row.games), row.games);
     addNumeric((row.winPct * 100).toFixed(1) + '%', row.winPct);
-
     const lastActiveTd = document.createElement('td');
     lastActiveTd.textContent = meta.lastActive || '';
     tr.appendChild(lastActiveTd);
-
     const locTd = document.createElement('td');
     locTd.className = 'col-location';
     locTd.dataset.sort = meta.locationSort;
@@ -1420,13 +1055,8 @@
     if (flagImg) locTd.appendChild(flagImg);
     locTd.appendChild(document.createTextNode(meta.location));
     tr.appendChild(locTd);
-
     return tr;
   }
-
-  // Mirrors toClientRow()'s array order in aggregate_players.js:
-  // [id, r, rd, wins, losses, games, isNew, placementChange]. winPct/uncertain
-  // aren't shipped (cheap to recompute) so they're filled back in here.
   function normalizeRow(arr) {
     const [id, r, rd, wins, losses, games, isNew, placementChange] = arr;
     return {
@@ -1436,7 +1066,6 @@
       isNew, placementChange,
     };
   }
-
   function renderRankingHistory(panel, checkpoint) {
     const grid = panel.querySelector('.pr-grid');
     const tbody = panel.querySelector('table tbody');
@@ -1452,13 +1081,6 @@
     applyFilters(panel);
     fitCardNames(panel);
   }
-
-  // Populates the Rankings tab's "View rankings at" dropdown from PR_HISTORY
-  // (one entry per tournament group, chronological) -- most-recent first,
-  // with a clock icon marking the current/latest entry. Selecting an older
-  // entry swaps the grid/table to that point-in-time standings; filters and
-  // the download button both operate on whatever's currently rendered, so
-  // they keep working unchanged.
   function enablePrHistorySelect(panel) {
     const select = panel.querySelector('.pr-history-select');
     const label = select ? select.closest('label') : null;
@@ -1480,7 +1102,6 @@
       if (checkpoint) renderRankingHistory(panel, checkpoint);
     });
   }
-
   function initPanel(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -1494,26 +1115,12 @@
     enableRankDeltaToggle(panel);
     document.fonts.ready.then(() => fitCardNames(panel));
   }
-
-  // Both the Events tab grid and the pr-square's "Next Tournament" callout
-  // are baked at generation time using the build machine's today (see
-  // sortedUpcomingEvents() / buildEventsTabHtml() in aggregate_players.js).
-  // If the site isn't regenerated the same day an event's date passes, the
-  // static HTML still shows it as upcoming. Re-filter both against the
-  // *visitor's* today here so a stale build still self-corrects in the
-  // browser instead of waiting on a rebuild.
   function setupLiveEventFiltering() {
-    // Built from local date parts, not toISOString(), for the same reason
-    // as todayIso() server-side: UTC parsing can read as tomorrow/yesterday
-    // depending on the visitor's timezone.
     const d = new Date();
     const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
     const grid = document.getElementById('events-grid');
     if (grid) {
       const cards = [...grid.querySelectorAll('.event-card[data-date]')];
-      // A blank data-date (no date on file for that event) can't be checked
-      // against today, so it's always kept rather than treated as expired.
       cards.forEach((card) => { card.hidden = Boolean(card.dataset.date) && card.dataset.date < today; });
       const anyVisible = cards.some((card) => !card.hidden);
       grid.hidden = !anyVisible;
@@ -1522,12 +1129,9 @@
       if (empty) empty.hidden = anyVisible;
       if (footer) footer.hidden = !anyVisible;
     }
-
     const candidatesWrap = document.getElementById('pr-square-next-candidates');
     if (candidatesWrap) {
       const candidates = [...candidatesWrap.querySelectorAll('.next-event-candidate[data-date]')];
-      // Same blank-date carve-out as the grid above -- a dateless candidate
-      // never "expires" client-side.
       const chosen = candidates.find((c) => !c.dataset.date || c.dataset.date >= today);
       candidates.forEach((c) => { c.hidden = c !== chosen; });
       const single = document.getElementById('pr-square-latest-single');
@@ -1536,7 +1140,6 @@
       if (plural) plural.hidden = !!chosen;
     }
   }
-
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
   enableTabs();
   enableTabsMenu();
@@ -1548,17 +1151,10 @@
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));
   setupLiveEventFiltering();
-
-  // Every indicator above was positioned/sized against whatever font was
-  // rendering at that moment — on first paint that's often the fallback
-  // font, since Rajdhani/Orbitron load async, so the underline/pill can end
-  // up too wide or narrow until something else (a click) recomputes it.
-  // Re-measure the tab underline and any currently-visible view-toggle pill
-  // once the real fonts are in so page load always lands on the right size.
   document.fonts.ready.then(() => {
     moveIndicator(document.querySelector('.tab-underline'), document.querySelector('.tabs'), document.querySelector('.tab-button.active'));
     document.querySelectorAll('.view-toggle').forEach((toggleEl) => {
-      if (!toggleEl.offsetWidth) return; // hidden panel — its own tab click handler will fix this when it opens
+      if (!toggleEl.offsetWidth) return;
       const indicator = toggleEl.querySelector('.view-toggle-indicator');
       const active = toggleEl.querySelector('.view-btn.active, .delta-btn.active');
       if (indicator && active) moveIndicator(indicator, toggleEl, active);

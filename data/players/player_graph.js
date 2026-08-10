@@ -21,6 +21,7 @@ const {
   embedMetaTags,
 } = require('./aggregate_players.js');
 const { louvain, refineCommunities, computeInternalRatio } = require('./louvain.js');
+const { stripCommentsInHeadBlocks } = require('./generate_output.js');
 
 // cardAccent() returns the CSS class the rest of the site uses; resolve it
 // to the actual color those classes paint (see .pr-card.card-green/-purple
@@ -1212,7 +1213,7 @@ const GRAPH = ${dataJson};
 `;
 
   const outPath = path.join(__dirname, '..', '..', 'player-graph.html');
-  fs.writeFileSync(outPath, html);
+  fs.writeFileSync(outPath, stripCommentsInHeadBlocks(html));
   console.log(`Wrote ${outPath}`);
 }
 
