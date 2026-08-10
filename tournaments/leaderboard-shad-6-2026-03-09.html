@@ -257,7 +257,22 @@
       else if (h2.textContent === 'Loser Bracket') h2.textContent = 'Losers Bracket';
     }
   }
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
+  function fitDoublesBracketWidth() {
+    const measurer = fitDoublesBracketWidth._ctx || (fitDoublesBracketWidth._ctx = document.createElement('canvas').getContext('2d'));
+    for (const container of document.querySelectorAll('.brackets-viewer.doubles-bracket')) {
+      let maxTextWidth = 0;
+      for (const nameEl of container.querySelectorAll('.name')) {
+        const cs = getComputedStyle(nameEl);
+        measurer.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+        const w = measurer.measureText(nameEl.textContent).width;
+        if (w > maxTextWidth) maxTextWidth = w;
+      }
+      if (!maxTextWidth) continue;
+      const needed = Math.ceil(maxTextWidth / 0.8) + 8;
+      container.style.setProperty('--match-width', Math.min(260, Math.max(150, needed)) + 'px');
+    }
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitDoublesBracketWidth(); layoutBrackets(); });
   function addBracketFlags(selector, flags) {
     for (const p of document.querySelectorAll(selector + ' .participant[data-participant-id]')) {
       const f = flags[p.dataset.participantId];
@@ -314,6 +329,7 @@
   window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"Leaderboard Shad #6","type":"double_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"result":"win"},"opponent2":null},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":2,"score":0,"result":"loss"},"opponent2":{"id":1,"score":2,"result":"win"}},{"id":2,"stage_id":0,"group_id":0,"round_id":0,"number":3,"child_count":0,"status":4,"opponent1":{"id":3,"result":"win"},"opponent2":null},{"id":3,"stage_id":0,"group_id":0,"round_id":0,"number":4,"child_count":0,"status":4,"opponent1":{"id":4,"score":2,"result":"win"},"opponent2":{"id":5,"score":1,"result":"loss"}},{"id":4,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":1,"score":1,"result":"loss"},"opponent2":{"id":0,"score":2,"result":"win"}},{"id":5,"stage_id":0,"group_id":0,"round_id":1,"number":2,"child_count":0,"status":4,"opponent1":{"id":3,"score":2,"result":"win"},"opponent2":{"id":4,"score":0,"result":"loss"}},{"id":6,"stage_id":0,"group_id":0,"round_id":2,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":2,"result":"win"},"opponent2":{"id":3,"score":0,"result":"loss"}},{"id":7,"stage_id":0,"group_id":1,"round_id":3,"number":1,"child_count":0,"status":4,"opponent1":{"id":4,"score":1,"result":"loss"},"opponent2":{"id":2,"score":2,"result":"win"}},{"id":8,"stage_id":0,"group_id":1,"round_id":3,"number":2,"child_count":0,"status":4,"opponent1":{"id":5,"score":2,"result":"win"},"opponent2":{"id":1,"score":1,"result":"loss"}},{"id":9,"stage_id":0,"group_id":1,"round_id":4,"number":1,"child_count":0,"status":4,"opponent1":{"id":5,"score":1,"result":"loss"},"opponent2":{"id":2,"score":2,"result":"win"}},{"id":10,"stage_id":0,"group_id":1,"round_id":5,"number":1,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"loss"},"opponent2":{"id":2,"score":2,"result":"win"}},{"id":11,"stage_id":0,"group_id":2,"round_id":6,"number":1,"child_count":0,"status":2,"opponent1":{"id":0},"opponent2":{"id":2}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"Cole"},{"id":1,"tournament_id":0,"name":"Bicker"},{"id":2,"tournament_id":0,"name":"Jay"},{"id":3,"tournament_id":0,"name":"Austin"},{"id":4,"tournament_id":0,"name":"Squid"},{"id":5,"tournament_id":0,"name":"Ty"}]}, { selector: '#bv-main' });
   addBracketFlags('#bv-main', {"0":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Jacksonville%2C_Florida.svg","title":"Jacksonville"},"1":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Jacksonville%2C_Florida.svg","title":"Jacksonville"},"2":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Jacksonville%2C_Florida.svg","title":"Jacksonville"},"3":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Jacksonville%2C_Florida.svg","title":"Jacksonville"},"4":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Jacksonville%2C_Florida.svg","title":"Jacksonville"},"5":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Jacksonville%2C_Florida.svg","title":"Jacksonville"}});
   pluralizeBracketNames();
+  fitDoublesBracketWidth();
   layoutBrackets();
   markPendingMatches();
 </script>

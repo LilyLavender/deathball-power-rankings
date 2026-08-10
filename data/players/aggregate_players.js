@@ -2594,9 +2594,12 @@ const BRACKETS_VIEWER_HEAD = stripCommentsInHeadBlocks(`<link rel="stylesheet" h
   /* Doubles brackets show two names per box ("PlayerA & PlayerB") instead
      of one -- the library's default 150px --match-width (with .name's own
      80%-width + ellipsis) truncates a team name far more readily than a
-     solo one. Widened only for doubles tournaments (see the
-     .doubles-bracket class added in writeTournamentPages) so singles
-     brackets keep their normal, more compact box size. */
+     solo one. 260px is only the ceiling here (see fitDoublesBracketWidth
+     below, which shrinks --match-width per tournament down to whatever the
+     longest team name in that specific bracket actually needs) -- widened
+     only for doubles tournaments (see the .doubles-bracket class added in
+     writeTournamentPages) so singles brackets keep their normal, more
+     compact box size. */
   .brackets-viewer.doubles-bracket {
     --match-width: 260px;
   }
@@ -2858,9 +2861,36 @@ const BRACKETS_VIEWER_HEAD = stripCommentsInHeadBlocks(`<link rel="stylesheet" h
     }
   }
 
+  // 260px (set in CSS above) is only the doubles-bracket ceiling -- shrink
+  // --match-width per tournament down to whatever its own longest team name
+  // actually needs, so a bracket full of short names doesn't carry the same
+  // wide cards as one with long names. .name renders at ~80% of
+  // --match-width (see the CSS comment above), so the needed match-width is
+  // the widest name's natural text width scaled back up from that 80%.
+  // Measured with canvas rather than a DOM clone since it needs each name's
+  // own font-weight (a winner's bolded name can be wider than a longer
+  // loser's regular-weight one) without a layout round-trip per name.
+  function fitDoublesBracketWidth() {
+    const measurer = fitDoublesBracketWidth._ctx || (fitDoublesBracketWidth._ctx = document.createElement('canvas').getContext('2d'));
+    for (const container of document.querySelectorAll('.brackets-viewer.doubles-bracket')) {
+      let maxTextWidth = 0;
+      for (const nameEl of container.querySelectorAll('.name')) {
+        const cs = getComputedStyle(nameEl);
+        measurer.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+        const w = measurer.measureText(nameEl.textContent).width;
+        if (w > maxTextWidth) maxTextWidth = w;
+      }
+      if (!maxTextWidth) continue;
+      const needed = Math.ceil(maxTextWidth / 0.8) + 8;
+      container.style.setProperty('--match-width', Math.min(260, Math.max(150, needed)) + 'px');
+    }
+  }
+
   // Box heights can shift once webfonts finish loading; re-run the layout
   // with settled metrics (layoutRounds fully re-derives, so this is safe).
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
+  // Widths are re-fit first since a font swap can change which name is
+  // widest, which layoutBrackets' own measurements then need to account for.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitDoublesBracketWidth(); layoutBrackets(); });
 
   // Prepends each participant's location flag (same imagery as the
   // standings list) to their name in every bracket box. Flags are keyed by
@@ -3124,14 +3154,22 @@ ${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span clas
         const containerId = `bv-${stage.label ? slugify(stage.label) : 'main'}`;
         const { incomplete, participants, ...rest } = stage.bracketData;
         const renderData = { ...rest, participants: participants.map(({ flag, ...p }) => p) };
-        const flagById = {};
-        for (const p of participants) if (p.flag) flagById[p.id] = { src: p.flag.src, title: p.flag.title };
+        // Doubles elimination bracket cards omit flags -- two players' worth
+        // of flag + team name is too wide for the bracket's tight card
+        // width. Standings/swiss/round-robin doubles views keep flags since
+        // they don't share the same width constraint.
+        let addFlagsScript = '';
+        if (!t.isDoubles) {
+          const flagById = {};
+          for (const p of participants) if (p.flag) flagById[p.id] = { src: p.flag.src, title: p.flag.title };
+          addFlagsScript = `\n  addBracketFlags('#${containerId}', ${JSON.stringify(flagById)});`;
+        }
         const note = incomplete ? '<p class="bracket-incomplete-note">&#9888; This bracket was not finished — some matches are missing from the source data, so results past that point aren\'t shown.</p>' : '';
         return `${heading}${note}<div class="brackets-viewer${t.isDoubles ? ' doubles-bracket' : ''}" id="${containerId}"></div>
 <script>
-  window.bracketsViewer.render(${JSON.stringify(renderData)}, { selector: '#${containerId}' });
-  addBracketFlags('#${containerId}', ${JSON.stringify(flagById)});
+  window.bracketsViewer.render(${JSON.stringify(renderData)}, { selector: '#${containerId}' });${addFlagsScript}
   pluralizeBracketNames();
+  fitDoublesBracketWidth();
   layoutBrackets();
   markPendingMatches();
 </script>`;

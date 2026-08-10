@@ -257,7 +257,22 @@
       else if (h2.textContent === 'Loser Bracket') h2.textContent = 'Losers Bracket';
     }
   }
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
+  function fitDoublesBracketWidth() {
+    const measurer = fitDoublesBracketWidth._ctx || (fitDoublesBracketWidth._ctx = document.createElement('canvas').getContext('2d'));
+    for (const container of document.querySelectorAll('.brackets-viewer.doubles-bracket')) {
+      let maxTextWidth = 0;
+      for (const nameEl of container.querySelectorAll('.name')) {
+        const cs = getComputedStyle(nameEl);
+        measurer.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+        const w = measurer.measureText(nameEl.textContent).width;
+        if (w > maxTextWidth) maxTextWidth = w;
+      }
+      if (!maxTextWidth) continue;
+      const needed = Math.ceil(maxTextWidth / 0.8) + 8;
+      container.style.setProperty('--match-width', Math.min(260, Math.max(150, needed)) + 'px');
+    }
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitDoublesBracketWidth(); layoutBrackets(); });
   function addBracketFlags(selector, flags) {
     for (const p of document.querySelectorAll(selector + ' .participant[data-participant-id]')) {
       const f = flags[p.dataset.participantId];
@@ -316,6 +331,7 @@
   window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"28th Annual DeathBall Tournament","type":"single_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":1,"result":"win"},"opponent2":{"id":1,"score":0,"result":"loss"}},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":3,"score":0,"result":"loss"},"opponent2":{"id":2,"score":1,"result":"win"}},{"id":2,"stage_id":0,"group_id":0,"round_id":0,"number":3,"child_count":0,"status":4,"opponent1":{"id":5,"score":0,"result":"loss"},"opponent2":{"id":4,"score":1,"result":"win"}},{"id":3,"stage_id":0,"group_id":0,"round_id":0,"number":4,"child_count":0,"status":4,"opponent1":{"id":6,"score":1,"result":"win"},"opponent2":{"id":7,"score":0,"result":"loss"}},{"id":4,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":1,"result":"win"},"opponent2":{"id":2,"score":0,"result":"loss"}},{"id":5,"stage_id":0,"group_id":0,"round_id":1,"number":2,"child_count":0,"status":4,"opponent1":{"id":6,"score":0,"result":"loss"},"opponent2":{"id":4,"score":1,"result":"win"}},{"id":6,"stage_id":0,"group_id":0,"round_id":2,"number":1,"child_count":0,"status":4,"opponent1":{"id":4,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"Cellshine"},{"id":1,"tournament_id":0,"name":"AnUnarmedPawn"},{"id":2,"tournament_id":0,"name":"Nathan"},{"id":3,"tournament_id":0,"name":"Troy"},{"id":4,"tournament_id":0,"name":"TakifuguPete"},{"id":5,"tournament_id":0,"name":"EileenJ"},{"id":6,"tournament_id":0,"name":"hlemke"},{"id":7,"tournament_id":0,"name":"CRAAAIIIGGG"}]}, { selector: '#bv-main' });
   addBracketFlags('#bv-main', {"0":{"src":"https://upload.wikimedia.org/wikipedia/en/6/6d/Flag_of_Seattle.svg","title":"Seattle"},"1":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/14/Flag_of_Madison%2C_Wisconsin_%282018%E2%80%93present%29.svg","title":"Madison"},"2":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/14/Flag_of_Madison%2C_Wisconsin_%282018%E2%80%93present%29.svg","title":"Madison"},"3":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/14/Flag_of_Madison%2C_Wisconsin_%282018%E2%80%93present%29.svg","title":"Madison"},"4":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/14/Flag_of_Madison%2C_Wisconsin_%282018%E2%80%93present%29.svg","title":"Madison"},"5":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/14/Flag_of_Madison%2C_Wisconsin_%282018%E2%80%93present%29.svg","title":"Madison"},"6":{"src":"https://upload.wikimedia.org/wikipedia/commons/9/9d/Flag_of_Minneapolis.svg","title":"Minneapolis"},"7":{"src":"https://upload.wikimedia.org/wikipedia/commons/1/14/Flag_of_Madison%2C_Wisconsin_%282018%E2%80%93present%29.svg","title":"Madison"}});
   pluralizeBracketNames();
+  fitDoublesBracketWidth();
   layoutBrackets();
   markPendingMatches();
 </script>

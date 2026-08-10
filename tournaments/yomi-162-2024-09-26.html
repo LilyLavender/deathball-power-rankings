@@ -257,7 +257,22 @@
       else if (h2.textContent === 'Loser Bracket') h2.textContent = 'Losers Bracket';
     }
   }
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBrackets());
+  function fitDoublesBracketWidth() {
+    const measurer = fitDoublesBracketWidth._ctx || (fitDoublesBracketWidth._ctx = document.createElement('canvas').getContext('2d'));
+    for (const container of document.querySelectorAll('.brackets-viewer.doubles-bracket')) {
+      let maxTextWidth = 0;
+      for (const nameEl of container.querySelectorAll('.name')) {
+        const cs = getComputedStyle(nameEl);
+        measurer.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+        const w = measurer.measureText(nameEl.textContent).width;
+        if (w > maxTextWidth) maxTextWidth = w;
+      }
+      if (!maxTextWidth) continue;
+      const needed = Math.ceil(maxTextWidth / 0.8) + 8;
+      container.style.setProperty('--match-width', Math.min(260, Math.max(150, needed)) + 'px');
+    }
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitDoublesBracketWidth(); layoutBrackets(); });
   function addBracketFlags(selector, flags) {
     for (const p of document.querySelectorAll(selector + ' .participant[data-participant-id]')) {
       const f = flags[p.dataset.participantId];
@@ -315,6 +330,7 @@
   window.bracketsViewer.render({"stages":[{"id":0,"tournament_id":0,"name":"Yomi 162","type":"double_elimination","number":1,"settings":{}}],"matches":[{"id":0,"stage_id":0,"group_id":0,"round_id":0,"number":1,"child_count":0,"status":4,"opponent1":{"id":1,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}},{"id":1,"stage_id":0,"group_id":0,"round_id":0,"number":2,"child_count":0,"status":4,"opponent1":{"id":2,"result":"win"},"opponent2":null},{"id":2,"stage_id":0,"group_id":0,"round_id":0,"number":3,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"win"},"opponent2":{"id":4,"score":0,"result":"loss"}},{"id":3,"stage_id":0,"group_id":0,"round_id":0,"number":4,"child_count":0,"status":4,"opponent1":{"id":6,"score":0,"result":"loss"},"opponent2":{"id":5,"score":1,"result":"win"}},{"id":4,"stage_id":0,"group_id":0,"round_id":1,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":0,"result":"loss"},"opponent2":{"id":0,"score":1,"result":"win"}},{"id":5,"stage_id":0,"group_id":0,"round_id":1,"number":2,"child_count":0,"status":4,"opponent1":{"id":3,"score":1,"result":"win"},"opponent2":{"id":5,"score":0,"result":"loss"}},{"id":6,"stage_id":0,"group_id":0,"round_id":2,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":2,"result":"win"},"opponent2":{"id":3,"score":0,"result":"loss"}},{"id":7,"stage_id":0,"group_id":1,"round_id":3,"number":1,"child_count":0,"status":4,"opponent1":{"id":6,"score":1,"result":"win"},"opponent2":{"id":4,"score":0,"result":"loss"}},{"id":8,"stage_id":0,"group_id":1,"round_id":4,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":1,"result":"win"},"opponent2":{"id":6,"score":0,"result":"loss"}},{"id":9,"stage_id":0,"group_id":1,"round_id":4,"number":2,"child_count":0,"status":4,"opponent1":{"id":5,"score":0,"result":"loss"},"opponent2":{"id":1,"score":1,"result":"win"}},{"id":10,"stage_id":0,"group_id":1,"round_id":5,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":1,"result":"win"},"opponent2":{"id":1,"score":0,"result":"loss"}},{"id":11,"stage_id":0,"group_id":1,"round_id":6,"number":1,"child_count":0,"status":4,"opponent1":{"id":2,"score":2,"result":"win"},"opponent2":{"id":3,"score":1,"result":"loss"}},{"id":12,"stage_id":0,"group_id":2,"round_id":7,"number":1,"child_count":0,"status":4,"opponent1":{"id":0,"score":1,"result":"win"},"opponent2":{"id":2,"score":0,"result":"loss"}}],"matchGames":[],"participants":[{"id":0,"tournament_id":0,"name":"looper_siffrin"},{"id":1,"tournament_id":0,"name":"sl0th"},{"id":2,"tournament_id":0,"name":"Kalkaita"},{"id":3,"tournament_id":0,"name":"Sety"},{"id":4,"tournament_id":0,"name":"MaJunior魔"},{"id":5,"tournament_id":0,"name":"Proteus"},{"id":6,"tournament_id":0,"name":"Doorman2"}]}, { selector: '#bv-main' });
   addBracketFlags('#bv-main', {"0":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Texas.svg","title":"Texas"},"1":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Texas.svg","title":"Texas"},"2":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Texas.svg","title":"Texas"},"3":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Texas.svg","title":"Texas"},"4":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Texas.svg","title":"Texas"},"5":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Texas.svg","title":"Texas"},"6":{"src":"https://cdn.jsdelivr.net/gh/nibsbin/us-state-flags-svg@master/flags/Flag_of_Texas.svg","title":"Texas"}});
   pluralizeBracketNames();
+  fitDoublesBracketWidth();
   layoutBrackets();
   markPendingMatches();
 </script>
