@@ -470,6 +470,18 @@ function resolveDate(url, builtIn) {
   return tournamentLocations[url]?.date || builtIn;
 }
 
+// Same-day tiebreaker for two tournaments whose `date` (after resolveDate's
+// override) ends up identical -- e.g. a one-day event's singles and doubles
+// brackets, which Challonge/start.gg's own started_at timestamps can't be
+// trusted to order (see the QuakeCon Arcade 2026 case: the two brackets'
+// started_at even disagreed on the calendar day, forcing a manual date
+// override in the first place). Only meaningful relative to other
+// tournaments sharing the same date -- defaults to 0, so every tournament
+// without an explicit order sorts as if tied with every other unset one.
+function resolveDateOrder(url) {
+  return tournamentLocations[url]?.order || 0;
+}
+
 function resolveName(url, builtIn) {
   return tournamentLocations[url]?.name || builtIn;
 }
@@ -603,6 +615,7 @@ function collectChallonge() {
       url,
       label,
       date: resolveDate(url, (t.started_at || t.created_at || '').slice(0, 10)),
+      dateOrder: resolveDateOrder(url),
       location: formatLocation(locInfo),
       locationDisplay: locationDisplay(locInfo),
       venue: locInfo?.location || '',
@@ -703,6 +716,7 @@ function collectStartgg() {
       url,
       label,
       date: resolveDate(url, rec.tournament.startAt ? new Date(rec.tournament.startAt * 1000).toISOString().slice(0, 10) : ''),
+      dateOrder: resolveDateOrder(url),
       location: formatLocation(locInfo),
       locationDisplay: locationDisplay(locInfo),
       venue: locInfo?.location || '',
@@ -2140,7 +2154,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
   // Oldest-to-newest (opposite of the on-page table's newest-first sort) --
   // reads better as a chronological export.
   const csvTournamentData = [...allTournaments]
-    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.dateOrder || 0) - (b.dateOrder || 0))
     .map((t) => ({
       name: t.label,
       date: t.date,
@@ -2158,7 +2172,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
     }));
 
   const tournamentTableRows = [...allTournaments]
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.dateOrder || 0) - (a.dateOrder || 0))
     .map((t) => `<tr>
       <td><a href="tournaments/${escapeHtml(t.slug)}.html">${escapeHtml(t.label)}</a><a class="ext-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener" title="View original">&#8599;</a>${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</td>
       <td data-sort="${t.date}">${escapeHtml(t.date)}</td>
@@ -3789,7 +3803,7 @@ async function main() {
   const startggTournaments = collectStartgg();
   const allTournaments = [...challongeTournaments, ...startggTournaments];
 
-  allTournaments.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  allTournaments.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.dateOrder || 0) - (b.dateOrder || 0));
   assignSlugs(allTournaments);
 
   const knownUrls = new Set(allTournaments.map((t) => t.url));
@@ -4074,7 +4088,7 @@ async function main() {
   // generation time — sort by the raw ISO date first, then format, since
   // sorting the formatted strings would order by month name instead of time.
   const toMapTournament = (t) => ({ label: t.label, href: `tournaments/${t.slug}.html`, date: formatDateHuman(t.date), dateIso: t.date, flag: t.locationDisplay.flag });
-  const mapAllTournaments = [...allTournaments].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(toMapTournament);
+  const mapAllTournaments = [...allTournaments].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.dateOrder || 0) - (a.dateOrder || 0)).map(toMapTournament);
   const regionTournamentsRaw = new Map();
   for (const t of allTournaments) {
     const abbr = regionAbbr(t.state, t.country);
@@ -4084,7 +4098,7 @@ async function main() {
   }
   const regionTournaments = new Map();
   for (const [abbr, list] of regionTournamentsRaw) {
-    regionTournaments.set(abbr, [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(toMapTournament));
+    regionTournaments.set(abbr, [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.dateOrder || 0) - (a.dateOrder || 0)).map(toMapTournament));
   }
 
   // A region's geometric centroid isn't always where its label should sit

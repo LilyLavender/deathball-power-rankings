@@ -1,0 +1,28 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Logan Brewer,1,,,false,,Mike Lossing,0,,,false
+B,,Will Blake,1,,,false,,Mack Gonman,0,,,false
+C,,Hyonk Tea,0,,,false,,Alec Dosier,1,,,false
+D,,Maksim,1,,,false,,Mike Welch,0,,,false
+E,,Truman Delong,1,,,false,,Truitt Crozier,0,,,false
+F,,Max Wade,0,,,false,,Mike Blanchard,1,,,false
+G,,Dave Z,1,,,false,,Logan Brewer,0,,,false
+H,,Will Blake,0,,,false,,Alec Dosier,1,,,false
+I,,D.Owls,1,,,false,,Maksim,0,,,false
+J,,Truman Delong,1,,,false,,Mike Blanchard,0,,,false
+K,,Dave Z,1,,,false,,Alec Dosier,0,,,false
+L,,D.Owls,1,,,false,,Truman Delong,0,,,false
+M,,Dave Z,1,,,false,,D.Owls,0,,,false
+P,,Mack Gonman,0,,,false,,Hyonk Tea,1,,,false
+Q,,Truitt Crozier,1,,,false,,Max Wade,0,,,false
+R,,Mike Blanchard,0,,,false,,Mike Lossing,1,,,false
+S,,Maksim,0,,,false,,Hyonk Tea,1,,,false
+T,,Will Blake,1,,,false,,Mike Welch,0,,,false
+U,,Logan Brewer,1,,,false,,Truitt Crozier,0,,,false
+V,,Mike Lossing,0,,,false,,Hyonk Tea,1,,,false
+W,,Will Blake,0,,,false,,Logan Brewer,1,,,false
+X,,Alec Dosier,0,,,false,,Hyonk Tea,1,,,false
+Y,,Truman Delong,0,,,false,,Logan Brewer,1,,,false
+Z,,Hyonk Tea,1,,,false,,Logan Brewer,0,,,false
+AA,,D.Owls,1,,,false,,Hyonk Tea,0,,,false
+N,,Dave Z,0,,,false,,D.Owls,1,,,false
+O,,D.Owls,1,,,false,,Dave Z,0,,,false

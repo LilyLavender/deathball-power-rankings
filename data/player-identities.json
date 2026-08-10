@@ -101,14 +101,19 @@
     { "names": ["Logan", "Logan2"], "canonical": "Logan", "id": "logan-2019-league" },
     { "names": ["Ellie", "something_dumber", "something dumber", "something_dumber (ellie)"], "canonical": "something_dumber" },
     { "names": ["typedef_sorbet", "_sorbet"], "canonical": "typedef_sorbet" },
-    { "names": ["Dave", "legacy_dave"], "canonical": "legacy_dave" },
+    { "names": ["Dave", "legacy_dave", "dave_owns", "Dave Z"], "canonical": "legacy_dave" },
     { "names": ["Mrlink2k", "Link"], "canonical": "Mrlink2k" },
     { "names": ["Dmt Goobz", "Goobz"], "canonical": "Dmt Goobz" },
     { "names": ["Queen_Magnolia", "Magnolia"], "canonical": "Queen_Magnolia" },
     { "names": ["Nambo_", "Nambo"], "canonical": "Nambo_" },
     { "names": ["SamuelJH", "Sam"], "canonical": "SamuelJH", "id": "samueljh" },
     { "names": ["dirtd", "Danny"], "canonical": "dirtd" },
-    { "names": ["kiaraxchr", "keucher", "kiara"], "canonical": "kiaraxchr" }
+    { "names": ["kiaraxchr", "keucher", "kiara"], "canonical": "kiaraxchr" },
+    { "names": ["HyonkTea", "Hyonk Tea"], "canonical": "HyonkTea" },
+    { "names": ["Will Blake", "Will"], "canonical": "Will Blake" },
+    { "names": ["Truman Delong", "Truman"], "canonical": "Truman Delong" },
+    { "names": ["Truitt Crozier", "Truitt"], "canonical": "Truitt Crozier" },
+    { "names": ["D-Overmind", "Overmind"], "canonical": "D-Overmind" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -456,6 +461,34 @@
         { "id": "tony-mpls", "canonical": "Tony", "tournaments": ["https://challonge.com/DBmpls"] },
         { "id": "tony-jax", "canonical": "Tony", "tournaments": ["https://challonge.com/dbjax"] }
       ]
+    },
+    {
+      "name": "Max",
+      "resolutions": [
+        { "id": "max wade", "canonical": "Max Wade", "tournaments": ["https://challonge.com/qc26deathball2"] }
+      ],
+      "default": { "id": "max", "canonical": "Max" }
+    },
+    {
+      "name": "Parker",
+      "resolutions": [
+        { "id": "parker-aug-2026", "canonical": "Parker", "tournaments": ["https://challonge.com/qc26deathball2"] }
+      ],
+      "default": { "id": "parker", "canonical": "Parker" }
+    },
+    {
+      "name": "Joshua",
+      "resolutions": [
+        { "id": "joshua-aug-2026", "canonical": "Joshua", "tournaments": ["https://challonge.com/qc26deathball2"] }
+      ],
+      "default": { "id": "joshua", "canonical": "Joshua" }
+    },
+    {
+      "name": "Shane",
+      "resolutions": [
+        { "id": "shane-aug-2026", "canonical": "Shane", "tournaments": ["https://challonge.com/qc26deathball2"] }
+      ],
+      "default": { "id": "shane", "canonical": "Shane" }
     }
   ],
   "_hidden_example": "Raw names listed here are dropped entirely: matches involving them are skipped (not counted as a win/loss for either side), and they never appear as a player.",

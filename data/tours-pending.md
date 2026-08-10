@@ -1,11 +1,10 @@
 Future tournaments:
 
-https://challonge.com/sgdq2026_deathball
-
-
 Need to add:
 
-
+- get paper tours from Ross
+- reach out to I/O about 2024 tournament
+- I/O 2026 doubles
 
 Need to confirm if actually DeathBall:
 
