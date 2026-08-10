@@ -2178,7 +2178,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       <td data-sort="${t.date}">${escapeHtml(t.date)}</td>
       <td>${locationHtml(t.locationDisplay)}</td>
       <td>${escapeHtml(t.source)}</td>
-      <td class="numeric" data-sort="${t.participants}">${t.participants}</td>
+      <td class="numeric" data-sort="${t.isDoubles ? t.participants * 2 : t.participants}">${t.isDoubles ? `${t.participants * 2} (${t.participants})` : t.participants}</td>
       <td class="numeric" data-sort="${t.matchCount}">${t.matchCount}</td>
     </tr>`).join('\n');
 
