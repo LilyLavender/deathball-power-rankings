@@ -349,6 +349,24 @@ async function handleSplitCollision(rl, splitEntry, rawName, tournament, knownBy
   const choice = await askChoice(rl, 'Choice: ', resolutions.length);
 
   if (choice === 0) {
+    // "New/different person" doesn't necessarily mean genuinely new to the
+    // site -- e.g. a doubles bracket typing just "Logan" for a player who's
+    // otherwise always gone by "Logan Brewer". Offer known near-matches
+    // before creating a fresh identity from scratch.
+    const candidates = fuzzyCandidates(rawName, knownById);
+    if (candidates.length) {
+      console.log(`\n"${rawName}" (${tournament.label}, ${tournament.date}) -- possible matches for this person:`);
+      console.log('  0 - Genuinely new player');
+      candidates.forEach((c, i) => console.log(`  ${i + 1} - ${describeCandidate(c)}`));
+      const subChoice = await askChoice(rl, 'Choice (blank = 0): ', candidates.length, 0);
+      if (subChoice !== 0) {
+        const match = candidates[subChoice - 1];
+        resolutions.push({ id: match.id, canonical: match.displayName, tournaments: [tournament.url] });
+        saveIdentities();
+        return;
+      }
+    }
+
     const id = generateId(rawName, tournament.date);
     resolutions.push({ id, canonical: rawName.trim(), tournaments: [tournament.url] });
     saveIdentities();
@@ -370,6 +388,12 @@ async function handleSplitCollision(rl, splitEntry, rawName, tournament, knownBy
 // shows up later is that same person. A "no" here converts the name into a
 // split: prior history keeps resolving to the existing player via `default`,
 // while this (and any future confirmed-different) occurrence gets a fresh id.
+// priorAlias, if given, is the alias entry that made rawName auto-resolve to
+// `existing` without ever reaching this confirmation before (see the alias
+// short-circuit note in the main loop below). On "no" it's stripped of this
+// spelling (or removed entirely if that was its only one) so the name stops
+// silently claiming a new occurrence is the same old person -- the fresh
+// split created below takes over disambiguating it from here on.
 async function handleExactMatchConfirmation(rl, rawName, tournament, existing) {
   console.log(`\n"${rawName}" (${tournament.label}, ${tournament.date}) matches an existing player:`);
   console.log(`  ${describeCandidate(existing)}`);
@@ -517,16 +541,27 @@ async function main() {
       for (const rawName of names) {
         if (hiddenNames.has(normName(rawName).toLowerCase())) continue;
 
-        const identity = resolveIdentity(rawName, t.url);
         const lower = normName(rawName).toLowerCase();
-        const isDefaultFallback = identity.id === lower;
-        if (!isDefaultFallback) continue; // already resolved via alias or split
 
+        // A name governed by a split must be checked for tournament coverage
+        // before anything else, even if resolveIdentity would otherwise fall
+        // through an uncovered split to a same-spelling alias (a name can be
+        // both a known-ambiguous split AND have a legacy alias covering the
+        // tournaments outside that split) -- gating on the *resolved* identity
+        // instead of on split coverage let an uncovered split silently borrow
+        // the alias's unrelated person for this tournament without ever
+        // asking (e.g. a bare "Logan" from a new tournament silently landing
+        // on the 2019-league Logan instead of prompting).
         const splitEntry = (identities.splits || []).find((s) => normName(s.name).toLowerCase() === lower);
         if (splitEntry) {
-          await handleSplitCollision(rl, splitEntry, rawName, t, knownById);
+          const resolution = (splitEntry.resolutions || []).find((r) => (r.tournaments || []).includes(t.url));
+          if (!resolution) await handleSplitCollision(rl, splitEntry, rawName, t, knownById);
           continue;
         }
+
+        const identity = resolveIdentity(rawName, t.url);
+        const isDefaultFallback = identity.id === lower;
+        if (!isDefaultFallback) continue; // already resolved via alias
 
         if (knownById.has(lower)) {
           await handleExactMatchConfirmation(rl, rawName, t, knownById.get(lower));

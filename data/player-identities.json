@@ -375,7 +375,8 @@
       "resolutions": [
         { "id": "logan-1105-24", "canonical": "Logan", "tournaments": ["https://challonge.com/bxlwhrkw"] },
         { "id": "logan-2019-league", "canonical": "Logan", "tournaments": ["https://challonge.com/dbcha20190430", "https://challonge.com/dbcha20190507", "https://challonge.com/dbcha20190521", "https://challonge.com/dbcha20191106"] },
-        { "id": "logan-shad4", "canonical": "Logan", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview"] }
+        { "id": "logan-shad4", "canonical": "Logan", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview"] },
+        { "id": "logan brewer", "canonical": "Logan Brewer", "tournaments": ["https://challonge.com/qc26deathball2"] }
       ]
     },
     {

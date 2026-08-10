@@ -14,8 +14,8 @@
     "https://challonge.com/dbcha20190514": { "city": "Chattanooga", "state": "TN", "date": "2019-05-14" },
     "https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/events/deathball-1v1/brackets/2116019/3086684/overview": { "city": "Detroit", "state": "MI", "location": "Psychic Drive" },
     "https://challonge.com/deathballgdc1": { "city": "San Francisco", "state": "CA", "location": "GDC", "name": "GDC 2018" },
-    "https://challonge.com/hq29vy8o": { "city": "Grapevine", "state": "TX", "location": "QuakeCon", "name": "QuakeCon 2025" },
-    "https://challonge.com/ny0ht36v": { "city": "Grapevine", "state": "TX", "location": "QuakeCon", "name": "QuakeCon 2025 Saturday" },
+    "https://challonge.com/hq29vy8o": { "city": "Grapevine", "state": "TX", "location": "QuakeCon", "name": "QuakeCon 2025: DeathBall" },
+    "https://challonge.com/ny0ht36v": { "city": "Grapevine", "state": "TX", "location": "QuakeCon", "name": "QuakeCon 2025: Saturday DeathBall" },
     "https://challonge.com/BaltDB": { "city": "Baltimore", "state": "MD", "location": "Baltimore Brawl", "name": "Baltimore Brawl 5" },
     "https://challonge.com/9yxjnhn": { "city": "Denton", "state": "TX" },
     "https://challonge.com/a2ai2n6q": { "city": "Chattanooga", "state": "TN" },
@@ -128,7 +128,7 @@
     "https://challonge.com/nd1zz0xn": { "city": "Minneapolis", "state": "MN", "location": "SGDQ", "date": "2024-07-07", "name": "SGDQ 2024 5: The Platinum Platter" },
     "https://challonge.com/sgdq2026_deathball": { "name": "SGDQ 2026", "date": "2026-07-07", "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
     "https://challonge.com/fb7fg5mo": { "name": "SGDQ 2026 Doubles", "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
-    "https://challonge.com/qc26deathball": { "date": "2026-08-07", "order": 0, "city": "Grapevine", "state": "TX", "location": "QuakeCon" },
-    "https://challonge.com/qc26deathball2": { "date": "2026-08-07", "order": 1, "city": "Grapevine", "state": "TX", "location": "QuakeCon" }
+    "https://challonge.com/qc26deathball": { "name": "QuakeCon 2026: DeathBall 1v1", "date": "2026-08-07", "order": 0, "city": "Grapevine", "state": "TX", "location": "QuakeCon" },
+    "https://challonge.com/qc26deathball2": { "name": "QuakeCon 2026: DeathBall 2v2", "date": "2026-08-07", "order": 1, "city": "Grapevine", "state": "TX", "location": "QuakeCon" }
   }
 }

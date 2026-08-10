@@ -40,6 +40,7 @@
     "_Orange|CA":            { "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Flag_of_Orange%2C_California.gif", "abbr": "CA" },
     "Phoenix|AZ":           { "url": "https://upload.wikimedia.org/wikipedia/commons/9/98/Flag_of_Phoenix%2C_Arizona.svg", "abbr": "PHX" },
     "Portland|OR":          { "url": "https://upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_Portland%2C_Oregon.svg", "abbr": "PDX" },
+    "Raleigh|NC":           { "url": "https://upload.wikimedia.org/wikipedia/commons/2/25/Flag_of_Raleigh%2C_North_Carolina.svg", "abbr": "NC" },
     "_Richardson|TX":        { "file": "Flag_of_Richardson,_Texas.svg", "abbr": "TX" },
     "San Francisco|CA":     { "url": "https://upload.wikimedia.org/wikipedia/commons/5/55/Flag_of_San_Francisco%2C_California.svg", "abbr": "SF" },
     "Seattle|WA":           { "url": "https://upload.wikimedia.org/wikipedia/en/6/6d/Flag_of_Seattle.svg", "abbr": "SEA" },

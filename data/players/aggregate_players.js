@@ -194,11 +194,38 @@ const playerInfo = readJson(path.join(DATA_ROOT, 'player-info.json'), { players:
 // a case-insensitive index so lookup doesn't depend on which casing a given
 // tournament host happened to type.
 const playerInfoByLowerKey = new Map(Object.keys(playerInfo).map((k) => [k.toLowerCase(), playerInfo[k]]));
+// A canonical display name shared by more than one distinct backend id (a
+// split, e.g. two unrelated "Parker"s) must never resolve player-info.json
+// through that shared name -- only through the id -- or a brand-new split
+// resolution silently inherits an unrelated old player's location/color
+// keyed under the plain name (see CLAUDE.md's player-info.json note on
+// keying split entries by id). Names with just one id behind them (most
+// aliases, e.g. "James Matthews") are unambiguous and can still fall back
+// to a name-keyed entry.
+const canonicalNameIds = new Map();
+function trackCanonicalName(id, canonical) {
+  if (!id || !canonical) return;
+  if (!canonicalNameIds.has(canonical)) canonicalNameIds.set(canonical, new Set());
+  canonicalNameIds.get(canonical).add(id);
+}
+for (const a of identities.aliases || []) trackCanonicalName(a.id || a.canonical.toLowerCase(), a.canonical);
+for (const s of identities.splits || []) {
+  for (const r of s.resolutions || []) trackCanonicalName(r.id, r.canonical);
+  if (s.default) trackCanonicalName(s.default.id, s.default.canonical);
+}
+const ambiguousCanonicalNames = new Set(
+  [...canonicalNameIds].filter(([, ids]) => ids.size > 1).map(([name]) => name)
+);
 function lookupPlayerInfo(id, name) {
-  return playerInfo[id] || playerInfo[name]
-    || playerInfoByLowerKey.get((id || '').toLowerCase())
-    || playerInfoByLowerKey.get((name || '').toLowerCase())
-    || {};
+  if (playerInfo[id]) return playerInfo[id];
+  const byIdLower = playerInfoByLowerKey.get((id || '').toLowerCase());
+  if (byIdLower) return byIdLower;
+  if (name && !ambiguousCanonicalNames.has(name)) {
+    if (playerInfo[name]) return playerInfo[name];
+    const byNameLower = playerInfoByLowerKey.get(name.toLowerCase());
+    if (byNameLower) return byNameLower;
+  }
+  return {};
 }
 
 // Shared by every doubles-card renderer (Doubles tab, player-page Doubles
