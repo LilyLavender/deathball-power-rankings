@@ -113,7 +113,13 @@
     { "names": ["Will Blake", "Will"], "canonical": "Will Blake" },
     { "names": ["Truman Delong", "Truman"], "canonical": "Truman Delong" },
     { "names": ["Truitt Crozier", "Truitt"], "canonical": "Truitt Crozier" },
-    { "names": ["D-Overmind", "Overmind"], "canonical": "D-Overmind" }
+    { "names": ["D-Overmind", "Overmind"], "canonical": "D-Overmind" },
+    { "names": ["emanelk"], "canonical": "emanelk", "id": "emanelk-aug-2026" },
+    { "names": ["dubrovnic"], "canonical": "dubrovnic", "id": "dubrovnic-aug-2026" },
+    { "names": ["Spray Kruger"], "canonical": "Spray Kruger", "id": "spray-kruger-aug-2026" },
+    { "names": ["Evan"], "canonical": "Evan", "id": "evan-aug-2026" },
+    { "names": ["LilyLambda", "Lily"], "canonical": "LilyLambda" },
+    { "names": ["Con", "Connor"], "canonical": "Con" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -460,7 +466,8 @@
       "name": "Tony",
       "resolutions": [
         { "id": "tony-mpls", "canonical": "Tony", "tournaments": ["https://challonge.com/DBmpls"] },
-        { "id": "tony-jax", "canonical": "Tony", "tournaments": ["https://challonge.com/dbjax"] }
+        { "id": "tony-jax", "canonical": "Tony", "tournaments": ["https://challonge.com/dbjax"] },
+        { "id": "tony-aug-2026", "canonical": "Tony", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
       ]
     },
     {
@@ -490,6 +497,41 @@
         { "id": "shane-aug-2026", "canonical": "Shane", "tournaments": ["https://challonge.com/qc26deathball2"] }
       ],
       "default": { "id": "shane", "canonical": "Shane" }
+    },
+    {
+      "name": "Tim",
+      "resolutions": [
+        { "id": "tim-aug-2026", "canonical": "Tim", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
+      ],
+      "default": { "id": "tim", "canonical": "Tim" }
+    },
+    {
+      "name": "Steven",
+      "resolutions": [
+        { "id": "steven-aug-2026", "canonical": "Steven", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
+      ],
+      "default": { "id": "steven", "canonical": "Steven" }
+    },
+    {
+      "name": "Courtney",
+      "resolutions": [
+        { "id": "courtney-aug-2026", "canonical": "Courtney", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
+      ],
+      "default": { "id": "courtney", "canonical": "Courtney" }
+    },
+    {
+      "name": "Ty",
+      "resolutions": [
+        { "id": "ty-aug-2026", "canonical": "Ty", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
+      ],
+      "default": { "id": "ty", "canonical": "Ty" }
+    },
+    {
+      "name": "Zach",
+      "resolutions": [
+        { "id": "zach-aug-2026", "canonical": "Zach", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
+      ],
+      "default": { "id": "zach", "canonical": "Zach" }
     }
   ],
   "_hidden_example": "Raw names listed here are dropped entirely: matches involving them are skipped (not counted as a win/loss for either side), and they never appear as a player.",

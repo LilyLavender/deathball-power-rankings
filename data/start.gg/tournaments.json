@@ -9064,5 +9064,1281 @@
     "games": null
    }
   ]
+ },
+ "https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview": {
+  "url": "https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview",
+  "event_id": 1689621,
+  "tournament_id": 943632,
+  "fetched_at": "2026-08-19T03:38:25.205Z",
+  "tournament": {
+   "id": 943632,
+   "name": "IO 4Player DeathBall Cab",
+   "startAt": 1786923000,
+   "city": "Madison",
+   "addrState": "WI"
+  },
+  "event": {
+   "id": 1689621,
+   "name": "4 Player Tournament"
+  },
+  "entrants": [
+   {
+    "id": 24408163,
+    "name": "Tony & Tim",
+    "participants": [
+     {
+      "id": 22357068,
+      "gamerTag": "Tony & Tim",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 13,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408126,
+    "name": "Monkey Ball",
+    "participants": [
+     {
+      "id": 22357035,
+      "gamerTag": "Monkey Ball",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 12,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408120,
+    "name": "Ball Wizards",
+    "participants": [
+     {
+      "id": 22357028,
+      "gamerTag": "Ball Wizards",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 11,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408084,
+    "name": "Steven & Courtney",
+    "participants": [
+     {
+      "id": 22356992,
+      "gamerTag": "Steven & Courtney",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 10,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408062,
+    "name": "DanJam",
+    "participants": [
+     {
+      "id": 22356972,
+      "gamerTag": "DanJam",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 9,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408031,
+    "name": "Ty & Mark",
+    "participants": [
+     {
+      "id": 22356948,
+      "gamerTag": "Ty & Mark",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 8,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408029,
+    "name": "Zach and Lily",
+    "participants": [
+     {
+      "id": 22356946,
+      "gamerTag": "Zach and Lily",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 7,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408024,
+    "name": "Beanboiz",
+    "participants": [
+     {
+      "id": 22356942,
+      "gamerTag": "Beanboiz",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 6,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408020,
+    "name": "Milwaukee Ballers",
+    "participants": [
+     {
+      "id": 22356940,
+      "gamerTag": "Milwaukee Ballers",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 5,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408016,
+    "name": "Stormspray",
+    "participants": [
+     {
+      "id": 22356937,
+      "gamerTag": "Stormspray",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 4,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408014,
+    "name": "Jeff & Daxton",
+    "participants": [
+     {
+      "id": 22356935,
+      "gamerTag": "Jeff & Daxton",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 3,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408011,
+    "name": "Team Ramrod",
+    "participants": [
+     {
+      "id": 22356934,
+      "gamerTag": "Team Ramrod",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 2,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   },
+   {
+    "id": 24408008,
+    "name": "Torre & Connor",
+    "participants": [
+     {
+      "id": 22356931,
+      "gamerTag": "Torre & Connor",
+      "prefix": ""
+     }
+    ],
+    "seeds": [
+     {
+      "seedNum": 1,
+      "phaseGroup": {
+       "id": 3422948
+      }
+     }
+    ]
+   }
+  ],
+  "sets": [
+   {
+    "id": 106595585,
+    "identifier": "M",
+    "round": 5,
+    "winnerId": 24408011,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408011
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408008
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595584,
+    "identifier": "L",
+    "round": 4,
+    "winnerId": 24408011,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408008
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408011
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595616,
+    "identifier": "Y",
+    "round": -8,
+    "winnerId": 24408008,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408008
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408014
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595615,
+    "identifier": "X",
+    "round": -7,
+    "winnerId": 24408014,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408163
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408014
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595582,
+    "identifier": "J",
+    "round": 3,
+    "winnerId": 24408008,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408008
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408163
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595583,
+    "identifier": "K",
+    "round": 3,
+    "winnerId": 24408011,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408011
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408014
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595613,
+    "identifier": "V",
+    "round": -6,
+    "winnerId": 24408163,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408163
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408016
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595614,
+    "identifier": "W",
+    "round": -6,
+    "winnerId": 24408014,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408014
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408029
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595611,
+    "identifier": "T",
+    "round": -5,
+    "winnerId": 24408016,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408120
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408016
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595612,
+    "identifier": "U",
+    "round": -5,
+    "winnerId": 24408029,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408029
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408024
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595578,
+    "identifier": "F",
+    "round": 2,
+    "winnerId": 24408008,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408008
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408062
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595579,
+    "identifier": "G",
+    "round": 2,
+    "winnerId": 24408163,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408163
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408020
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595580,
+    "identifier": "H",
+    "round": 2,
+    "winnerId": 24408011,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408011
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408084
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595581,
+    "identifier": "I",
+    "round": 2,
+    "winnerId": 24408014,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408014
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408120
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595607,
+    "identifier": "P",
+    "round": -4,
+    "winnerId": 24408120,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408120
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408031
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595608,
+    "identifier": "Q",
+    "round": -4,
+    "winnerId": 24408016,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408084
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408016
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595609,
+    "identifier": "R",
+    "round": -4,
+    "winnerId": 24408029,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408020
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408029
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595610,
+    "identifier": "S",
+    "round": -4,
+    "winnerId": 24408024,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408062
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408024
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595604,
+    "identifier": "O",
+    "round": -3,
+    "winnerId": 24408016,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408016
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408126
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595571,
+    "identifier": "A",
+    "round": 1,
+    "winnerId": 24408062,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408031
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408062
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595572,
+    "identifier": "B",
+    "round": 1,
+    "winnerId": 24408163,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408016
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408163
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595573,
+    "identifier": "C",
+    "round": 1,
+    "winnerId": 24408020,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408020
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408126
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595575,
+    "identifier": "D",
+    "round": 1,
+    "winnerId": 24408084,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408029
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 0
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408084
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   },
+   {
+    "id": 106595577,
+    "identifier": "E",
+    "round": 1,
+    "winnerId": 24408120,
+    "phaseGroup": {
+     "id": 3422948,
+     "displayIdentifier": "1",
+     "bracketType": "DOUBLE_ELIMINATION",
+     "phase": {
+      "id": 2371889,
+      "name": "Bracket"
+     }
+    },
+    "slots": [
+     {
+      "entrant": {
+       "id": 24408024
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 1
+        }
+       }
+      }
+     },
+     {
+      "entrant": {
+       "id": 24408120
+      },
+      "standing": {
+       "stats": {
+        "score": {
+         "value": 2
+        }
+       }
+      }
+     }
+    ],
+    "games": null
+   }
+  ]
  }
 }

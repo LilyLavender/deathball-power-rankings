@@ -1,0 +1,9 @@
+{
+"Monkey Ball": { "displayName": "Monkey Ball", "players": [{ "id": "unnamed-monkey-ball-1", "name": "Unnamed Player" }, { "id": "unnamed-monkey-ball-2", "name": "Unnamed Player" }] },
+"Ball Wizards": { "displayName": "Ball Wizards", "players": [{ "id": "unnamed-ball-wizards-1", "name": "Unnamed Player" }, { "id": "unnamed-ball-wizards-2", "name": "Unnamed Player" }] },
+"DanJam": { "displayName": "DanJam", "players": [{ "id": "unnamed-danjam-1", "name": "Unnamed Player" }, { "id": "unnamed-danjam-2", "name": "Unnamed Player" }] },
+"Beanboiz": { "displayName": "Beanboiz", "players": [{ "id": "emanelk-aug-2026", "name": "emanelk" }, { "id": "dubrovnic-aug-2026", "name": "dubrovnic" }] },
+"Milwaukee Ballers": { "displayName": "Milwaukee Ballers", "players": [{ "id": "unnamed-milwaukee-ballers-1", "name": "Unnamed Player" }, { "id": "unnamed-milwaukee-ballers-2", "name": "Unnamed Player" }] },
+"Stormspray": { "displayName": "Stormspray", "players": [{ "id": "spray-kruger-aug-2026", "name": "Spray Kruger" }, { "id": "unnamed-stormspray-2", "name": "Unnamed Player" }] },
+"Team Ramrod": { "displayName": "Team Ramrod", "players": [{ "id": "zachaction", "name": "zachaction" }, { "id": "evan-aug-2026", "name": "Evan" }] }
+}

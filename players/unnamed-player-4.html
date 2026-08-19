@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unnamed Player — DeathBall Power Rankings</title>
+<meta property="og:title" content="Unnamed Player — DeathBall Player" />
+<meta property="og:description" content="Profile for Unnamed Player." />
+<meta property="og:url" content="https://lilylavender.github.io/deathball-power-rankings/players/unnamed-player-4.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="DeathBall Power Rankings" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Unnamed Player — DeathBall Player" />
+<meta name="twitter:description" content="Profile for Unnamed Player." />
+<link rel="stylesheet" href="../index.css">
+</head>
+<body class="card-green">
+<div class="player-title-row"><h1>Unnamed Player</h1></div>
+
+
+<a class="back-link" href="../index.html">&larr; Back to rankings</a>
+
+<div class="player-grid doubles-only-grid">
+  <div class="tourney-section tournaments-col">
+    <h2>Tournaments (1)</h2>
+    <p>No tournaments on record.</p>
+  </div>
+
+</div>
+<script>
+  document.querySelectorAll('.show-more-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const list = document.getElementById(btn.dataset.list);
+      const hiddenItems = [...list.children].filter((li) => li.hidden).slice(0, 10);
+      hiddenItems.forEach((li) => { li.hidden = false; });
+      if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
+    });
+  });
+  (() => {
+    const toggle = document.querySelector('.aka-toggle');
+    const content = document.getElementById('aka-content');
+    if (!toggle || !content) return;
+    toggle.addEventListener('click', () => {
+      const open = content.classList.toggle('open');
+      toggle.classList.toggle('active', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+  })();
+  document.querySelectorAll('.rating-chart-inner').forEach((wrap) => {
+    const tooltip = wrap.querySelector('.chart-tooltip');
+    const svg = wrap.querySelector('.rating-chart');
+    if (!tooltip || !svg) return;
+    const show = (point) => {
+      const wrapRect = wrap.getBoundingClientRect();
+      const pointRect = point.getBoundingClientRect();
+      tooltip.innerHTML = '<strong>' + point.dataset.label + '</strong><br>' +
+        point.dataset.date + '<br>Rating ' + point.dataset.rating +
+        (point.dataset.rank ? ' &middot; Rank #' + point.dataset.rank : '');
+      tooltip.hidden = false;
+      let left = (pointRect.left - wrapRect.left) + (pointRect.width / 2);
+      left = Math.max(60, Math.min(left, wrapRect.width - 60));
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = (pointRect.top - wrapRect.top) + 'px';
+    };
+    const hide = () => { tooltip.hidden = true; };
+    const points = [...svg.querySelectorAll('.chart-point')];
+    points.forEach((point) => {
+      point.addEventListener('focus', () => show(point));
+      point.addEventListener('blur', hide);
+    });
+    svg.addEventListener('mousemove', (e) => {
+      if (!points.length) return;
+      let nearest = points[0];
+      let nearestDist = Infinity;
+      for (const p of points) {
+        const r = p.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const dist = Math.abs(e.clientX - cx);
+        if (dist < nearestDist) { nearestDist = dist; nearest = p; }
+      }
+      show(nearest);
+    });
+    svg.addEventListener('mouseleave', hide);
+  });
+</script>
+<footer class="site-footer">
+  <span class="footer-row">
+    <span class="footer-copyright"><span class="footer-copyright-full">&copy; 2026 LilyLambda – Power Rankings Site | Tony Hauber – DeathBall</span><span class="footer-copyright-short">&copy; 2026 LilyLambda, Tony Hauber</span></span>
+    <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">Support on Ko-Fi</a>
+  </span>
+  <span class="footer-row">
+    <span>Data sourced from <a href="https://start.gg" target="_blank" rel="noopener">start.gg</a> &amp; <a href="https://challonge.com" target="_blank" rel="noopener">Challonge</a></span>
+    <a href="https://forms.gle/sKJ9eT7RGgf4aAr17" target="_blank" rel="noopener">Submit a correction</a>
+  </span>
+</footer>
+</body>
+</html>

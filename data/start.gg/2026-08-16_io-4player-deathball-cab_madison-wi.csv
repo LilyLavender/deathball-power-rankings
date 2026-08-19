@@ -1,0 +1,25 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+M,,Team Ramrod,2,,,false,,Torre & Connor,0,,,false
+L,,Torre & Connor,1,,,false,,Team Ramrod,2,,,false
+Y,,Torre & Connor,2,,,false,,Jeff & Daxton,0,,,false
+X,,Tony & Tim,0,,,false,,Jeff & Daxton,2,,,false
+J,,Torre & Connor,2,,,false,,Tony & Tim,0,,,false
+K,,Team Ramrod,2,,,false,,Jeff & Daxton,0,,,false
+V,,Tony & Tim,2,,,false,,Stormspray,0,,,false
+W,,Jeff & Daxton,2,,,false,,Zach and Lily,0,,,false
+T,,Ball Wizards,1,,,false,,Stormspray,2,,,false
+U,,Zach and Lily,2,,,false,,Beanboiz,0,,,false
+F,,Torre & Connor,2,,,false,,DanJam,0,,,false
+G,,Tony & Tim,2,,,false,,Milwaukee Ballers,0,,,false
+H,,Team Ramrod,2,,,false,,Steven & Courtney,0,,,false
+I,,Jeff & Daxton,2,,,false,,Ball Wizards,0,,,false
+P,,Ball Wizards,2,,,false,,Ty & Mark,0,,,false
+Q,,Steven & Courtney,0,,,false,,Stormspray,2,,,false
+R,,Milwaukee Ballers,1,,,false,,Zach and Lily,2,,,false
+S,,DanJam,1,,,false,,Beanboiz,2,,,false
+O,,Stormspray,2,,,false,,Monkey Ball,0,,,false
+A,,Ty & Mark,0,,,false,,DanJam,2,,,false
+B,,Stormspray,1,,,false,,Tony & Tim,2,,,false
+C,,Milwaukee Ballers,2,,,false,,Monkey Ball,0,,,false
+D,,Zach and Lily,0,,,false,,Steven & Courtney,2,,,false
+E,,Beanboiz,1,,,false,,Ball Wizards,2,,,false

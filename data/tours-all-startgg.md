@@ -6,3 +6,4 @@ https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v
 https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/events/deathball-1v1/brackets/2116019/3086684/overview
 https://www.start.gg/tournament/yomi-158/events/wednesday-unwind-deathball/brackets/1745566/2590463/overview
 https://www.start.gg/tournament/yomi-162/events/wednesday-unwind-deathball-free-to-join/brackets/1773284/2627178/overview
+https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview

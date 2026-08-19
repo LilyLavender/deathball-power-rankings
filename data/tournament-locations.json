@@ -129,6 +129,7 @@
     "https://challonge.com/sgdq2026_deathball": { "name": "SGDQ 2026", "date": "2026-07-07", "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
     "https://challonge.com/fb7fg5mo": { "name": "SGDQ 2026 Doubles", "city": "Minneapolis", "state": "MN", "location": "SGDQ" },
     "https://challonge.com/qc26deathball": { "name": "QuakeCon 2026: DeathBall 1v1", "date": "2026-08-07", "order": 0, "city": "Grapevine", "state": "TX", "location": "QuakeCon" },
-    "https://challonge.com/qc26deathball2": { "name": "QuakeCon 2026: DeathBall 2v2", "date": "2026-08-07", "order": 1, "city": "Grapevine", "state": "TX", "location": "QuakeCon" }
+    "https://challonge.com/qc26deathball2": { "name": "QuakeCon 2026: DeathBall 2v2", "date": "2026-08-07", "order": 1, "city": "Grapevine", "state": "TX", "location": "QuakeCon" },
+    "https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview": { "name": "Inaugural 4 Player @ I/O", "city": "Madison", "state": "WI", "location": "I/O Arcade Bar" }
   }
 }
