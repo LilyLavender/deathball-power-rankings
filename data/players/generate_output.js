@@ -515,7 +515,16 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .doubles-card.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%); }
 .doubles-card.card-green:hover { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.38) 0%, #181818 65%); border-color: rgba(62,255,139,0.65); }
 .doubles-card.card-purple:hover { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.38) 0%, #181818 65%); border-color: rgba(176,79,255,0.6); }
-.doubles-card-nickname { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; color: #ccc; }
+/* Doubles tab only: a team's registered nickname shown inline before its
+   two player names on the same line (e.g. "Team Ramrod: zachaction &
+   Evan") rather than its own stacked line above them -- keeps every card's
+   name area exactly one line regardless of whether a nickname is on file,
+   so cards in the tab's dense grid line up evenly. */
+.doubles-card-team { color: #aaa; margin-right: 0.15em; }
+/* Player pages' Doubles Teams section (.doubles-col) shows one card per
+   partner rather than a dense grid of every team on the site, so the
+   nickname keeps its own bigger stacked line above the players there. */
+.doubles-card-nickname { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; color: #ccc; }
 .doubles-card-names { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.2rem; color: #fff; line-height: 1.3; }
 .doubles-card-names a { color: #fff; }
 .doubles-card-names a:hover { color: #3eff8b; }
@@ -647,7 +656,7 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
    above its two player names -- overrides the plain single-line ellipsis
    truncation above with a 2-line stack, each line truncated on its own. */
 .standings-list li > span.standings-name-stack { display: flex; flex-direction: column; gap: 0.1rem; white-space: normal; line-height: 1.3; }
-.standings-team-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.03em; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.standings-team-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.92rem; letter-spacing: 0.03em; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-team-players { color: #999; font-size: 0.92em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Synced with the bracket/crosstable/round-list: hovering or clicking a
    player anywhere highlights them everywhere (see setupPlayerInteractivity

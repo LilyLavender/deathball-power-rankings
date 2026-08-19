@@ -2183,12 +2183,12 @@ function buildDoublesTabHtml(doublesTeams) {
       return href ? `<a href="${escapeHtml(href)}">${flagImg}${escapeHtml(p.name)}</a>` : `<span>${flagImg}${escapeHtml(p.name)}</span>`;
     }).join(' <span class="doubles-amp">&amp;</span> ');
     const nickname = teamDisplayNameByPairKey.get(team.key);
-    const nicknameHtml = nickname ? `<div class="doubles-card-nickname">${escapeHtml(nickname)}</div>` : '';
+    const teamLabel = nickname ? `<span class="doubles-card-team">${escapeHtml(nickname)}:</span> ` : '';
     const games = team.wins + team.losses;
     const winPct = games > 0 ? Math.round((team.wins / games) * 100) : 0;
     const accent = teamCardAccent(team.players[0], team.players[1]);
     return `<div class="doubles-card ${accent}">
-${nicknameHtml ? `  ${nicknameHtml}\n` : ''}  <div class="doubles-card-names">${names}</div>
+  <div class="doubles-card-names">${teamLabel}${names}</div>
   <div class="doubles-card-stats"><span>${team.tournamentCount} tournament${team.tournamentCount === 1 ? '' : 's'}</span><span class="doubles-sep">&middot;</span><span>${team.wins}-${team.losses} (${winPct}%)</span></div>
 </div>`;
   }).join('\n');
