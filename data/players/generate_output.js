@@ -643,6 +643,12 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; flex-shrink: 0; }
 .standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+/* A doubles team with a registered nickname (e.g. "Team Ramrod") shown
+   above its two player names -- overrides the plain single-line ellipsis
+   truncation above with a 2-line stack, each line truncated on its own. */
+.standings-list li > span.standings-name-stack { display: flex; flex-direction: column; gap: 0.1rem; white-space: normal; line-height: 1.3; }
+.standings-team-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.03em; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.standings-team-players { color: #999; font-size: 0.92em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Synced with the bracket/crosstable/round-list: hovering or clicking a
    player anywhere highlights them everywhere (see setupPlayerInteractivity
    in the always-loaded player-interactivity head script). */

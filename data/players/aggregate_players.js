@@ -1022,7 +1022,11 @@ function rankByPoolRecord(poolMatches, names) {
 // in pools ranked after (by combined pool win rate).
 function buildStandings(t) {
   const named = t.participantList.filter((p) => p.name);
-  const canon = (rawName) => resolveIdentity(rawName, t.url).name;
+  // Doubles teams must canonicalize through teamCanonicalName (nickname-
+  // preferring), not a bare resolveIdentity on the raw team string -- see
+  // that function's comment for why a plain resolveIdentity here silently
+  // breaks nickname teams' W-L record.
+  const canon = (rawName) => (t.isDoubles ? teamCanonicalName(rawName, t) : resolveIdentity(rawName, t.url).name);
   const canonicalMatches = t.matches.map((m) => ({
     ...m,
     winnerName: m.winnerName ? canon(m.winnerName) : m.winnerName,
@@ -1140,7 +1144,7 @@ function buildCrosstable(t, standings) {
   // with an alias (e.g. someone who played an extra group-stage round under
   // a second Challonge registration) would have their real matches silently
   // fail to look up against their canonical row/column header.
-  const canon = (rawName) => resolveIdentity(rawName, t.url).name;
+  const canon = (rawName) => (t.isDoubles ? teamCanonicalName(rawName, t) : resolveIdentity(rawName, t.url).name);
   const names = standings.length ? standings.map((s) => s.name) : [...new Set(t.matches.flatMap((m) => [m.winnerName, m.loserName]).filter(Boolean).map(canon))];
 
   const pairKey = (a, b) => [a, b].sort().join(' ');
@@ -2015,6 +2019,25 @@ for (const [nickname, entry] of Object.entries(teamNames)) {
   teamDisplayNameByPairKey.set(teamKeyFor(a.id, b.id), entry.displayName || nickname);
 }
 
+// Canonical text key for a doubles team's raw registration string within a
+// given tournament -- prefers the team's registered nickname (unique text,
+// since it's the literal string they signed up under) when one exists;
+// otherwise falls back to its two resolved players' names joined by " & ".
+// Every doubles-aware piece of standings/crosstable/bracket/history code
+// MUST go through this (never a bare resolveIdentity call on the raw team
+// string) so they all agree on the same key for the same team -- using
+// different canonicalizations in different places let a nickname team's
+// W-L record and tournament-history entry silently vanish (the raw
+// nickname text never matched the joined-names text used elsewhere), and
+// let two unrelated teams that are both a pair of anonymous "Unnamed
+// Player" placeholders collide onto the same joined-names key.
+function teamCanonicalName(rawName, t) {
+  const pair = resolveTeamMembers(rawName, t.url);
+  if (!pair) return resolveIdentity(rawName, t.url).name;
+  const nickname = teamDisplayNameByPairKey.get(teamKeyFor(pair[0].id, pair[1].id));
+  return nickname || pair.map((r) => r.name).join(' & ');
+}
+
 // For a doubles tournament, maps each standings entry's canonical team name
 // (as produced by buildStandings/resolveIdentity) to its two resolved player
 // identities -- shared by buildPlayerHistories's doubles branch and
@@ -2024,7 +2047,7 @@ function resolveDoublesTeamPairs(t) {
   const pairByCanonName = new Map();
   const consider = (raw) => {
     if (!raw) return;
-    const canon = resolveIdentity(raw, t.url).name;
+    const canon = teamCanonicalName(raw, t);
     if (pairByCanonName.has(canon)) return;
     const pair = resolveTeamMembers(raw, t.url);
     if (!pair) return;
@@ -3174,8 +3197,13 @@ function rawNameForCanonical(t, canonicalName) {
   if (!map) {
     map = new Map();
     const consider = (raw) => {
-      if (!raw || map.has(resolveIdentity(raw, t.url).name)) return;
-      map.set(resolveIdentity(raw, t.url).name, raw);
+      if (!raw) return;
+      // Doubles must canonicalize through teamCanonicalName (nickname-
+      // preferring) here too, or this map's keys won't match what
+      // buildStandings/buildCrosstable produced for `canonicalName`.
+      const name = t.isDoubles ? teamCanonicalName(raw, t) : resolveIdentity(raw, t.url).name;
+      if (map.has(name)) return;
+      map.set(name, raw);
     };
     for (const p of t.participantList) consider(p.name);
     for (const m of t.matches) { consider(m.winnerName); consider(m.loserName); }
@@ -3213,7 +3241,20 @@ function writeTournamentPages(allTournaments) {
 
     const standingsHtml = standings.length
       ? `<ol class="standings-list">
-${standings.map((s) => `      <li data-player="${escapeHtml(s.name)}"><span class="standings-rank">${s.rank != null ? s.rank : '—'}</span><span>${teamAware(rawNameForCanonical(t, s.name))}</span><span class="standings-record">${s.wins}-${s.losses}</span></li>`).join('\n')}
+${standings.map((s) => {
+  const raw = rawNameForCanonical(t, s.name);
+  const rank = s.rank != null ? s.rank : '—';
+  const record = `${s.wins}-${s.losses}`;
+  // A doubles team with a registered nickname shows it as a label above
+  // the two (still individually clickable) player names, e.g. "Team
+  // Ramrod" over "zachaction & Evan" -- see teamCanonicalName.
+  const pair = t.isDoubles ? resolveTeamMembers(raw, t.url) : null;
+  const nickname = pair ? teamDisplayNameByPairKey.get(teamKeyFor(pair[0].id, pair[1].id)) : null;
+  const nameCell = nickname
+    ? `<span class="standings-name-stack"><span class="standings-team-name">${escapeHtml(nickname)}</span><span class="standings-team-players">${teamAware(raw)}</span></span>`
+    : `<span>${teamAware(raw)}</span>`;
+  return `      <li data-player="${escapeHtml(s.name)}"><span class="standings-rank">${rank}</span>${nameCell}<span class="standings-record">${record}</span></li>`;
+}).join('\n')}
     </ol>`
       : '<p>No standings available.</p>';
 
@@ -3989,7 +4030,12 @@ async function main() {
           if (t.isDoubles) {
             const pair = resolveTeamMembers(p.name, t.url);
             if (pair) {
-              p.name = pair.map((r) => r.name).join(' & ');
+              // A team's registered nickname (if any) takes priority over
+              // its two players' joined names here -- brackets should read
+              // "Team Ramrod", not "zachaction & Evan", when a nickname is
+              // on file (see teamCanonicalName).
+              const nickname = teamDisplayNameByPairKey.get(teamKeyFor(pair[0].id, pair[1].id));
+              p.name = nickname || pair.map((r) => r.name).join(' & ');
               const flags = pair.map((r) => flagForInfo(lookupPlayerInfo(r.id, r.name))).filter(Boolean);
               p.flag = (flags.length === 1 || (flags.length === 2 && flags[0].src === flags[1].src)) ? flags[0] : null;
               continue;
