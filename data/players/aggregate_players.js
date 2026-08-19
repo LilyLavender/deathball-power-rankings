@@ -4226,17 +4226,29 @@ async function main() {
   // any region anyway. `rank` still reflects each player's real overall
   // Power Ranking position (looked up from the rank-ordered rankingRows
   // before re-sorting alphabetically), just displayed in an alpha-sorted list.
+  //
+  // Sourced from `playerRows` (every player, including doubles-only ones
+  // with 0 singles games) rather than `rankingRows` (ranked/singles only,
+  // per buildRankingRows' games>0 filter) -- a doubles-only player still has
+  // a real home location and belongs on the map even though they have no
+  // Glicko rating. Their rank/rating/rd are simply left unset (see
+  // ratingById below); the map/sidebar render an "Unranked" placeholder for
+  // those instead of a numeric rating.
   const rankById = new Map(rankingRows.map((p, i) => [p.id, i + 1]));
-  const toMapPlayer = (p) => ({
-    name: p.name,
-    href: playerHref(p.id, ''),
-    rank: rankById.get(p.id),
-    rating: Math.round(p.r),
-    rd: Math.round(p.rd),
-    lastActive: formatMonthYearHuman(lastActiveById.get(p.id)),
-    flag: p.flag,
-  });
-  const locatedPlayersAlpha = rankingRows
+  const ratingById = new Map(rankingRows.map((p) => [p.id, { r: p.r, rd: p.rd }]));
+  const toMapPlayer = (p) => {
+    const rating = ratingById.get(p.id);
+    return {
+      name: p.name,
+      href: playerHref(p.id, ''),
+      rank: rankById.get(p.id) ?? null,
+      rating: rating ? Math.round(rating.r) : null,
+      rd: rating ? Math.round(rating.rd) : null,
+      lastActive: p.lastActive,
+      flag: p.flag,
+    };
+  };
+  const locatedPlayersAlpha = playerRows
     .filter((p) => p.state || p.country)
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   const mapAllPlayers = locatedPlayersAlpha.map(toMapPlayer);

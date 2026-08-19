@@ -11,6 +11,7 @@ const {
   collectStartgg,
   buildPlayerStats,
   resolveIdentity,
+  resolveTeamMembers,
   displayName,
   hiddenNames,
   normName,
@@ -118,6 +119,11 @@ function groupIsolatedTournaments(communityOf, allTournaments, players, nodeIds)
     const idsInT = new Set();
     for (const p of t.participantList) {
       if (!p.name || hiddenNames.has(normName(p.name).toLowerCase())) continue;
+      if (t.isDoubles) {
+        const pair = resolveTeamMembers(p.name, t.url);
+        if (pair) for (const m of pair) if (nodeIds.has(m.id)) idsInT.add(m.id);
+        continue;
+      }
       const identity = resolveIdentity(p.name, t.url);
       if (identity && identity.id && nodeIds.has(identity.id)) idsInT.add(identity.id);
     }
@@ -355,13 +361,46 @@ function computeCommunityAnchors(sizeOf, crossWeight) {
 function buildGraph() {
   const challongeTournaments = collectChallonge();
   const startggTournaments = collectStartgg();
-  const allTournaments = [...challongeTournaments, ...startggTournaments].filter((t) => !t.isDoubles);
+  const allTournaments = [...challongeTournaments, ...startggTournaments];
+  const singlesTournaments = allTournaments.filter((t) => !t.isDoubles);
+  const doublesTournaments = allTournaments.filter((t) => t.isDoubles);
 
-  const players = buildPlayerStats(allTournaments);
+  // buildPlayerStats only ever looks at singles matches (doubles never
+  // touches win/loss/games stats -- same isDoubles guard as the main site's
+  // Glicko engine), so a player who only ever played doubles gets no entry
+  // here. ensurePlayer backfills a bare 0-games node for them below, same
+  // convention aggregate_players.js's registerDoublesParticipants uses so
+  // they still show up on the Players tab despite never being ranked.
+  const players = buildPlayerStats(singlesTournaments);
+  function ensurePlayer(id, name) {
+    if (!players.has(id)) {
+      players.set(id, { wins: 0, losses: 0, games: 0, tournaments: new Map(), nameCounts: new Map([[name, 1]]), rawNames: new Map() });
+    }
+    return players.get(id);
+  }
 
-  // "Played against" — an edge per pair who faced off in a real match.
+  // Register every doubles participant as a node with their real tournament
+  // count (from the roster, not just matches -- a team that dropped before
+  // playing still entered) before any edges are built, so games=0 nodes
+  // still report an accurate tournament count in their tooltip and so
+  // groupIsolatedTournaments (which checks p.tournaments) sees them.
+  for (const t of doublesTournaments) {
+    for (const p of t.participantList) {
+      if (!p.name || hiddenNames.has(normName(p.name).toLowerCase())) continue;
+      const pair = resolveTeamMembers(p.name, t.url);
+      if (!pair) continue;
+      for (const m of pair) ensurePlayer(m.id, m.name).tournaments.set(t.url, t.label);
+    }
+  }
+
+  // "Played against" — an edge per pair who faced off in a real match. For
+  // doubles, this expands to two kinds of connection per the site's own
+  // request: teammates ("been teamed with") get an edge, and every player
+  // on one team gets an edge to every player on the opposing team ("their
+  // team has played against") — both are real in-tournament interactions
+  // between two specific people, same as a singles head-to-head.
   const playedEdgeMap = new Map();
-  for (const t of allTournaments) {
+  for (const t of singlesTournaments) {
     for (const m of t.matches) {
       if (!m.winnerName || !m.loserName) continue;
       if (hiddenNames.has(normName(m.winnerName).toLowerCase())) continue;
@@ -372,18 +411,43 @@ function buildGraph() {
       addPairEdge(playedEdgeMap, a.id, b.id, t.url);
     }
   }
+  for (const t of doublesTournaments) {
+    for (const m of t.matches) {
+      if (!m.winnerName || !m.loserName) continue;
+      const winPair = resolveTeamMembers(m.winnerName, t.url);
+      const losePair = resolveTeamMembers(m.loserName, t.url);
+      if (!winPair || !losePair) continue;
+      // Doubles matches never touch buildPlayerStats' games/wins/losses
+      // (same isDoubles guard the main site's Players tab uses, since
+      // doubles isn't part of singles win/loss stats) -- but this graph's
+      // node size and tooltip are meant to reflect a player's total match
+      // activity, so each side of a doubles match still counts as a game
+      // played here, on top of whatever singles games they have.
+      for (const p of [...winPair, ...losePair]) ensurePlayer(p.id, p.name).games += 1;
+      addPairEdge(playedEdgeMap, winPair[0].id, winPair[1].id, t.url);
+      addPairEdge(playedEdgeMap, losePair[0].id, losePair[1].id, t.url);
+      for (const w of winPair) for (const l of losePair) addPairEdge(playedEdgeMap, w.id, l.id, t.url);
+    }
+  }
 
   // "Attended same tournament" — an edge per pair who both entered the same
   // event, regardless of whether they ever actually played each other.
   // Restricted to players who also appear as a node (i.e. have a recorded
   // match somewhere) — an entrant who never played a single logged match
   // (e.g. dropped before their first match) has no node to draw an edge to.
+  // Computed after the doubles pass above so doubles-only players (just
+  // registered via ensurePlayer) count as nodes here too.
   const nodeIds = new Set(players.keys());
   const attendedEdgeMap = new Map();
   for (const t of allTournaments) {
     const ids = new Set();
     for (const p of t.participantList) {
       if (!p.name || hiddenNames.has(normName(p.name).toLowerCase())) continue;
+      if (t.isDoubles) {
+        const pair = resolveTeamMembers(p.name, t.url);
+        if (pair) for (const m of pair) if (nodeIds.has(m.id)) ids.add(m.id);
+        continue;
+      }
       const identity = resolveIdentity(p.name, t.url);
       if (identity && identity.id && nodeIds.has(identity.id)) ids.add(identity.id);
     }
@@ -629,7 +693,10 @@ const GRAPH = ${dataJson};
   const HULL_LABEL_FONT_WORLD = 28;
 
   let currentMode = 'played';
-  let nodes = GRAPH.nodes.map((n) => ({ ...n, r: radiusScale(n.games) }));
+  // A doubles-only player has 0 singles games (buildPlayerStats never sees
+  // doubles matches) -- floor at 1 so they still render at the scale's
+  // minimum node size instead of extrapolating below it.
+  let nodes = GRAPH.nodes.map((n) => ({ ...n, r: radiusScale(n.games || 1) }));
   let links = [];
 
   // Auto-detected community backgrounds — a translucent blob behind each

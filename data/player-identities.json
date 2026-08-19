@@ -114,10 +114,6 @@
     { "names": ["Truman Delong", "Truman"], "canonical": "Truman Delong" },
     { "names": ["Truitt Crozier", "Truitt"], "canonical": "Truitt Crozier" },
     { "names": ["D-Overmind", "Overmind"], "canonical": "D-Overmind" },
-    { "names": ["emanelk"], "canonical": "emanelk", "id": "emanelk-aug-2026" },
-    { "names": ["dubrovnic"], "canonical": "dubrovnic", "id": "dubrovnic-aug-2026" },
-    { "names": ["Spray Kruger"], "canonical": "Spray Kruger", "id": "spray-kruger-aug-2026" },
-    { "names": ["Evan"], "canonical": "Evan", "id": "evan-aug-2026" },
     { "names": ["LilyLambda", "Lily"], "canonical": "LilyLambda" },
     { "names": ["Con", "Connor"], "canonical": "Con" }
   ],
@@ -532,6 +528,13 @@
         { "id": "zach-aug-2026", "canonical": "Zach", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
       ],
       "default": { "id": "zach", "canonical": "Zach" }
+    },
+    {
+      "name": "Evan",
+      "resolutions": [
+        { "id": "evan-aug-2026", "canonical": "Evan", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
+      ],
+      "default": { "id": "evan", "canonical": "Evan" }
     }
   ],
   "_hidden_example": "Raw names listed here are dropped entirely: matches involving them are skipped (not counted as a win/loss for either side), and they never appear as a player.",

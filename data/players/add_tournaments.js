@@ -520,14 +520,54 @@ async function resolveTeamNickname(rl, rawName, tournament, knownById) {
       continue;
     }
 
-    // New player: same alias-suggestion + location/color prompts as the
-    // main per-name dedup loop, since this typed name never appears as its
-    // own raw string anywhere in the tournament's participant/match data
-    // for that loop to pick up on its own.
+    // New player: same exact-match / fuzzy-match / genuinely-new prompts as
+    // the main per-name dedup loop, since this typed name never appears as
+    // its own raw string anywhere in the tournament's participant/match
+    // data for that loop to pick up on its own.
     const typedName = await ask(rl, '    Name: ');
-    const candidates = fuzzyCandidates(typedName, knownById);
+    const trimmedName = typedName.trim();
+    const lower = trimmedName.toLowerCase();
+
+    // Exact match to an existing (unambiguous or already-split) player --
+    // same "are you sure?" guard as the main loop's
+    // handleExactMatchConfirmation. Two different real people sharing a
+    // name (e.g. two "Evan"s from different cities) is common; answering
+    // "no" here creates a split scoped to just this tournament, so every
+    // other tournament keeps resolving the bare name to the ORIGINAL
+    // person. Skipping this check previously let a team-nickname member's
+    // name silently retro-merge an unrelated namesake's entire history
+    // onto this occurrence's id via a raw sitewide alias.
+    if (knownById.has(lower)) {
+      const existing = knownById.get(lower);
+      console.log(`\n    "${trimmedName}" matches an existing player: ${describeCandidate(existing)}`);
+      const answer = (await ask(rl, '    Same player? [y/N] (default n): ')).trim().toLowerCase();
+      if (answer === 'y' || answer === 'yes') {
+        members.push({ id: existing.id, name: existing.displayName });
+        continue;
+      }
+      const newId = generateId(trimmedName, tournament.date);
+      identities.splits = identities.splits || [];
+      identities.splits.push({
+        name: trimmedName,
+        resolutions: [{ id: newId, canonical: trimmedName, tournaments: [tournament.url] }],
+        default: { id: existing.id, canonical: existing.displayName },
+      });
+      saveIdentities();
+      const info = await askLocationAndColor(rl, `${trimmedName} (${newId})`);
+      if (Object.keys(info).length) {
+        playerInfoFile.players[newId] = info;
+        savePlayerInfo();
+      }
+      members.push({ id: newId, name: trimmedName });
+      continue;
+    }
+
+    // Not an exact match -- offer fuzzy near-match suggestions (typo/
+    // alternate spelling of an existing player) before treating as
+    // genuinely new.
+    const candidates = fuzzyCandidates(trimmedName, knownById);
     if (candidates.length) {
-      console.log(`\n    "${typedName}" -- possible existing matches:`);
+      console.log(`\n    "${trimmedName}" -- possible existing matches:`);
       console.log('      0 - Genuinely new player');
       candidates.forEach((c, i) => console.log(`      ${i + 1} - ${describeCandidate(c)}`));
       const sub = await askChoice(rl, '    Choice (blank = 0): ', candidates.length, 0);
@@ -538,16 +578,15 @@ async function resolveTeamNickname(rl, rawName, tournament, knownById) {
       }
     }
 
-    const id = generateId(typedName, tournament.date);
-    identities.aliases = identities.aliases || [];
-    identities.aliases.push({ names: [typedName.trim()], canonical: typedName.trim(), id });
-    saveIdentities();
-    const info = await askLocationAndColor(rl, `${typedName.trim()} (${id})`);
+    // Genuinely new player -- no alias/split entry needed, same as the main
+    // loop's handleUnresolvedName: default resolution (id = lowercased
+    // name) is enough when nothing else on file uses this name.
+    const info = await askLocationAndColor(rl, `${trimmedName} (${tournament.label}, ${tournament.date})`);
     if (Object.keys(info).length) {
-      playerInfoFile.players[id] = info;
+      playerInfoFile.players[trimmedName] = info;
       savePlayerInfo();
     }
-    members.push({ id, name: typedName.trim() });
+    members.push({ id: lower, name: trimmedName });
   }
 
   const entry = { displayName: rawName.trim(), players: members };

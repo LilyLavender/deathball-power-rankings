@@ -1627,11 +1627,14 @@ function writeJs(glickoUncertainRdThreshold) {
       } else {
         const rankSpan = document.createElement('span');
         rankSpan.className = 'standings-record';
-        rankSpan.textContent = '#' + item.rank;
+        // A doubles-only player has no Power Ranking placement/rating (never
+        // touches the Glicko engine) -- shown as an em dash / "Unranked"
+        // instead of "#null"/"null ± null".
+        rankSpan.textContent = item.rank != null ? '#' + item.rank : '—';
         li.appendChild(rankSpan);
         const ratingSpan = document.createElement('span');
         ratingSpan.className = 'standings-record';
-        ratingSpan.textContent = item.v + ' ± ' + item.rd;
+        ratingSpan.textContent = item.v != null ? item.v + ' ± ' + item.rd : 'Unranked';
         li.appendChild(ratingSpan);
         const lastActiveSpan = document.createElement('span');
         lastActiveSpan.className = 'standings-record';
