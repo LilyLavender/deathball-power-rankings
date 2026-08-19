@@ -252,18 +252,51 @@ const tournamentDoubles = readJson(path.join(DATA_ROOT, 'tournament-doubles.json
 function isDoublesTournament(url) {
   return !!tournamentDoubles[url];
 }
+// Flat map of team nickname (exactly as registered in the bracket, e.g.
+// "Team Ramrod") -> { displayName, players: [{id,name}, {id,name}] }, for
+// doubles teams whose raw registration name can't be split into two player
+// names via parseTeamName at all -- a nickname reveals nothing about who's
+// actually on the team, so add_tournaments.js resolves each member manually
+// (new player / existing player / an "Unnamed Player" placeholder identity
+// for someone whose real name isn't known) and records the result here.
+// Optional/empty-safe like the other manual dedup configs.
+const teamNames = readJson(path.join(DATA_ROOT, 'team-names.json'), {});
+
+// Doubles-aware identity resolution for a raw team/participant name: splits
+// on a separator via parseTeamName and resolves each half the normal way, or
+// falls back to a team-names.json entry for a nickname registration. Returns
+// [identityA, identityB] (each {id, name}) or null if neither path resolves.
+function resolveTeamMembers(rawName, tournamentUrl) {
+  const parts = parseTeamName(rawName);
+  if (parts) {
+    const a = resolveIdentity(parts[0], tournamentUrl);
+    const b = resolveIdentity(parts[1], tournamentUrl);
+    if (!a.id || !b.id || a.id === b.id) return null;
+    return [a, b];
+  }
+  const entry = teamNames[normName(rawName)];
+  if (entry && Array.isArray(entry.players) && entry.players.length === 2) {
+    const [a, b] = entry.players;
+    if (!a || !b || !a.id || !b.id || a.id === b.id) return null;
+    return [a, b];
+  }
+  return null;
+}
 // Flat map of tournament URL -> YouTube video URL, for tournaments with a
 // VOD available -- optional, powers the "Watch on YouTube" pill on the
 // tournament page alongside the "View on Challonge/start.gg" source pill.
 const tournamentVideos = readJson(path.join(DATA_ROOT, 'tournament-videos.json'), {});
 
-// Splits a doubles participant/team raw name (e.g. "PlayerA + PlayerB" or
-// "PlayerA & PlayerB") into its two component raw player names. Returns
-// null if the name doesn't contain exactly one such separator.
+// Splits a doubles participant/team raw name (e.g. "PlayerA + PlayerB",
+// "PlayerA & PlayerB", or "PlayerA and PlayerB") into its two component raw
+// player names. Returns null if the name doesn't contain exactly one such
+// separator -- e.g. a team registered under a nickname with no player names
+// in it at all ("Team Ramrod"), which resolveTeamMembers below falls back to
+// team-names.json for instead.
 function parseTeamName(rawName) {
   const trimmed = normName(rawName);
   if (!trimmed) return null;
-  const parts = trimmed.split(/\s*[+&/]\s*/).map((s) => s.trim()).filter(Boolean);
+  const parts = trimmed.split(/\s*(?:[+&/]|\band\b)\s*/i).map((s) => s.trim()).filter(Boolean);
   return parts.length === 2 ? parts : null;
 }
 // Manually maintained list for the "Upcoming Events" tab -- each entry is
@@ -1955,6 +1988,19 @@ function teamKeyFor(idA, idB) {
   return [idA, idB].sort().join('::');
 }
 
+// Derived from team-names.json: resolved player-id-pair -> the nickname the
+// team registered under (last entry in file order wins if a pair somehow
+// appears twice) -- so a team shows its nickname on cross-tournament
+// aggregate views (Doubles tab, player pages) even if a *different*
+// tournament had them register as "PlayerA & PlayerB" instead.
+const teamDisplayNameByPairKey = new Map();
+for (const [nickname, entry] of Object.entries(teamNames)) {
+  if (!entry || !Array.isArray(entry.players) || entry.players.length !== 2) continue;
+  const [a, b] = entry.players;
+  if (!a || !b || !a.id || !b.id) continue;
+  teamDisplayNameByPairKey.set(teamKeyFor(a.id, b.id), entry.displayName || nickname);
+}
+
 // For a doubles tournament, maps each standings entry's canonical team name
 // (as produced by buildStandings/resolveIdentity) to its two resolved player
 // identities -- shared by buildPlayerHistories's doubles branch and
@@ -1966,12 +2012,9 @@ function resolveDoublesTeamPairs(t) {
     if (!raw) return;
     const canon = resolveIdentity(raw, t.url).name;
     if (pairByCanonName.has(canon)) return;
-    const parts = parseTeamName(raw);
-    if (!parts) return;
-    const a = resolveIdentity(parts[0], t.url);
-    const b = resolveIdentity(parts[1], t.url);
-    if (!a.id || !b.id || a.id === b.id) return;
-    pairByCanonName.set(canon, [a, b]);
+    const pair = resolveTeamMembers(raw, t.url);
+    if (!pair) return;
+    pairByCanonName.set(canon, pair);
   };
   for (const p of t.participantList) consider(p.name);
   for (const m of t.matches) { consider(m.winnerName); consider(m.loserName); }
@@ -2015,28 +2058,20 @@ function buildDoublesTeams(allTournaments) {
     if (!t.isDoubles) continue;
 
     for (const p of t.participantList) {
-      const parts = parseTeamName(p.name);
-      if (!parts) continue;
-      const a = resolveIdentity(parts[0], t.url);
-      const b = resolveIdentity(parts[1], t.url);
-      if (!a.id || !b.id || a.id === b.id) continue;
-      ensureTeam(a, b).tournaments.set(t.url, t.label);
+      const pair = resolveTeamMembers(p.name, t.url);
+      if (!pair) continue;
+      ensureTeam(pair[0], pair[1]).tournaments.set(t.url, t.label);
     }
 
     for (const m of t.matches) {
       if (!m.winnerName || !m.loserName) continue;
-      const winnerParts = parseTeamName(m.winnerName);
-      const loserParts = parseTeamName(m.loserName);
-      if (!winnerParts || !loserParts) continue;
-      const winA = resolveIdentity(winnerParts[0], t.url);
-      const winB = resolveIdentity(winnerParts[1], t.url);
-      const loseA = resolveIdentity(loserParts[0], t.url);
-      const loseB = resolveIdentity(loserParts[1], t.url);
-      if (winA.id === winB.id || loseA.id === loseB.id) continue;
-      const winnerTeam = ensureTeam(winA, winB);
+      const winPair = resolveTeamMembers(m.winnerName, t.url);
+      const losePair = resolveTeamMembers(m.loserName, t.url);
+      if (!winPair || !losePair) continue;
+      const winnerTeam = ensureTeam(winPair[0], winPair[1]);
       winnerTeam.tournaments.set(t.url, t.label);
       winnerTeam.wins += 1;
-      const loserTeam = ensureTeam(loseA, loseB);
+      const loserTeam = ensureTeam(losePair[0], losePair[1]);
       loserTeam.tournaments.set(t.url, t.label);
       loserTeam.losses += 1;
     }
@@ -2110,11 +2145,13 @@ function buildDoublesTabHtml(doublesTeams) {
       const flagImg = playerFlagImg(p.id, p.name);
       return href ? `<a href="${escapeHtml(href)}">${flagImg}${escapeHtml(p.name)}</a>` : `<span>${flagImg}${escapeHtml(p.name)}</span>`;
     }).join(' <span class="doubles-amp">&amp;</span> ');
+    const nickname = teamDisplayNameByPairKey.get(team.key);
+    const nicknameHtml = nickname ? `<div class="doubles-card-nickname">${escapeHtml(nickname)}</div>` : '';
     const games = team.wins + team.losses;
     const winPct = games > 0 ? Math.round((team.wins / games) * 100) : 0;
     const accent = teamCardAccent(team.players[0], team.players[1]);
     return `<div class="doubles-card ${accent}">
-  <div class="doubles-card-names">${names}</div>
+${nicknameHtml ? `  ${nicknameHtml}\n` : ''}  <div class="doubles-card-names">${names}</div>
   <div class="doubles-card-stats"><span>${team.tournamentCount} tournament${team.tournamentCount === 1 ? '' : 's'}</span><span class="doubles-sep">&middot;</span><span>${team.wins}-${team.losses} (${winPct}%)</span></div>
 </div>`;
   }).join('\n');
@@ -3085,18 +3122,19 @@ function nameHtml(rawName, tournamentUrl, opts = {}) {
   return href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner;
 }
 
-// Doubles-aware counterpart to nameHtml, for tournament pages -- splits the
-// raw team name into its two component players and links each individually
+// Doubles-aware counterpart to nameHtml, for tournament pages -- resolves
+// the raw team name into its two component players (splitting a separator
+// via parseTeamName, or falling back to a team-names.json nickname
+// registration -- see resolveTeamMembers) and links each individually
 // (clicking either name goes to that player's own page), always joined by
 // "&" regardless of what separator the source bracket actually used. Falls
-// back to nameHtml itself if the raw string can't be split (e.g. a name
-// with no + or & wasn't a proper doubles entry). See nameHtml for
-// `opts.noLink`/`opts.flagAfter`.
+// back to nameHtml itself if neither path resolves two distinct players.
+// See nameHtml for `opts.noLink`/`opts.flagAfter`.
 function teamNameHtml(rawTeamName, tournamentUrl, opts = {}) {
-  const parts = parseTeamName(rawTeamName);
-  if (!parts) return nameHtml(rawTeamName, tournamentUrl, opts);
-  const spans = parts.map((raw) => {
-    const { id, name, flag } = resolveDisplayName(raw, tournamentUrl);
+  const pair = resolveTeamMembers(rawTeamName, tournamentUrl);
+  if (!pair) return nameHtml(rawTeamName, tournamentUrl, opts);
+  const spans = pair.map(({ id, name }) => {
+    const flag = flagForInfo(lookupPlayerInfo(id, name));
     const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
     const href = opts.noLink ? null : playerHref(id, '../');
     const inner = opts.flagAfter ? `${escapeHtml(name)}${flagImg}` : `${flagImg}${escapeHtml(name)}`;
@@ -3663,10 +3701,12 @@ ${[...doublesHist.partners.values()]
       const partnerFlagImg = playerFlagImg(partner.id, partner.name);
       const partnerNameHtml = partnerHref ? `<a href="${escapeHtml(partnerHref)}">${partnerFlagImg}${escapeHtml(partner.name)}</a>` : `${partnerFlagImg}${escapeHtml(partner.name)}`;
       const accent = teamCardAccent({ id, name }, { id: partner.id, name: partner.name });
+      const nickname = teamDisplayNameByPairKey.get(teamKeyFor(id, partner.id));
+      const nicknameHtml = nickname ? `<div class="doubles-card-nickname">${escapeHtml(nickname)}</div>` : '';
       const entriesDesc = [...partner.entries].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       const entriesHtml = entriesDesc.map((e) => `      <li><span class="standings-rank"><span class="rank-ordinal">${ordinal(e.rank)}<span class="rank-total">/${e.totalEntrants}</span></span> <span class="hist-record">${e.wins}-${e.losses}</span></span><span class="hist-tourney-name"><a href="../tournaments/${escapeHtml(e.slug)}.html">${escapeHtml(e.label)}</a></span><span class="standings-record">${escapeHtml(formatDateHuman(e.date))}</span></li>`).join('\n');
       return `    <div class="doubles-card ${accent}">
-      <div class="doubles-card-names">${flagImg}${escapeHtml(name)} <span class="doubles-amp">&amp;</span> ${partnerNameHtml}</div>
+${nicknameHtml ? `      ${nicknameHtml}\n` : ''}      <div class="doubles-card-names">${flagImg}${escapeHtml(name)} <span class="doubles-amp">&amp;</span> ${partnerNameHtml}</div>
       <div class="doubles-card-stats"><span>${partner.entries.length} tournament${partner.entries.length === 1 ? '' : 's'}</span><span class="doubles-sep">&middot;</span><span>${pWins}-${pLosses} (${winPct}%)</span></div>
       <ol class="standings-list">
 ${entriesHtml}
@@ -3929,15 +3969,14 @@ async function main() {
         // each team's raw in-tournament spelling in the bracket instead of
         // canonical player names -- inconsistent with every other view of
         // the same tournament (crosstable, standings), which split and
-        // resolve each half individually via teamNameHtml/parseTeamName.
+        // resolve each half individually via teamNameHtml/resolveTeamMembers.
         // Do the same split-then-resolve-then-rejoin here.
         for (const p of stage.bracketData.participants) {
           if (t.isDoubles) {
-            const parts = parseTeamName(p.name);
-            if (parts) {
-              const resolvedParts = parts.map((raw) => resolveDisplayName(raw, t.url));
-              p.name = resolvedParts.map((r) => r.name).join(' & ');
-              const flags = resolvedParts.map((r) => r.flag).filter(Boolean);
+            const pair = resolveTeamMembers(p.name, t.url);
+            if (pair) {
+              p.name = pair.map((r) => r.name).join(' & ');
+              const flags = pair.map((r) => flagForInfo(lookupPlayerInfo(r.id, r.name))).filter(Boolean);
               p.flag = (flags.length === 1 || (flags.length === 2 && flags[0].src === flags[1].src)) ? flags[0] : null;
               continue;
             }
@@ -4219,6 +4258,7 @@ module.exports = {
   collectStartgg,
   buildPlayerStats,
   parseTeamName,
+  resolveTeamMembers,
   cardAccent,
   lookupPlayerInfo,
   flagForInfo,

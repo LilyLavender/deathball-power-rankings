@@ -3,9 +3,14 @@
 //      (both fetch_batch.js scripts are idempotent, so this is safe to rerun).
 //   2. For each new tournament, asks whether it was singles or doubles (2v2);
 //      doubles writes tournament-doubles.json and splits every raw
-//      participant/match name on + or & (see parseTeamName in
+//      participant/match name on + / & / "and" (see parseTeamName in
 //      aggregate_players.js) before the per-name dedup pass below, so each
-//      half of a team is resolved as its own individual player.
+//      half of a team is resolved as its own individual player. A raw name
+//      with no such separator -- a nickname registration like "Team Ramrod"
+//      that reveals nothing about who's on the team -- is resolved
+//      member-by-member instead (new player / existing player / an "Unnamed
+//      Player" placeholder for someone whose identity isn't known) via
+//      resolveTeamNickname, persisted globally to team-names.json.
 //   3. Finds tournaments that were newly fetched this run and walks through
 //      their unique raw player names one at a time, asking you to confirm
 //      every name that isn't already pinned to a specific person by an
@@ -52,6 +57,7 @@ const IDENTITIES_PATH = path.join(DATA_ROOT, 'player-identities.json');
 const PLAYER_INFO_PATH = path.join(DATA_ROOT, 'player-info.json');
 const TOURNAMENT_LOCATIONS_PATH = path.join(DATA_ROOT, 'tournament-locations.json');
 const TOURNAMENT_DOUBLES_PATH = path.join(DATA_ROOT, 'tournament-doubles.json');
+const TEAM_NAMES_PATH = path.join(DATA_ROOT, 'team-names.json');
 const CHALLONGE_STORE = path.join(DATA_ROOT, 'challonge', 'tournaments.json');
 const STARTGG_STORE = path.join(DATA_ROOT, 'start.gg', 'tournaments.json');
 
@@ -134,6 +140,7 @@ const tournamentLocationsFile = readJson(TOURNAMENT_LOCATIONS_PATH, { locations:
 tournamentLocationsFile.locations = tournamentLocationsFile.locations || {};
 
 const tournamentDoublesFile = readJson(TOURNAMENT_DOUBLES_PATH, {});
+const teamNamesFile = readJson(TEAM_NAMES_PATH, {});
 
 function saveIdentities() {
   fs.writeFileSync(IDENTITIES_PATH, serializeIdentities(identities));
@@ -155,6 +162,18 @@ function saveTournamentDoubles() {
   });
   lines.push('}');
   fs.writeFileSync(TOURNAMENT_DOUBLES_PATH, lines.join('\n') + '\n');
+}
+// team-names.json is also a flat map (team nickname -> { displayName,
+// players: [{id,name}, {id,name}] }) -- same tiny serializer as
+// tournament-doubles.json, no wrapper key.
+function saveTeamNames() {
+  const lines = ['{'];
+  const keys = Object.keys(teamNamesFile);
+  keys.forEach((key, i) => {
+    lines.push(`${JSON.stringify(key)}: ${compactStringify(teamNamesFile[key])}${i < keys.length - 1 ? ',' : ''}`);
+  });
+  lines.push('}');
+  fs.writeFileSync(TEAM_NAMES_PATH, lines.join('\n') + '\n');
 }
 
 // --- Fuzzy matching ---
@@ -196,6 +215,9 @@ function collectAllIds() {
     for (const r of s.resolutions || []) if (r.id) ids.add(r.id);
     if (s.default?.id) ids.add(s.default.id);
   }
+  for (const entry of Object.values(teamNamesFile)) {
+    for (const p of entry?.players || []) if (p?.id) ids.add(p.id);
+  }
   return ids;
 }
 
@@ -203,6 +225,21 @@ const usedIds = collectAllIds();
 
 function generateId(name, dateStr) {
   const base = `${slugify(name)}-${monthYearSlug(dateStr)}`;
+  let id = base;
+  let n = 1;
+  while (usedIds.has(id)) id = `${base}-${++n}`;
+  usedIds.add(id);
+  return id;
+}
+
+// Placeholder identity for a doubles teammate whose real name isn't known --
+// e.g. a team registered under a nickname ("Team Ramrod") where only one of
+// the two players could be identified. Gets a stable, team-scoped backend id
+// (so two different unknowns never collide) but always displays as the
+// literal "Unnamed Player" -- same "same display name, distinct backend id"
+// pattern player-identities.json splits already use elsewhere on the site.
+function generatePlaceholderId(teamRawName, slot) {
+  const base = `unnamed-${slugify(teamRawName)}-${slot}`;
   let id = base;
   let n = 1;
   while (usedIds.has(id)) id = `${base}-${++n}`;
@@ -444,6 +481,81 @@ async function handleUnresolvedName(rl, rawName, tournament, knownById) {
   saveIdentities();
 }
 
+// A doubles team registered under a nickname (e.g. "Team Ramrod") reveals
+// nothing about who's actually on it, so parseTeamName can't split it --
+// resolve each of its 2 members manually and persist the result to
+// team-names.json (global: the nickname always means these same 2 players
+// from now on). Returns { displayName, players: [{id,name}, {id,name}] }.
+async function resolveTeamNickname(rl, rawName, tournament, knownById) {
+  console.log(`\nTeam "${rawName}" (${tournament.label}, ${tournament.date}) has no +/&/and separator -- resolving its 2 players individually.`);
+  const members = [];
+  for (let slot = 1; slot <= 2; slot++) {
+    console.log(`  Player ${slot} of "${rawName}":`);
+    const choice = await askChoice(
+      rl,
+      '    0 - New player (type a name) / 1 - Existing player (search) / 2 - Unnamed placeholder (identity unknown)\n    Choice: ',
+      2
+    );
+
+    if (choice === 1) {
+      const query = await ask(rl, '    Search existing players by name: ');
+      const candidates = fuzzyCandidates(query, knownById, 10);
+      if (candidates.length === 0) {
+        console.log('    No matches found for that search -- treating as a new player instead.');
+      } else {
+        candidates.forEach((c, i) => console.log(`      ${i + 1} - ${describeCandidate(c)}`));
+        console.log('      0 - None of these (new player)');
+        const sub = await askChoice(rl, '    Choice: ', candidates.length);
+        if (sub !== 0) {
+          const match = candidates[sub - 1];
+          members.push({ id: match.id, name: match.displayName });
+          continue;
+        }
+      }
+    }
+
+    if (choice === 2) {
+      const id = generatePlaceholderId(rawName, slot);
+      members.push({ id, name: 'Unnamed Player' });
+      continue;
+    }
+
+    // New player: same alias-suggestion + location/color prompts as the
+    // main per-name dedup loop, since this typed name never appears as its
+    // own raw string anywhere in the tournament's participant/match data
+    // for that loop to pick up on its own.
+    const typedName = await ask(rl, '    Name: ');
+    const candidates = fuzzyCandidates(typedName, knownById);
+    if (candidates.length) {
+      console.log(`\n    "${typedName}" -- possible existing matches:`);
+      console.log('      0 - Genuinely new player');
+      candidates.forEach((c, i) => console.log(`      ${i + 1} - ${describeCandidate(c)}`));
+      const sub = await askChoice(rl, '    Choice (blank = 0): ', candidates.length, 0);
+      if (sub !== 0) {
+        const match = candidates[sub - 1];
+        members.push({ id: match.id, name: match.displayName });
+        continue;
+      }
+    }
+
+    const id = generateId(typedName, tournament.date);
+    identities.aliases = identities.aliases || [];
+    identities.aliases.push({ names: [typedName.trim()], canonical: typedName.trim(), id });
+    saveIdentities();
+    const info = await askLocationAndColor(rl, `${typedName.trim()} (${id})`);
+    if (Object.keys(info).length) {
+      playerInfoFile.players[id] = info;
+      savePlayerInfo();
+    }
+    members.push({ id, name: typedName.trim() });
+  }
+
+  const entry = { displayName: rawName.trim(), players: members };
+  teamNamesFile[rawName.trim()] = entry;
+  saveTeamNames();
+  return entry;
+}
+
 // --- Fetch + diff ---
 
 function snapshotUrls(storePath) {
@@ -523,22 +635,30 @@ async function main() {
       const isStartgg = t.source === 'start.gg';
       const rawNames = [...new Set(rawParticipantNames(t.url, isStartgg))];
 
-      // Doubles participant/team names are "PlayerA + PlayerB" (or "&") --
-      // split each into its two halves and dedupe/resolve them individually,
-      // same as any singles name, instead of treating the joined string as
-      // one (nonexistent) player.
-      const names = isDoublesTournament
-        ? [...new Set(rawNames.flatMap((raw) => {
-            const parts = parseTeamName(raw);
-            if (!parts) {
-              console.log(`  Could not split team name "${raw}" on + or & -- treating it as a single name.`);
-              return [raw];
-            }
-            return parts;
-          }))]
-        : rawNames;
+      // Doubles participant/team names are usually "PlayerA + PlayerB" (or
+      // "&"/"and") -- split each into its two halves and dedupe/resolve them
+      // individually, same as any singles name, instead of treating the
+      // joined string as one (nonexistent) player. A raw name with no such
+      // separator is a nickname registration (e.g. "Team Ramrod") that
+      // reveals nothing about who's on the team -- those are resolved
+      // member-by-member via resolveTeamNickname (new/existing/placeholder
+      // player, persisted to team-names.json) instead of going through the
+      // per-name dedup loop below at all, since by the time that call
+      // returns both members are already fully pinned to a specific id.
+      const names = [];
+      if (isDoublesTournament) {
+        for (const raw of rawNames) {
+          const parts = parseTeamName(raw);
+          if (parts) { names.push(...parts); continue; }
+          const trimmed = normName(raw);
+          if (!teamNamesFile[trimmed]) await resolveTeamNickname(rl, raw, t, knownById);
+        }
+      } else {
+        names.push(...rawNames);
+      }
+      const uniqueNames = [...new Set(names)];
 
-      for (const rawName of names) {
+      for (const rawName of uniqueNames) {
         if (hiddenNames.has(normName(rawName).toLowerCase())) continue;
 
         const lower = normName(rawName).toLowerCase();
