@@ -1,7 +1,8 @@
 {
-  "_schema": "Manually entered match results to supplement scraped tournament data. All entries must reference a tournament URL that already exists in the scraped data (challonge/tournaments.json or start.gg/tournaments.json). Player names go through the same alias/split resolution as scraped data — use the name as it appears in that tournament, or a known alias from player-identities.json. `match_index` is for reference and deduplication only (ordering within a tournament does not affect Glicko-2 period updates). Either `score` or `games` must be provided. `score` is a set-count string in p1-p2 format (e.g. '3-1'); winner is inferred from who has more sets. `games` is an array of per-game goal scores in p1-p2 format (e.g. '3-2'); winner is inferred from who wins more games; close games (margin ≤1 goal) receive a reduced Glicko win score.",
+  "_schema": "Manually entered match results to supplement scraped tournament data. All entries must reference a tournament URL that already exists in the scraped data (challonge/tournaments.json or start.gg/tournaments.json). Player names go through the same alias/split resolution as scraped data — use the name as it appears in that tournament, or a known alias from player-identities.json. `match_index` is for reference and deduplication only (ordering within a tournament does not affect Glicko-2 period updates). One of `score`, `games`, or `dq` must be provided. `score` is a set-count string in p1-p2 format (e.g. '3-1'); winner is inferred from who has more sets. `games` is an array of per-game goal scores in p1-p2 format (e.g. '3-2'); winner is inferred from who wins more games; close games (margin ≤1 goal) receive a reduced Glicko win score. `dq: true` marks p2 as having been disqualified/forfeited against p1 (no score) — counts toward W/L stats but is excluded from Glicko, same as a scraped DQ.",
   "_example": { "p1": "somewes", "p2": "Corley", "tournament": "https://challonge.com/example", "match_index": "A3", "score": "3-1" },
   "_example_games": { "p1": "somewes", "p2": "Corley", "tournament": "https://challonge.com/example", "match_index": "B2", "games": ["3-2", "0-3", "3-1"] },
+  "_example_dq": { "p1": "somewes", "p2": "Corley", "tournament": "https://challonge.com/example", "match_index": "C4", "dq": true },
   "matches": [
     {
       "p1": "zachaction",
@@ -72,6 +73,13 @@
       "tournament": "https://challonge.com/db20190406",
       "match_index": "Z",
       "score": "0-1"
+    },
+    {
+      "p1": "Milwaukee Ballers",
+      "p2": "Monkey Ball",
+      "tournament": "https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview",
+      "match_index": "C",
+      "dq": true
     }
   ]
 }

@@ -1171,6 +1171,20 @@ function buildCrosstable(t, standings) {
 
 // Converts a raw manual-matches.json entry into a normalised match object.
 function resolveManualMatch(m) {
+  if (m.dq) {
+    // Same shape a scraped DQ gets (see the standing.stats.score.value===-1
+    // branch below) -- null sets, isDQ true. matchScoreLabel/build_bracket
+    // already know to show "DQ" instead of a score for this shape.
+    return {
+      winnerName: m.p1,
+      loserName: m.p2,
+      winnerSets: null,
+      loserSets: null,
+      games: null,
+      isDQ: true,
+    };
+  }
+
   if (m.games) {
     let p1Wins = 0;
     let p2Wins = 0;
