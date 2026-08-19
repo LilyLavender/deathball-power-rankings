@@ -543,6 +543,15 @@
     "Mark": { "city": "Madison", "state": "WI" },
     "zach-aug-2026": { "city": "Madison", "state": "WI" },
     "Jeff": { "city": "Madison", "state": "WI" },
-    "Daxton": { "city": "Madison", "state": "WI" }
+    "Daxton": { "city": "Madison", "state": "WI" },
+    "unnamed-milwaukee-ballers-1": { "city": "Milwaukee", "state": "WI" },
+    "unnamed-milwaukee-ballers-2": { "city": "Milwaukee", "state": "WI" },
+    "unnamed-monkey-ball-1": { "city": "Madison", "state": "WI" },
+    "unnamed-monkey-ball-2": { "city": "Madison", "state": "WI" },
+    "unnamed-ball-wizards-1": { "city": "Madison", "state": "WI" },
+    "unnamed-ball-wizards-2": { "city": "Madison", "state": "WI" },
+    "unnamed-danjam-1": { "city": "Madison", "state": "WI" },
+    "unnamed-danjam-2": { "city": "Madison", "state": "WI" },
+    "unnamed-stormspray-2": { "city": "Madison", "state": "WI" }
   }
 }

@@ -23,7 +23,7 @@
     { "names": ["Acnorris0", "Amanda"], "canonical": "Acnorris0" },
     { "names": ["quantumpotato", "qp"], "canonical": "quantumpotato" },
     { "names": ["somewes", "wes", "wesmess", "Wess Mess", "Westley", "Mario boii", "Wizley", "we s", "Wes2"], "canonical": "somewes" },
-    { "names": ["SkitsSkoots", "Skoots", "TC$", "Mr_Skoots"], "canonical": "SkitsSkoots" },
+    { "names": ["SkitsSkoots", "Skoots", "TC$", "Mr_Skoots", "Torre"], "canonical": "SkitsSkoots" },
     { "names": ["Chan", "Chayan", "KQHTX", "DBHTX FOUNDER"], "canonical": "Chan" },
     { "names": ["Eduardo2332", "Eduardo Gabriel Martinez Banda", "Eduardo"], "canonical": "Eduardo" },
     { "names": ["Mosspassion", "nickyD"], "canonical": "Mosspassion" },
@@ -467,7 +467,7 @@
       "resolutions": [
         { "id": "tony-mpls", "canonical": "Tony", "tournaments": ["https://challonge.com/DBmpls"] },
         { "id": "tony-jax", "canonical": "Tony", "tournaments": ["https://challonge.com/dbjax"] },
-        { "id": "tony-aug-2026", "canonical": "Tony", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
+        { "id": "tony-aug-2026", "canonical": "Tony Hauber", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
       ]
     },
     {
