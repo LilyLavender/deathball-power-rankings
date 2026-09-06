@@ -21,7 +21,7 @@ Rebuilds `index.html`/`index.css`/`index.js`, `players.csv`, and every `tourname
 1. Add new tournaments to the bottom of `tours-all-challonge.md` or `tours-all-startgg.md`.
 2. Run:
 ```
-node data/players/add_tournaments.js
+.\add_tournaments.bat
 ```
 
 This command fetches tournaments via their url from either service, asks some player-related questions via a text-based wizard, and then aggregates all new data. You may need to add additional data to the many `.json` files after adding a tournament.
