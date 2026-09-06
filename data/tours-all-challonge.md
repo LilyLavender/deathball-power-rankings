@@ -118,3 +118,5 @@ https://challonge.com/sgdq2026_deathball
 https://challonge.com/fb7fg5mo
 https://challonge.com/qc26deathball
 https://challonge.com/qc26deathball2
+https://challonge.com/matsuricondb1
+https://challonge.com/matsuricondb2

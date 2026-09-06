@@ -535,6 +535,27 @@
         { "id": "evan-aug-2026", "canonical": "Evan", "tournaments": ["https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview"] }
       ],
       "default": { "id": "evan", "canonical": "Evan" }
+    },
+    {
+      "name": "Eli",
+      "resolutions": [
+        { "id": "eli-sep-2026", "canonical": "Eli", "tournaments": ["https://challonge.com/matsuricondb2"] }
+      ],
+      "default": { "id": "eli", "canonical": "Eli" }
+    },
+    {
+      "name": "Taylor",
+      "resolutions": [
+        { "id": "taylor-sep-2026", "canonical": "Taylor", "tournaments": ["https://challonge.com/matsuricondb2"] }
+      ],
+      "default": { "id": "taylor", "canonical": "Taylor" }
+    },
+    {
+      "name": "Kevin",
+      "resolutions": [
+        { "id": "kevin-sep-2026", "canonical": "Kevin", "tournaments": ["https://challonge.com/matsuricondb2"] }
+      ],
+      "default": { "id": "kevin", "canonical": "Kevin" }
     }
   ],
   "_hidden_example": "Raw names listed here are dropped entirely: matches involving them are skipped (not counted as a win/loss for either side), and they never appear as a player.",

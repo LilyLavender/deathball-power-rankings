@@ -1,0 +1,12 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Sam L,1,,,false,,Putt,0,,,false
+B,,Josh S,0,,,false,,Jakob C,1,,,false
+C,,dave_owns,1,,,false,,Sam L,0,,,false
+D,,Ben S,1,,,false,,Jakob C,0,,,false
+E,,dave_owns,1,,,false,,Ben S,0,,,false
+H,,Jakob C,1,,,false,,Putt,0,,,false
+I,,Sam L,1,,,false,,Josh S,0,,,false
+J,,Jakob C,0,,,false,,Sam L,1,,,false
+K,,Ben S,1,,,false,,Sam L,0,,,false
+F,,dave_owns,0,,,false,,Ben S,1,,,false
+G,,Ben S,1,,,false,,dave_owns,0,,,false

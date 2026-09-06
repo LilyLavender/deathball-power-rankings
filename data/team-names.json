@@ -5,5 +5,7 @@
 "Beanboiz": { "displayName": "Beanboiz", "players": [{ "id": "emanelk", "name": "emanelk" }, { "id": "dubrovnic", "name": "dubrovnic" }] },
 "Milwaukee Ballers": { "displayName": "Milwaukee Ballers", "players": [{ "id": "unnamed-milwaukee-ballers-1", "name": "Unnamed Player" }, { "id": "unnamed-milwaukee-ballers-2", "name": "Unnamed Player" }] },
 "Stormspray": { "displayName": "Stormspray", "players": [{ "id": "unnamed-stormspray-2", "name": "Unnamed Player" }, { "id": "spray kruger", "name": "Spray Kruger" }] },
-"Team Ramrod": { "displayName": "Team Ramrod", "players": [{ "id": "zachaction", "name": "zachaction" }, { "id": "evan-aug-2026", "name": "Evan" }] }
+"Team Ramrod": { "displayName": "Team Ramrod", "players": [{ "id": "zachaction", "name": "zachaction" }, { "id": "evan-aug-2026", "name": "Evan" }] },
+"8 Leg Society": { "displayName": "8 Leg Society", "players": [{ "id": "unnamed-8-leg-society-1", "name": "Unnamed Player" }, { "id": "unnamed-8-leg-society-2", "name": "Unnamed Player" }] },
+"12 Leg Society": { "displayName": "12 Leg Society", "players": [{ "id": "unnamed-12-leg-society-1", "name": "Unnamed Player" }, { "id": "unnamed-12-leg-society-2", "name": "Unnamed Player" }] }
 }
