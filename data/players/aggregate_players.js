@@ -1627,6 +1627,10 @@ function buildPlayerRows(players, tournamentMetaByUrl, lastActiveById) {
         // own schema documents `country` as optional, defaulting to United
         // States when omitted (see player-info.json's _schema).
         country: info.country || 'United States',
+        // Location dropdown filter value -- state/province abbreviation when
+        // known, else the country name for players outside the US/Canada
+        // (who have no state/province at all), else '' (unknown location).
+        locationKey: info.state || (info.country && info.country !== 'United States' ? info.country : ''),
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
           label,
@@ -1658,6 +1662,7 @@ function buildPlayerMeta(id, p, lastActiveById) {
     locationSort: [info.state || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
     state: info.state || '',
     country: info.country || '',
+    locationKey: info.state || (info.country && info.country !== 'United States' ? info.country : ''),
     color: info.color || '',
     lastActive: lastActiveById ? formatMonthYearHuman(lastActiveById.get(id)) : '',
   };
@@ -2203,7 +2208,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       .map((t) => `<a href="tournaments/${escapeHtml(t.slug)}.html"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
       .join(', ');
     const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
-    return `<tr${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
+    return `<tr${p.locationKey ? ` data-state="${escapeHtml(p.locationKey)}"` : ''}>
       <td>${nameCell}</td>
       <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${p.flag ? `<img class="loc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : ''}${escapeHtml(p.location)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
@@ -2285,7 +2290,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
 
   const rankingTableRows = rankingRows.map((p, i) => {
     const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
-    return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}${p.uncertain ? ' class="uncertain"' : ''}>
+    return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.locationKey ? ` data-state="${escapeHtml(p.locationKey)}"` : ''}${p.uncertain ? ' class="uncertain"' : ''}>
       <td class="rank-num">${i + 1}</td>
       <td>${nameCell}</td>
       <td class="numeric">${Math.round(p.r)}</td>
@@ -2306,7 +2311,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
     const nameSpan = href
       ? `<a class="prc-name" href="${escapeHtml(href)}" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</a>`
       : `<span class="prc-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>`;
-    return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.state ? ` data-state="${escapeHtml(p.state)}"` : ''}>
+    return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.locationKey ? ` data-state="${escapeHtml(p.locationKey)}"` : ''}>
 <div class="prc-top">
   <span class="prc-rank"><span class="rank-plain${rankDeltaState(p) ? ` rank-plain-${rankDeltaState(p)}` : ''}">${i + 1}</span>${rankDeltaHtml(p)}</span>${nameSpan}
   ${flagImg}
