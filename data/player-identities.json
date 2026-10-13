@@ -193,7 +193,7 @@
       "name": "Bryan",
       "resolutions": [
         { "id": "bryan-free-play", "canonical": "Bryan", "tournaments": ["https://fpaplayers.challonge.com/cusnp6yj"] },
-        { "id": "bryan-2024-2026", "canonical": "Bryan M", "tournaments": ["https://challonge.com/w31sc2d1", "https://challonge.com/8m265y1c", "https://challonge.com/4afozcud", "https://challonge.com/9yxjnhn"] }
+        { "id": "bryan-2024-2026", "canonical": "Bryan M", "tournaments": ["https://challonge.com/w31sc2d1", "https://challonge.com/8m265y1c", "https://challonge.com/4afozcud", "https://challonge.com/9yxjnhn", "https://challonge.com/amt63j4j"] }
       ]
     },
     {
@@ -394,7 +394,8 @@
         { "id": "matt-battle-of-cq", "canonical": "Matt", "tournaments": ["https://challonge.com/dbcq1"] },
         { "id": "matt-free-play", "canonical": "Matt", "tournaments": ["https://fpaplayers.challonge.com/l2xp49u5", "https://fpaplayers.challonge.com/cjyk76li"] },
         { "id": "matt-may-july-2019", "canonical": "Matthew", "tournaments": ["https://challonge.com/dbcha20190430", "https://challonge.com/dbcha20190514", "https://challonge.com/dbcha20190724"] },
-        { "id": "matt-dbjax5", "canonical": "Matt", "tournaments": ["https://challonge.com/9eis0ou0"] }
+        { "id": "matt-dbjax5", "canonical": "Matt", "tournaments": ["https://challonge.com/9eis0ou0"] },
+        { "id": "matt-sep-2026", "canonical": "Matt", "tournaments": ["https://challonge.com/amt63j4j"] }
       ]
     },
     {
@@ -441,7 +442,8 @@
         { "id": "sam-beerandball", "canonical": "Sam", "tournaments": ["https://challonge.com/beerandball"] },
         { "id": "sam-gdc", "canonical": "Sam", "tournaments": ["https://challonge.com/dbgdc"] },
         { "id": "sam-shad5", "canonical": "Sam", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview"] },
-        { "id": "samueljh", "canonical": "SamuelJH", "tournaments": ["https://challonge.com/fb7fg5mo"] }
+        { "id": "samueljh", "canonical": "SamuelJH", "tournaments": ["https://challonge.com/fb7fg5mo"] },
+        { "id": "sam-sep-2026", "canonical": "Sam", "tournaments": ["https://challonge.com/amt63j4j"] }
       ]
     },
     {
@@ -556,6 +558,13 @@
         { "id": "kevin-sep-2026", "canonical": "Kevin", "tournaments": ["https://challonge.com/matsuricondb2"] }
       ],
       "default": { "id": "kevin", "canonical": "Kevin" }
+    },
+    {
+      "name": "Nate",
+      "resolutions": [
+        { "id": "nate-sep-2026", "canonical": "Nate", "tournaments": ["https://challonge.com/amt63j4j"] }
+      ],
+      "default": { "id": "nate", "canonical": "nate" }
     }
   ],
   "_hidden_example": "Raw names listed here are dropped entirely: matches involving them are skipped (not counted as a win/loss for either side), and they never appear as a player.",

@@ -132,6 +132,8 @@
     "https://challonge.com/qc26deathball2": { "name": "QuakeCon 2026: DeathBall 2v2", "date": "2026-08-07", "order": 1, "city": "Grapevine", "state": "TX", "location": "QuakeCon" },
     "https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview": { "name": "Inaugural 4 Player @ I/O", "city": "Madison", "state": "WI", "location": "I/O Arcade Bar" },
     "https://challonge.com/matsuricondb1": { "city": "Columbus", "state": "OH", "location": "Matsuricon" },
-    "https://challonge.com/matsuricondb2": { "name": "Matsuricon 2026 DeathBall 2v2", "city": "Columbus", "state": "OH", "location": "Matsuricon" }
+    "https://challonge.com/matsuricondb2": { "name": "Matsuricon 2026 DeathBall 2v2", "city": "Columbus", "state": "OH", "location": "Matsuricon" },
+    "https://challonge.com/amt63j4j": { "name": "Final Denton DeathBall 09/10", "date": "2026-09-10", "city": "Denton", "state": "TX" },
+    "https://www.start.gg/tournament/detroit-slam-dance-ii-electric-snake-boogaloo/events/deathball/brackets/2397524/3456218/overview": { "date": "2026-09-13", "city": "Warren", "state": "MI", "location": "Detroit Slam Dance" }
   }
 }

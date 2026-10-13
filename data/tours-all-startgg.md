@@ -7,3 +7,4 @@ https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youma2025/event
 https://www.start.gg/tournament/yomi-158/events/wednesday-unwind-deathball/brackets/1745566/2590463/overview
 https://www.start.gg/tournament/yomi-162/events/wednesday-unwind-deathball-free-to-join/brackets/1773284/2627178/overview
 https://www.start.gg/tournament/io-4player-deathball-cab/events/4-player-tournament/brackets/2371889/3422948/overview
+https://www.start.gg/tournament/detroit-slam-dance-ii-electric-snake-boogaloo/events/deathball/brackets/2397524/3456218/overview

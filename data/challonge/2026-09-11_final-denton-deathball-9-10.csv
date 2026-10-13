@@ -1,0 +1,22 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Bryan,1,,,false,,Nate,0,,,false
+B,,Matt,1,,,false,,Spoom,0,,,false
+C,,Chris S,0,,,false,,Vern,1,,,false
+D,,Sam,0,,,false,,Bryan,1,,,false
+E,,Edwinn,0,,,false,,Luis,1,,,false
+F,,Kylie,1,,,false,,Matt,0,,,false
+G,,Kirt,0,,,false,,Vern,1,,,false
+H,,Bryan,,,,false,,Luis,,,,false
+I,,Kylie,,,,false,,Vern,,,,false
+J,,,,,,false,,,,,,false
+M,,Kirt,,,,false,,Nate,,,,false
+N,,Edwinn,,,,false,,Spoom,,,,false
+O,,Sam,1,,,false,,Chris S,0,,,false
+P,,Matt,,,,false,,,,,,false
+Q,,,,,,false,,Sam,,,,false
+R,,,,,,false,,,,,,false
+S,,,,,,false,,,,,,false
+T,,,,,,false,,,,,,false
+U,,,,,,false,,,,,,false
+K,,,,,,false,,,,,,false
+L,,,,,,false,,,,,,false

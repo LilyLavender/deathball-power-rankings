@@ -2,6 +2,7 @@
   "_schema": "Per-player metadata, keyed by the player's canonical display name (after alias/split resolution in player-identities.json — check players.csv's Player column for the exact string to use as the key). `city` (optional) and `state` are the player's home location. `country` (optional) defaults to United States when omitted, but set it explicitly when the player is not from the US. `color` (optional) overrides the deterministic per-player accent color on the Power Rankings grid cards — set to \"green\" or \"purple\"; omit to keep the default hash-based color. When a display name is shared by more than one distinct person (because of a split in player-identities.json — e.g. \"Joe\" or \"Ethan\"), key the entry by that split resolution's backend `id` instead (see player-identities.json) so the info attaches to the right person only.",
   "_example": "\"Corley\": { \"city\": \"Denton\", \"state\": \"TX\", \"country\": \"United States\" }",
   "players": {
+    "333": { "city": "Chicago", "state": "IL" },
     "#1TechBryan": { "city": "Dallas/Fort Worth", "state": "TX", "country": "United States" },
     "30Aces": { "state": "OH", "country": "United States" },
     "aaron-wednesday-unwind": { "city": "Dallas/Fort Worth", "state": "TX", "country": "United States" },
@@ -554,6 +555,27 @@
     "unnamed-danjam-1": { "city": "Madison", "state": "WI" },
     "unnamed-danjam-2": { "city": "Madison", "state": "WI" },
     "unnamed-stormspray-2": { "city": "Madison", "state": "WI" },
-    "Putt": { "city": "Middletown", "state": "OH" }
+    "Putt": { "city": "Middletown", "state": "OH" },
+    "sam-sep-2026": { "city": "Denton", "state": "TX" },
+    "Kirt": { "city": "Denton", "state": "TX" },
+    "Edwinn": { "city": "Denton", "state": "TX" },
+    "Luis": { "city": "Denton", "state": "TX" },
+    "Chris S": { "city": "Denton", "state": "TX" },
+    "matt-sep-2026": { "city": "Denton", "state": "TX" },
+    "nate-sep-2026": { "city": "Denton", "state": "TX" },
+    "Ivvy": { "state": "MI" },
+    "PartyPoison": { "city": "Chicago", "state": "IL" },
+    "tifftuuga": { "city": "Chicago", "state": "IL" },
+    "burnerphone": { "city": "Birmingham", "state": "MI" },
+    "Diesel+": { "city": "North Aurora", "state": "IL" },
+    "Zed": { "city": "Toronto", "state": "ON", "country": "Canada" },
+    "Coop Doop": { "city": "Universal City", "state": "TX" },
+    "Matteo": { "city": "Oakville", "state": "ON", "country": "Canada" },
+    "Fredo": { "city": "Chicago", "state": "IL" },
+    "Italdan": { "country": "Canada" },
+    "MrPart2": { "city": "Chicago", "state": "IL" },
+    "JRose": { "city": "Chicago", "state": "IL" },
+    "Orochi Tom Cruise": { "city": "Chicago", "state": "IL" },
+    "Moe": { "city": "Toronto", "state": "ON", "country": "Canada" }
   }
 }
