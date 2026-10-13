@@ -77,7 +77,7 @@
     <div class="chart-label chart-label-date-start">November 2023</div>
 <div class="chart-label chart-label-date-end">December 2024</div>
     <div class="chart-label chart-label-current" style="right:1.94%; top:17.95%">1384</div>
-    <div class="chart-tooltip" hidden></div>
+    <div class="chart-tooltip" data-show="false"></div>
   </div>
 </div>
   </div>
@@ -137,7 +137,13 @@
     btn.addEventListener('click', () => {
       const list = document.getElementById(btn.dataset.list);
       const hiddenItems = [...list.children].filter((li) => li.hidden).slice(0, 10);
-      hiddenItems.forEach((li) => { li.hidden = false; });
+      hiddenItems.forEach((li, i) => {
+        li.hidden = false;
+        li.classList.add('t-stagger-line');
+        li.style.transitionDelay = (i * 40) + 'ms';
+      });
+      void list.offsetHeight;
+      hiddenItems.forEach((li) => { li.classList.add('is-shown'); });
       if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
     });
   });
@@ -156,18 +162,28 @@
     const svg = wrap.querySelector('.rating-chart');
     if (!tooltip || !svg) return;
     const show = (point) => {
+      const wasShown = tooltip.dataset.show === 'true';
       const wrapRect = wrap.getBoundingClientRect();
       const pointRect = point.getBoundingClientRect();
       tooltip.innerHTML = '<strong>' + point.dataset.label + '</strong><br>' +
         point.dataset.date + '<br>Rating ' + point.dataset.rating +
         (point.dataset.rank ? ' &middot; Rank #' + point.dataset.rank : '');
-      tooltip.hidden = false;
       let left = (pointRect.left - wrapRect.left) + (pointRect.width / 2);
       left = Math.max(60, Math.min(left, wrapRect.width - 60));
-      tooltip.style.left = left + 'px';
-      tooltip.style.top = (pointRect.top - wrapRect.top) + 'px';
+      const top = pointRect.top - wrapRect.top;
+      if (!wasShown) {
+        tooltip.style.transition = 'none';
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+        void tooltip.offsetWidth;
+        tooltip.style.transition = '';
+      } else {
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      }
+      tooltip.dataset.show = 'true';
     };
-    const hide = () => { tooltip.hidden = true; };
+    const hide = () => { tooltip.dataset.show = 'false'; };
     const points = [...svg.querySelectorAll('.chart-point')];
     points.forEach((point) => {
       point.addEventListener('focus', () => show(point));

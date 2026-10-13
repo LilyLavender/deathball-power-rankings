@@ -872,18 +872,32 @@
     const rankDeltaToggle = panel.querySelector('.rank-delta-toggle');
     document.querySelectorAll('.download-btn').forEach((downloadBtn) => {
       const downloadLabel = downloadBtn.querySelector('.download-btn-label');
+      const iconSlot = downloadBtn.querySelector('.download-icon-slot');
+      const check = downloadBtn.querySelector('.t-success-check');
       downloadBtn.addEventListener('click', async () => {
         if (downloadBtn.disabled) return;
         downloadBtn.disabled = true;
         downloadBtn.classList.remove('failed');
         downloadBtn.classList.add('loading');
+        if (iconSlot) iconSlot.dataset.state = 'loading';
         if (downloadLabel) downloadLabel.textContent = 'Preparing…';
         try {
           await downloadRankingsImage(panel);
           if (downloadLabel) downloadLabel.textContent = 'Download Top 100';
+          if (iconSlot) iconSlot.dataset.state = 'success';
+          if (check) {
+            check.dataset.state = 'out';
+            void check.offsetWidth;
+            check.dataset.state = 'in';
+          }
+          setTimeout(() => {
+            if (iconSlot) iconSlot.dataset.state = 'idle';
+            if (check) check.dataset.state = 'out';
+          }, 1400);
         } catch (err) {
           downloadBtn.classList.add('failed');
           if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
+          if (iconSlot) iconSlot.dataset.state = 'idle';
         } finally {
           downloadBtn.disabled = false;
           downloadBtn.classList.remove('loading');

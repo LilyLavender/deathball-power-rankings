@@ -145,6 +145,55 @@ function stripJsComments(code) {
 function writeCss() {
   const css = `@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
 
+/* Shared motion tokens for the transition work below (tab/panel fades,
+   the AKA/Options accordions, the chart tooltip, the download button's
+   icon-swap + success check). Values are picked to sit close to the
+   150-220ms plain-"ease" durations already used across the file (tab
+   underline, view-toggle pill, etc.) so new motion blends in rather than
+   feeling like a different design language. */
+:root {
+  --duration-quick: 150ms;
+  --duration-fast: 250ms;
+  --duration-very-slow: 500ms;
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: ease-in-out;
+  --ease-out: ease-out;
+  --blur-small: 2px;
+  --acc-expand: 250ms;
+  --acc-collapse: 250ms;
+  --acc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --icon-swap-dur: 250ms;
+  --icon-swap-blur: 2px;
+  --icon-swap-start-scale: 0.25;
+  --icon-swap-ease: ease-in-out;
+  --tt-in-dur: 150ms;
+  --tt-out-dur: 50ms;
+  --tt-scale: 0.98;
+  --tt-delay: 80ms;
+  --tt-in-ease: ease-out;
+  --tt-out-ease: ease-out;
+  --tt-move-dur: 160ms;
+  --tt-move-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-opacity-dur: 400ms;
+  --check-rotate-dur: 400ms;
+  --check-rotate-from: 80deg;
+  --check-bob-dur: 400ms;
+  --check-y-amount: 10px;
+  --check-blur-dur: 400ms;
+  --check-blur-from: 6px;
+  --check-path-dur: 300ms;
+  --check-path-delay: 80ms;
+  --check-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease-opacity: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease-rotate: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease-bob: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --check-ease-path: cubic-bezier(0.22, 1, 0.36, 1);
+  --stagger-dur: 500ms;
+  --stagger-distance: 12px;
+  --stagger-stagger: 40ms;
+  --stagger-blur: 3px;
+  --stagger-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 /* display:flex + min-height:100vh so .site-footer's margin-top:auto (below)
@@ -176,8 +225,20 @@ a:hover { text-decoration: underline; }
    one. */
 .tab-underline { position: absolute; bottom: -1px; height: 2px; background: #3eff8b; transition: left 220ms ease, width 220ms ease; }
 .tab-panel { display: none; }
-.tab-panel.active { display: block; }
+/* Going from display:none to block re-triggers a CSS animation every time
+   (unlike a transition, which needs both states rendered) -- so switching
+   tabs plays this fade-in fresh on each activation with no JS involved. */
+.tab-panel.active { display: block; animation: t-panel-fade-in var(--duration-fast) var(--ease-in-out); }
+@keyframes t-panel-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .tab-panel.active { animation: none !important; }
+}
 .tab-controls { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+/* display:contents on desktop so #rankings-options-panel's children (the
+   view-toggle, filter selects, download button) stay direct flex items of
+   the .tab-controls row above -- this wrapper only becomes a real box (the
+   accordion's collapsible content) inside the mobile media query below. */
+.rankings-options-inner { display: contents; }
 .tab-controls label { color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem; }
 /* appearance:none drops the native arrow entirely, so a chevron is drawn as
    a background image instead (color-scheme:dark keeps the native option
@@ -218,22 +279,75 @@ a:hover { text-decoration: underline; }
 .download-btn[hidden] { display: none; }
 .download-btn:disabled { cursor: default; opacity: 0.85; }
 /* Spinner swaps in for .download-icon while generating -- see the
-   downloadBtn click handler in initPanel/enableViewToggle, which toggles
-   .loading and disables the button for the duration so a second click
-   can't kick off a concurrent export mid-generation. Path is a ~300 degree
-   open ring (not a full circle) so the rotation itself reads as motion. */
+   downloadBtn click handler in enableViewToggle, which toggles .loading
+   (and briefly .success once the export finishes) and disables the button
+   for the duration so a second click can't kick off a concurrent export
+   mid-generation. Path is a ~300 degree open ring (not a full circle) so
+   the rotation itself reads as motion. .download-icon/.download-spinner/
+   .download-check are wrapped in a shared .download-icon-slot grid cell
+   (see downloadIconSlotHtml in aggregate_players.js) so switching between
+   them cross-fades instead of popping -- the slot's data-state
+   ('idle'/'loading'/'success') picks which one shows. The bare, unwrapped
+   .csv-download-btn instances (synchronous exports that never enter a
+   loading state) keep the plain display:none spinner below untouched. */
 .download-spinner { display: none; flex-shrink: 0; animation: download-spin 0.7s linear infinite; }
-.download-btn.loading .download-icon { display: none; }
-.download-btn.loading .download-spinner { display: block; }
 @keyframes download-spin { to { transform: rotate(360deg); } }
+.download-icon-slot { position: relative; display: inline-grid; }
+.download-icon-slot > * { grid-area: 1 / 1; }
+.download-icon-slot .download-icon,
+.download-icon-slot .download-spinner {
+  display: block;
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+  transition: opacity var(--icon-swap-dur) var(--icon-swap-ease), filter var(--icon-swap-dur) var(--icon-swap-ease), transform var(--icon-swap-dur) var(--icon-swap-ease);
+}
+.download-icon-slot[data-state="idle"] .download-icon,
+.download-icon-slot[data-state="loading"] .download-spinner {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+.download-check { color: #3eff8b; }
+@media (prefers-reduced-motion: reduce) {
+  .download-icon-slot .download-icon,
+  .download-icon-slot .download-spinner { transition: none !important; }
+}
 .download-btn-boxed { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #111; border: 1px solid #333; border-radius: 3px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.9rem; cursor: pointer; transition: border-color 150ms, color 150ms; }
 .download-btn-boxed:hover { border-color: #3eff8b; color: #3eff8b; }
 .download-btn-boxed.failed { border-color: #ff5c5c; color: #ff5c5c; }
-.download-btn-boxed .download-icon, .download-btn-boxed .download-spinner { width: 14px; height: 14px; flex-shrink: 0; }
+.download-btn-boxed .download-icon, .download-btn-boxed .download-spinner, .download-btn-boxed .download-check { width: 14px; height: 14px; flex-shrink: 0; }
 .download-btn-icon { display: none; align-items: center; justify-content: center; flex-shrink: 0; background: none; border: none; padding: 0; margin: 0; color: #aaa; cursor: pointer; transition: color 150ms; }
 .download-btn-icon:hover { color: #3eff8b; }
 .download-btn-icon.failed { color: #ff5c5c; }
-.download-btn-icon .download-icon, .download-btn-icon .download-spinner { width: 20px; height: 20px; flex-shrink: 0; }
+.download-btn-icon .download-icon, .download-btn-icon .download-spinner, .download-btn-icon .download-check { width: 20px; height: 20px; flex-shrink: 0; }
+/* Success check: plays once when a PNG export finishes (see the downloadBtn
+   click handler), stacked in the same .download-icon-slot cell as the
+   other two icons above. Durations/distances are scaled down from the
+   transitions-dev catalog defaults (500ms/40px) to suit a 14-20px button
+   icon instead of a full-size confirmation graphic. */
+.t-success-check { display: inline-block; transform-origin: center; opacity: 0; will-change: transform, opacity, filter; }
+.t-success-check svg { display: block; overflow: visible; width: 100%; height: 100%; }
+.t-success-check svg path { stroke-dasharray: 15; stroke-dashoffset: 15; }
+.t-success-check[data-state="in"] {
+  animation:
+    t-check-fade   var(--check-opacity-dur) var(--check-ease-opacity) forwards,
+    t-check-rotate var(--check-rotate-dur)  var(--check-ease-rotate)  forwards,
+    t-check-blur   var(--check-blur-dur)    var(--check-ease-out)     forwards,
+    t-check-bob    var(--check-bob-dur)     var(--check-ease-bob)     forwards;
+}
+.t-success-check[data-state="in"] svg path {
+  animation: t-check-draw var(--check-path-dur) var(--check-ease-path) var(--check-path-delay, 0ms) forwards;
+}
+@keyframes t-check-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes t-check-rotate { from { transform: rotate(var(--check-rotate-from)); } to { transform: rotate(0deg); } }
+@keyframes t-check-blur { from { filter: blur(var(--check-blur-from)); } to { filter: blur(0); } }
+@keyframes t-check-bob { from { translate: 0 var(--check-y-amount); } to { translate: 0 0; } }
+@keyframes t-check-draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .t-success-check { animation: none !important; opacity: 1; }
+  .t-success-check svg path { animation: none !important; stroke-dashoffset: 0 !important; }
+}
 .map-legend { display: flex; align-items: center; gap: 0.5rem; color: #888; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .map-legend-swatch { display: inline-block; width: 90px; height: 10px; border-radius: 2px; background: linear-gradient(to right, hsl(150, 70%, 16%), hsl(150, 70%, 60%)); border: 1px solid #333; }
 /* Fixed 2:1 column split (not flex-grow based) so the map's box never
@@ -342,7 +456,16 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .tourney-loc { display: flex; align-items: center; }
 .uncertain { opacity: 0.45; }
 .filter-dim { opacity: 0.45; }
-.pr-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+/* The Grid/Table switch already animates its own sliding pill indicator
+   (.view-toggle-indicator); without this, the content underneath it used to
+   pop instantly on the same click, undercutting that motion. Reuses the
+   same display:none-to-block re-trigger trick as .tab-panel.active above --
+   scoped to #rankings-tab specifically so it never touches other tables. */
+.pr-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; animation: t-panel-fade-in var(--duration-fast) var(--ease-in-out); }
+#rankings-tab table { animation: t-panel-fade-in var(--duration-fast) var(--ease-in-out); }
+@media (prefers-reduced-motion: reduce) {
+  .pr-grid, #rankings-tab table { animation: none !important; }
+}
 .pr-card { background: #0f0f0f; border: 1px solid #222; border-radius: 0; padding: 3px 6px; display: flex; flex-direction: column; gap: 2px; min-width: 0; transition: border-color 150ms, background 150ms; user-select: none; }
 .pr-card.card-green { background: radial-gradient(ellipse at 20% 0%, rgba(62,255,139,0.22) 0%, #0f0f0f 65%); }
 .pr-card.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(176,79,255,0.22) 0%, #0f0f0f 65%); }
@@ -597,8 +720,42 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 /* Positioned in JS against the inner box's own rect (not the viewport), so
    it tracks correctly regardless of how the SVG's preserveAspectRatio scales
    the underlying viewBox coordinates to the box's actual rendered size. */
-.chart-tooltip { position: absolute; transform: translate(-50%, -100%) translateY(-10px); background: #111; border: 1px solid #333; border-radius: 3px; padding: 0.4rem 0.6rem; font-size: 0.8rem; line-height: 1.4; color: #ddd; white-space: nowrap; pointer-events: none; z-index: 2; }
+/* Tooltip open/close, adapted from the transitions-dev catalog: default
+   rule (data-show="false"/absent) controls the LEAVE state -- no delay, so
+   hiding plays immediately -- while the [data-show="true"] rule adds the
+   appear delay. left/top always transition on --tt-move-dur regardless of
+   data-show, so the bubble travels smoothly between points instead of
+   popping to the next one (see the mousemove nearest-point handler in
+   aggregate_players.js, which now snaps position only on the first show
+   after being hidden). scale is a standalone property (not part of the
+   positioning transform above it) so the pop-in doesn't fight the
+   translate used to anchor the tooltip above its point. */
+.chart-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%) translateY(-10px);
+  scale: var(--tt-scale);
+  transform-origin: 50% 100%;
+  background: #111; border: 1px solid #333; border-radius: 3px; padding: 0.4rem 0.6rem; font-size: 0.8rem; line-height: 1.4; color: #ddd; white-space: nowrap; pointer-events: none; z-index: 2;
+  opacity: 0;
+  transition:
+    opacity var(--tt-out-dur) var(--tt-out-ease),
+    scale   var(--tt-out-dur) var(--tt-out-ease),
+    left    var(--tt-move-dur) var(--tt-move-ease),
+    top     var(--tt-move-dur) var(--tt-move-ease);
+}
+.chart-tooltip[data-show="true"] {
+  opacity: 1;
+  scale: 1;
+  transition:
+    opacity var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+    scale   var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+    left    var(--tt-move-dur) var(--tt-move-ease),
+    top     var(--tt-move-dur) var(--tt-move-ease);
+}
 .chart-tooltip strong { color: #3eff8b; }
+@media (prefers-reduced-motion: reduce) {
+  .chart-tooltip { transition: none !important; }
+}
 /* Standings and the bracket/round list side by side — a narrow standings
    list otherwise leaves most of the page empty next to it. The bracket
    column has no fixed width (min-width:0 lets it shrink below its content's
@@ -649,6 +806,26 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .swiss-match-card .score-dq { color: #ff5e5e; }
 .standings-list { list-style: none; margin: 0; padding: 0; counter-reset: none; }
 .standings-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid #161616; cursor: pointer; transition: background-color 150ms ease; }
+/* Texts reveal, adapted for a batch of list rows rather than a couple of
+   headline lines: the "Show more" button (see its click handler below)
+   marks each newly-revealed <li> with .t-stagger-line and an inline
+   transition-delay per its index in the batch, then adds .is-shown a frame
+   later so they rise in with a staggered blur instead of popping in as a
+   block the instant [hidden] is cleared. */
+.standings-list li.t-stagger-line {
+  opacity: 0;
+  transform: translateY(var(--stagger-distance));
+  filter: blur(var(--stagger-blur));
+  transition: opacity var(--stagger-dur) var(--stagger-ease), transform var(--stagger-dur) var(--stagger-ease), filter var(--stagger-dur) var(--stagger-ease), background-color 150ms ease;
+}
+.standings-list li.t-stagger-line.is-shown {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .standings-list li.t-stagger-line { transition: background-color 150ms ease !important; }
+}
 .standings-rank { font-family: 'Orbitron', monospace; color: #666; font-weight: 900; min-width: 2rem; flex-shrink: 0; }
 .standings-list li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standings-record { color: #777; font-variant-numeric: tabular-nums; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
@@ -802,7 +979,16 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .map-sidebar-colhead span.sorted-asc, .map-sidebar-colhead span.sorted-desc { color: #3eff8b; }
 .map-sidebar-colhead span.sorted-asc::after { content: " \\25B2"; }
 .map-sidebar-colhead span.sorted-desc::after { content: " \\25BC"; }
-.map-sidebar-list li { display: grid; gap: 0.5rem; }
+/* renderMapSidebar (see writeJs) rebuilds this list from scratch (innerHTML
+   = '' then re-append) on every region click and every Players/Tournaments
+   toggle, so a freshly-inserted <li> always plays this fade-in -- no JS
+   needed, same display/insertion-triggers-animation mechanism as
+   .tab-panel.active above. Opacity-only (no stagger) since the whole list
+   swaps together, unlike the .t-stagger-line batch reveal on player pages. */
+.map-sidebar-list li { display: grid; gap: 0.5rem; animation: t-panel-fade-in var(--duration-fast) var(--ease-in-out); }
+@media (prefers-reduced-motion: reduce) {
+  .map-sidebar-list li { animation: none !important; }
+}
 .map-sidebar-list li > span:not(:first-child) { text-align: right; margin-left: 0; }
 /* The map-cols-* class is toggled onto both the header div (which is
    itself the grid, so this rule applies directly) and the <ol> (which
@@ -875,8 +1061,24 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .tab-button { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid #161616; margin-bottom: 0; }
   .tab-external-link { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid #161616; margin-bottom: 0; margin-left: 0; }
   .tab-underline { display: none; }
-  .tabs-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 40; }
-  .tabs-backdrop.mobile-open { display: block; }
+  /* Fades in/out alongside the .tabs drawer's own transform slide (see
+     .tabs above) instead of popping on/off -- visibility (not display) so
+     it can transition, with the delayed visibility flip on the way out
+     keeping it non-interactive/invisible-to-screen-readers once faded. */
+  .tabs-backdrop {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--duration-fast) var(--ease-smooth-out), visibility 0s linear var(--duration-fast);
+  }
+  .tabs-backdrop.mobile-open {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--duration-fast) var(--ease-smooth-out), visibility 0s linear 0s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tabs-backdrop { transition: none !important; }
+  }
 
   /* Swap which download button is visible -- the boxed one (inside the
      Power Rankings tab-controls row) only makes sense on desktop; mobile
@@ -918,7 +1120,20 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .rankings-options-toggle:hover, .rankings-options-toggle.active { border-color: #3eff8b; color: #3eff8b; }
   .rankings-options-caret { width: 9px; height: 6px; transition: transform 150ms ease; }
   .rankings-options-toggle.active .rankings-options-caret { transform: rotate(180deg); }
-  #rankings-options-panel { display: none; }
+  /* Accordion expand: the panel itself is the grid-template-rows 0fr/1fr
+     track (no JS height measuring, any content height animates cleanly);
+     .rankings-options-inner is the overflow:hidden clipping box that also
+     owns the real 2-column layout and its own opacity/blur fade so the
+     controls don't pop in the instant the track finishes growing. */
+  #rankings-options-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--acc-collapse) var(--acc-ease);
+  }
+  #rankings-options-panel.options-open {
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--acc-expand) var(--acc-ease);
+  }
   /* 2-column grid instead of one long wrapping row of controls -- the
      Grid/Table and Hide/Show-delta pills naturally land in row 1 (one per
      column), then the four filter selects form a clean 2x2 grid below them
@@ -926,11 +1141,25 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
      justify-items:stretch fills each pill's own column width instead of
      leaving it at its cramped intrinsic size -- its two buttons then split
      that width evenly (flex: 1 1 0) rather than sizing to their own text. */
-  #rankings-options-panel.options-open { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem 0.75rem; align-items: end; }
-  #rankings-options-panel.options-open .view-toggle,
-  #rankings-options-panel.options-open .rank-delta-toggle { width: 100%; }
-  #rankings-options-panel.options-open .view-btn,
-  #rankings-options-panel.options-open .delta-btn { flex: 1 1 0; text-align: center; white-space: nowrap; padding-left: 0.4rem; padding-right: 0.4rem; }
+  .rankings-options-inner {
+    display: grid;
+    overflow: hidden;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem 0.75rem;
+    align-items: end;
+    opacity: 0;
+    filter: blur(var(--blur-small));
+    transition: opacity var(--acc-collapse) var(--acc-ease), filter var(--acc-collapse) var(--acc-ease);
+  }
+  #rankings-options-panel.options-open .rankings-options-inner {
+    opacity: 1;
+    filter: blur(0);
+    transition: opacity var(--acc-expand) var(--acc-ease), filter var(--acc-expand) var(--acc-ease);
+  }
+  .rankings-options-inner .view-toggle,
+  .rankings-options-inner .rank-delta-toggle { width: 100%; }
+  .rankings-options-inner .view-btn,
+  .rankings-options-inner .delta-btn { flex: 1 1 0; text-align: center; white-space: nowrap; padding-left: 0.4rem; padding-right: 0.4rem; }
   /* Override the desktop [hidden]{display:none} rule above -- on mobile,
      switching to Table view should leave this pill's grid cell empty
      (invisible but still occupying its row) instead of collapsing it and
@@ -939,8 +1168,11 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
      [hidden] note elsewhere in this file), which otherwise wins over any
      non-important rule regardless of selector specificity or source order. */
   .rank-delta-toggle[hidden] { display: flex !important; visibility: hidden; }
-  #rankings-options-panel.options-open label { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
-  #rankings-options-panel.options-open label select { width: 100%; }
+  .rankings-options-inner label { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  .rankings-options-inner label select { width: 100%; }
+  @media (prefers-reduced-motion: reduce) {
+    #rankings-options-panel, .rankings-options-inner { transition: none !important; }
+  }
 
   /* Player page: name + AKA toggle share a row; the header matching
      "Historical Rating" only shows here since the grid is the first section
@@ -957,11 +1189,40 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .aka-toggle:hover, .aka-toggle.active { color: #3eff8b; }
   .aka-caret { width: 9px; height: 6px; flex-shrink: 0; transition: transform 150ms ease; }
   .aka-toggle.active .aka-caret { transform: rotate(180deg); }
-  /* Same -1rem trick .tourney-meta uses below to pull up close under h1's
-     own large default margin -- keeps the title-to-AKA gap the same size as
-     the title-to-location gap on a page with no AKA line at all. */
-  .aka-content { margin: -1rem 0 0; color: #888; font-size: 0.85rem; }
-  .aka-content.open { display: block; }
+  /* Accordion expand, same technique as #rankings-options-panel above:
+     .aka-content is the grid-template-rows 0fr/1fr track (kept as the
+     element .open toggles on, so the .aka-content.open + .tourney-meta
+     sibling-spacing rule below still applies unchanged); .aka-content-inner
+     clips overflow and carries its own opacity/blur fade. Same -1rem trick
+     .tourney-meta uses below to pull up close under h1's own large default
+     margin -- keeps the title-to-AKA gap the same size as the
+     title-to-location gap on a page with no AKA line at all. */
+  .aka-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin: -1rem 0 0;
+    transition: grid-template-rows var(--acc-collapse) var(--acc-ease);
+  }
+  .aka-content.open {
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--acc-expand) var(--acc-ease);
+  }
+  .aka-content-inner {
+    overflow: hidden;
+    color: #888;
+    font-size: 0.85rem;
+    opacity: 0;
+    filter: blur(var(--blur-small));
+    transition: opacity var(--acc-collapse) var(--acc-ease), filter var(--acc-collapse) var(--acc-ease);
+  }
+  .aka-content.open .aka-content-inner {
+    opacity: 1;
+    filter: blur(0);
+    transition: opacity var(--acc-expand) var(--acc-ease), filter var(--acc-expand) var(--acc-ease);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aka-content, .aka-content-inner { transition: none !important; }
+  }
   /* Once AKA is open and visible, .tourney-meta directly follows it instead
      of h1 -- its own -1rem margin-top (tuned for pulling up against h1's
      larger gap) would sit too tight against a line of plain text, so this
@@ -1261,11 +1522,12 @@ function writeJs(glickoUncertainRdThreshold) {
       toggle.classList.toggle('active', open);
       toggle.setAttribute('aria-expanded', String(open));
       // The Grid/Table and Hide/Show-delta sliding pills were positioned (at
-      // page load and on every filter change) while this panel was
-      // display:none on mobile -- getBoundingClientRect on a display:none
-      // element's children is a zero-size rect, so both pills got stuck at
-      // left:0/width:0 until something recomputed them against real layout.
-      // Re-run that positioning now that the panel actually has size.
+      // page load and on every filter change) while this panel's accordion
+      // track was still collapsed (grid-template-rows: 0fr -- see
+      // #rankings-options-panel in writeCss). Column widths aren't actually
+      // affected by that (fr row-sizing only squeezes the block dimension),
+      // but re-running the positioning once the track is open is a cheap
+      // safety net against any layout edge case rather than trusting that.
       if (open) {
         for (const innerToggle of panel.querySelectorAll('.view-toggle')) {
           const innerIndicator = innerToggle.querySelector('.view-toggle-indicator');
@@ -2239,18 +2501,36 @@ function writeJs(glickoUncertainRdThreshold) {
     // own loading/failed state and the same downloadRankingsImage call.
     document.querySelectorAll('.download-btn').forEach((downloadBtn) => {
       const downloadLabel = downloadBtn.querySelector('.download-btn-label');
+      const iconSlot = downloadBtn.querySelector('.download-icon-slot');
+      const check = downloadBtn.querySelector('.t-success-check');
       downloadBtn.addEventListener('click', async () => {
         if (downloadBtn.disabled) return;
         downloadBtn.disabled = true;
         downloadBtn.classList.remove('failed');
         downloadBtn.classList.add('loading');
+        if (iconSlot) iconSlot.dataset.state = 'loading';
         if (downloadLabel) downloadLabel.textContent = 'Preparing…';
         try {
           await downloadRankingsImage(panel);
           if (downloadLabel) downloadLabel.textContent = 'Download Top 100';
+          // Brief success-check flash (see the transitions-dev success-check
+          // + icon-swap pairing) before settling back to the idle icon --
+          // paired instead of left showing indefinitely since this button
+          // gets clicked repeatedly, not once like a form submit.
+          if (iconSlot) iconSlot.dataset.state = 'success';
+          if (check) {
+            check.dataset.state = 'out';
+            void check.offsetWidth;
+            check.dataset.state = 'in';
+          }
+          setTimeout(() => {
+            if (iconSlot) iconSlot.dataset.state = 'idle';
+            if (check) check.dataset.state = 'out';
+          }, 1400);
         } catch (err) {
           downloadBtn.classList.add('failed');
           if (downloadLabel) downloadLabel.textContent = 'Failed — Retry';
+          if (iconSlot) iconSlot.dataset.state = 'idle';
         } finally {
           downloadBtn.disabled = false;
           downloadBtn.classList.remove('loading');

@@ -485,6 +485,20 @@ function locationHtml(disp) {
   return `${flagImg}${venueSpan}${sep}${cityStateSpan}`;
 }
 
+// The three icons (idle download arrow, spinner, success check) shared by
+// both .download-btn instances (PNG export -- see writeHtml's page-title-row
+// and rankings-options-panel markup), stacked in one .download-icon-slot
+// grid cell so the downloadBtn click handler (see enableViewToggle in
+// generate_output.js) can cross-fade between them via the slot's data-state
+// instead of a hard display:none/block swap. Not used by the CSV export
+// buttons (csvDownloadButtonHtml below) since those are synchronous and
+// never show a loading/success state. Checkmark path length (15) is a
+// static measurement of the M3.5 8.5L6.5 11.5L12.5 4.5 path below -- see the
+// success-check reference's "Calibrating stroke-dasharray" note.
+function downloadIconSlotHtml() {
+  return `<span class="download-icon-slot" data-state="idle"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="t-success-check download-check" data-state="out" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></span>`;
+}
+
 // A CSV-export button, styled/iconed identically to the PR tab's PNG
 // download button (see .download-btn-boxed in generate_output.js) but kept
 // off the .download-btn class so it isn't swept into that button's
@@ -2449,7 +2463,7 @@ ${embedMetaTags('DeathBall Power Rankings', 'Glicko-2 power rankings, player sta
 <div class="page-title-row">
   <button class="tabs-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-tabs"><svg class="tabs-toggle-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
   <h1><span id="tab-heading">DeathBall Power Rankings</span></h1>
-  <button class="download-btn download-btn-icon" type="button" title="Download power rankings image" aria-label="Download power rankings image"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg></button>
+  <button class="download-btn download-btn-icon" type="button" title="Download power rankings image" aria-label="Download power rankings image">${downloadIconSlotHtml()}</button>
 </div>
 <div class="tabs" id="site-tabs">
   <button class="tab-button active" data-tab="rankings-tab">Power Rankings</button>
@@ -2568,6 +2582,7 @@ ${mapLabels}
 <div id="rankings-tab" class="tab-panel active show-rank-delta">
   <button class="rankings-options-toggle" type="button" aria-expanded="false" aria-controls="rankings-options-panel">Options <svg class="rankings-options-caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button>
   <div class="tab-controls" id="rankings-options-panel">
+    <div class="rankings-options-inner">
     <div class="view-toggle">
       <span class="view-toggle-indicator"></span>
       <button class="view-btn active" data-view="grid">Grid</button>
@@ -2604,8 +2619,9 @@ ${mapLabels}
     <label>Rankings at:
       <select class="pr-history-select"></select>
     </label>
-    <button class="download-btn download-btn-boxed" type="button"><svg class="download-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8"/><path d="M4.5 7L8 10.5 11.5 7"/><path d="M2.5 12.5h11"/></svg><svg class="download-spinner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M14 8a6 6 0 1 1-2-4.47"/></svg><span class="download-btn-label">Download Top 100</span></button>
+    <button class="download-btn download-btn-boxed" type="button">${downloadIconSlotHtml()}<span class="download-btn-label">Download Top 100</span></button>
     ${csvDownloadButtonHtml('players', 'deathball-players', true)}
+    </div>
   </div>
   <div class="pr-grid">
 ${prSquareHtml}
@@ -3523,7 +3539,7 @@ function buildRatingChartSvg(history) {
     ${yLabels}
     ${dateLabels}
     ${currentLabel}
-    <div class="chart-tooltip" hidden></div>
+    <div class="chart-tooltip" data-show="false"></div>
   </div>
 </div>`;
 }
@@ -3797,7 +3813,7 @@ ${entriesHtml}
       ? `<button class="aka-toggle" type="button" aria-expanded="false" aria-controls="aka-content">AKA <svg class="aka-caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button>`
       : '';
     const akaContentRow = aliases.length
-      ? `<div class="aka-content" id="aka-content">AKA: ${aliases.map(escapeHtml).join(', ')}</div>`
+      ? `<div class="aka-content" id="aka-content"><div class="aka-content-inner">AKA: ${aliases.map(escapeHtml).join(', ')}</div></div>`
       : '';
     const activeCaption = activeRange ? `<span class="alias-list">Active ${escapeHtml(activeRange)}</span>` : '';
     const metaLine = location || activeCaption || aliasCaption
@@ -3887,7 +3903,18 @@ ${hasChart
     btn.addEventListener('click', () => {
       const list = document.getElementById(btn.dataset.list);
       const hiddenItems = [...list.children].filter((li) => li.hidden).slice(0, ${PAGE_SIZE});
-      hiddenItems.forEach((li) => { li.hidden = false; });
+      // Texts-reveal, staggered per row (see .t-stagger-line in writeCss):
+      // unhide + mark each row first (transition-delay set per its index in
+      // this batch), then flip .is-shown a frame later so the browser has a
+      // resting opacity:0 state to transition away from instead of jumping
+      // straight to opacity:1.
+      hiddenItems.forEach((li, i) => {
+        li.hidden = false;
+        li.classList.add('t-stagger-line');
+        li.style.transitionDelay = (i * 40) + 'ms';
+      });
+      void list.offsetHeight;
+      hiddenItems.forEach((li) => { li.classList.add('is-shown'); });
       if (![...list.children].some((li) => li.hidden)) btn.hidden = true;
     });
   });
@@ -3916,18 +3943,33 @@ ${hasChart
     const svg = wrap.querySelector('.rating-chart');
     if (!tooltip || !svg) return;
     const show = (point) => {
+      const wasShown = tooltip.dataset.show === 'true';
       const wrapRect = wrap.getBoundingClientRect();
       const pointRect = point.getBoundingClientRect();
       tooltip.innerHTML = '<strong>' + point.dataset.label + '</strong><br>' +
         point.dataset.date + '<br>Rating ' + point.dataset.rating +
         (point.dataset.rank ? ' &middot; Rank #' + point.dataset.rank : '');
-      tooltip.hidden = false;
       let left = (pointRect.left - wrapRect.left) + (pointRect.width / 2);
       left = Math.max(60, Math.min(left, wrapRect.width - 60));
-      tooltip.style.left = left + 'px';
-      tooltip.style.top = (pointRect.top - wrapRect.top) + 'px';
+      const top = pointRect.top - wrapRect.top;
+      // Coming from hidden, snap straight to the new point's position so
+      // only the appear (fade+scale) plays -- otherwise it would tween in
+      // from wherever it was last shown. Already showing: let left/top
+      // transition so the bubble travels to the new point instead of
+      // popping there (see the CSS's always-live left/top transition).
+      if (!wasShown) {
+        tooltip.style.transition = 'none';
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+        void tooltip.offsetWidth;
+        tooltip.style.transition = '';
+      } else {
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      }
+      tooltip.dataset.show = 'true';
     };
-    const hide = () => { tooltip.hidden = true; };
+    const hide = () => { tooltip.dataset.show = 'false'; };
     const points = [...svg.querySelectorAll('.chart-point')];
     points.forEach((point) => {
       point.addEventListener('focus', () => show(point));
