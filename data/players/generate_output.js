@@ -286,6 +286,12 @@ a:hover { text-decoration: underline; }
 .dd-option.is-active { background: #1a1a1a; color: #fff; }
 .dd-option[aria-selected="true"] { color: #3eff8b; font-weight: 700; }
 .dd-option-check { flex-shrink: 0; width: 0.7rem; height: auto; color: #3eff8b; opacity: 0; }
+/* Flag next to an option / the chosen value (the Location filter): a fixed
+   box with object-fit so state flags of different aspect ratios line up. */
+.dd-flag { flex-shrink: 0; width: 1.4em; height: 1em; object-fit: contain; border-radius: 1px; }
+/* Section headers inside a menu (one per optgroup), styled like the site's
+   table column headers; every group gets a rule above it. */
+.dd-group { padding: 0.55rem 0.75rem 0.25rem; margin-top: 4px; border-top: 1px solid #222; color: #666; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: default; }
 .dd-option[aria-selected="true"] .dd-option-check { opacity: 1; }
 /* transitions.dev menu-dropdown: grows out of the trigger's edge (top-left
    when opening downward, bottom-left when flipped above), softer and
@@ -1387,6 +1393,8 @@ function writeJs(glickoUncertainRdThreshold) {
   const PR_HISTORY_DATA = JSON.parse(document.getElementById('pr-history-data')?.textContent || '{}');
   const PR_META = PR_HISTORY_DATA.players || {};
   const PR_HISTORY = PR_HISTORY_DATA.checkpoints || [];
+  // Region/country names + flags for the Location filter (buildLocationFilterData in aggregate_players.js).
+  const LOCATION_FILTER = JSON.parse(document.getElementById('location-filter-data')?.textContent || '{"regions":{},"countries":{}}');
   const PR_UNCERTAIN_RD_THRESHOLD = ${glickoUncertainRdThreshold};
 
   function enableSorting(table) {
@@ -1624,24 +1632,44 @@ function writeJs(glickoUncertainRdThreshold) {
     });
   }
 
+  // Location filter options, built from the rows' data-country / data-state
+  // attributes: a Country group (every country with at least one player)
+  // above a Region group (every state/province with at least one player,
+  // all countries mixed), each ordered by player count. Option values are
+  // prefixed c: / r: so applyFilters knows which attribute to match, and
+  // data-flag carries the flag image the custom dropdown menu draws next to
+  // the entry (enhanceDropdowns) -- a native option can't show one.
   function populateStateFilter(panel) {
     const select = panel.querySelector('.state-filter-select');
     const tbody = panel.querySelector('table tbody');
     if (!select || !tbody) return;
-    const seen = new Set();
+    const countryCounts = new Map();
+    const regionCounts = new Map();
     for (const row of tbody.rows) {
-      if (row.dataset.state) seen.add(row.dataset.state);
+      const country = row.dataset.country;
+      const region = row.dataset.state;
+      if (country) countryCounts.set(country, (countryCounts.get(country) || 0) + 1);
+      if (region) regionCounts.set(region, (regionCounts.get(region) || 0) + 1);
     }
-    const sorted = [...seen].sort((a, b) =>
-      (STATE_NAMES[a] || a).localeCompare(STATE_NAMES[b] || b)
-    );
-    for (const abbr of sorted) {
-      const opt = document.createElement('option');
-      opt.value = abbr;
-      opt.dataset.label = STATE_NAMES[abbr] || abbr;
-      opt.textContent = opt.dataset.label;
-      select.appendChild(opt);
-    }
+    const regionName = (abbr) => (LOCATION_FILTER.regions[abbr] || {}).name || STATE_NAMES[abbr] || abbr;
+    const byCountThenName = (nameOf) => (a, b) => (b[1] - a[1]) || nameOf(a[0]).localeCompare(nameOf(b[0]));
+    const addGroup = (label, entries, prefix, nameOf, flagOf) => {
+      if (!entries.length) return;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      for (const [key] of entries) {
+        const opt = document.createElement('option');
+        opt.value = prefix + key;
+        opt.dataset.label = nameOf(key);
+        opt.textContent = opt.dataset.label;
+        const flag = flagOf(key);
+        if (flag && flag.src) opt.dataset.flag = flag.src;
+        group.appendChild(opt);
+      }
+      select.appendChild(group);
+    };
+    addGroup('Country', [...countryCounts].sort(byCountThenName((c) => c)), 'c:', (c) => c, (c) => (LOCATION_FILTER.countries[c] || {}).flag);
+    addGroup('Region', [...regionCounts].sort(byCountThenName(regionName)), 'r:', regionName, (r) => (LOCATION_FILTER.regions[r] || {}).flag);
     // Stamp base label on the hardcoded "All locations" option too
     if (select.options[0]) select.options[0].dataset.label = select.options[0].textContent;
   }
@@ -1650,7 +1678,11 @@ function writeJs(glickoUncertainRdThreshold) {
     const minGames = parseInt(panel.querySelector('.min-games-select')?.value || '0', 10);
     const maxRdVal = panel.querySelector('.max-rd-select')?.value || 'Infinity';
     const maxRd = maxRdVal === 'Infinity' ? Infinity : parseFloat(maxRdVal);
-    const state = panel.querySelector('.state-filter-select')?.value || '';
+    // Location filter value is '' (all), 'c:<country>' or 'r:<region abbr>'
+    // (see populateStateFilter) -- pick the data attribute to match on.
+    const locationValue = panel.querySelector('.state-filter-select')?.value || '';
+    const locationAttr = locationValue.startsWith('c:') ? 'country' : 'state';
+    const location = locationValue.slice(2);
     const tbody = panel.querySelector('table tbody');
     const isRankingsTab = panel.id === 'rankings-tab';
     const DEFAULT_MIN_GAMES = 5;
@@ -1663,16 +1695,20 @@ function writeJs(glickoUncertainRdThreshold) {
     const grid = isRankingsTab ? panel.querySelector('.pr-grid') : null;
     const countSource = grid ? [...grid.querySelectorAll(':scope > .pr-card')] : (tbody ? [...tbody.rows] : []);
 
-    // First pass: count per state for items passing non-state filters
-    const stateCounts = new Map();
+    // First pass: count per country and per region for items passing the
+    // non-location filters
+    const countryCounts = new Map();
+    const regionCounts = new Map();
     let totalPassingNonState = 0;
     for (const el of countSource) {
       const games = parseInt(el.dataset.games || '0', 10);
       const rd = parseFloat(el.dataset.rd || '0');
       if (minGames && games < minGames) continue;
       if (maxRd !== Infinity && rd > maxRd) continue;
+      const rowCountry = el.dataset.country || '';
       const rowState = el.dataset.state || '';
-      stateCounts.set(rowState, (stateCounts.get(rowState) || 0) + 1);
+      countryCounts.set(rowCountry, (countryCounts.get(rowCountry) || 0) + 1);
+      regionCounts.set(rowState, (regionCounts.get(rowState) || 0) + 1);
       totalPassingNonState++;
     }
 
@@ -1681,7 +1717,9 @@ function writeJs(glickoUncertainRdThreshold) {
     if (stateSelect) {
       for (const opt of stateSelect.options) {
         const label = opt.dataset.label || opt.textContent.replace(/\\s*\\(\\d+\\)$/, '');
-        const count = opt.value === '' ? totalPassingNonState : (stateCounts.get(opt.value) || 0);
+        const count = opt.value === '' ? totalPassingNonState
+          : opt.value.startsWith('c:') ? (countryCounts.get(opt.value.slice(2)) || 0)
+          : (regionCounts.get(opt.value.slice(2)) || 0);
         opt.textContent = label + ' (' + count + ')';
       }
     }
@@ -1692,9 +1730,8 @@ function writeJs(glickoUncertainRdThreshold) {
       for (const row of tbody.rows) {
         const games = parseInt(row.dataset.games || '0', 10);
         const rd = parseFloat(row.dataset.rd || '0');
-        const rowState = row.dataset.state || '';
         const passesMinMax = (!minGames || games >= minGames) && (maxRd === Infinity || rd <= maxRd);
-        const passesState = !state || rowState === state;
+        const passesState = !location || (row.dataset[locationAttr] || '') === location;
         const show = passesMinMax && passesState;
         row.hidden = !show;
         if (isRankingsTab) {
@@ -1717,9 +1754,8 @@ function writeJs(glickoUncertainRdThreshold) {
       for (const card of grid.querySelectorAll(':scope > .pr-card')) {
         const games = parseInt(card.dataset.games || '0', 10);
         const rd = parseFloat(card.dataset.rd || '0');
-        const cardState = card.dataset.state || '';
         const passesMinMax = (!minGames || games >= minGames) && (maxRd === Infinity || rd <= maxRd);
-        const passesState = !state || cardState === state;
+        const passesState = !location || (card.dataset[locationAttr] || '') === location;
         const show = passesMinMax && passesState;
         card.hidden = !show;
         const meetsDefaults = games >= DEFAULT_MIN_GAMES && rd <= DEFAULT_MAX_RD;
@@ -2726,6 +2762,7 @@ function writeJs(glickoUncertainRdThreshold) {
     card.dataset.games = row.games;
     card.dataset.rd = row.rd;
     if (meta.state) card.dataset.state = meta.state;
+    if (meta.country) card.dataset.country = meta.country;
 
     const top = document.createElement('div');
     top.className = 'prc-top';
@@ -2786,6 +2823,7 @@ function writeJs(glickoUncertainRdThreshold) {
     tr.dataset.games = row.games;
     tr.dataset.rd = row.rd;
     if (meta.state) tr.dataset.state = meta.state;
+    if (meta.country) tr.dataset.country = meta.country;
     if (row.uncertain) tr.className = 'uncertain';
 
     const rankTd = document.createElement('td');
@@ -2946,6 +2984,12 @@ function writeJs(glickoUncertainRdThreshold) {
     trigger.setAttribute('aria-haspopup', 'listbox');
     trigger.setAttribute('aria-expanded', 'false');
     trigger.setAttribute('aria-controls', id + '-menu');
+    // Flag of the chosen option (only options with data-flag ever show one).
+    const triggerFlag = document.createElement('img');
+    triggerFlag.className = 'dd-flag';
+    triggerFlag.alt = '';
+    triggerFlag.hidden = true;
+    trigger.appendChild(triggerFlag);
     const labelSpan = document.createElement('span');
     labelSpan.className = 'dd-label';
     trigger.appendChild(labelSpan);
@@ -2980,36 +3024,81 @@ function writeJs(glickoUncertainRdThreshold) {
     function syncTrigger() {
       const opt = select.options[select.selectedIndex];
       labelSpan.textContent = opt ? opt.textContent : '';
+      const flagSrc = opt ? opt.dataset.flag : '';
+      if (flagSrc) {
+        if (triggerFlag.getAttribute('src') !== flagSrc) triggerFlag.src = flagSrc;
+        triggerFlag.hidden = false;
+      } else {
+        triggerFlag.hidden = true;
+        triggerFlag.removeAttribute('src');
+      }
+    }
+    // The menu's selectable rows (group headers excluded); activeIndex is a
+    // position in this list, and each row's data-index is the index of the
+    // native option it stands for.
+    function items() {
+      return [...menu.querySelectorAll('.dd-option')];
+    }
+    function itemIndexOfOption(optionIndex) {
+      return items().findIndex((li) => parseInt(li.dataset.index, 10) === optionIndex);
     }
     function setActive(i, scroll) {
-      const items = [...menu.children];
-      if (!items.length) { activeIndex = -1; trigger.removeAttribute('aria-activedescendant'); return; }
-      activeIndex = Math.max(0, Math.min(items.length - 1, i));
-      items.forEach((li, idx) => li.classList.toggle('is-active', idx === activeIndex));
-      const li = items[activeIndex];
+      const list = items();
+      if (!list.length) { activeIndex = -1; trigger.removeAttribute('aria-activedescendant'); return; }
+      activeIndex = Math.max(0, Math.min(list.length - 1, i));
+      list.forEach((li, idx) => li.classList.toggle('is-active', idx === activeIndex));
+      const li = list[activeIndex];
       trigger.setAttribute('aria-activedescendant', li.id);
       if (scroll) {
-        const top = li.offsetTop, bottom = top + li.offsetHeight;
+        // Keep the group header above the first row of a group in view too.
+        const prev = li.previousElementSibling;
+        const top = prev && prev.classList.contains('dd-group') ? prev.offsetTop : li.offsetTop;
+        const bottom = li.offsetTop + li.offsetHeight;
         if (top < menu.scrollTop) menu.scrollTop = top;
         else if (bottom > menu.scrollTop + menu.clientHeight) menu.scrollTop = bottom - menu.clientHeight;
       }
     }
+    function chooseActive() {
+      const li = items()[activeIndex];
+      if (li) choose(parseInt(li.dataset.index, 10));
+    }
     function renderOptions() {
       menu.textContent = '';
-      [...select.options].forEach((opt, i) => {
+      const addOption = (opt) => {
         const li = document.createElement('li');
         li.className = 'dd-option';
-        li.id = id + '-opt-' + i;
+        li.id = id + '-opt-' + opt.index;
         li.setAttribute('role', 'option');
-        li.setAttribute('aria-selected', String(i === select.selectedIndex));
-        li.dataset.index = String(i);
+        li.setAttribute('aria-selected', String(opt.index === select.selectedIndex));
+        li.dataset.index = String(opt.index);
+        if (opt.dataset.flag) {
+          const img = document.createElement('img');
+          img.className = 'dd-flag';
+          img.src = opt.dataset.flag;
+          img.alt = '';
+          img.loading = 'lazy';
+          li.appendChild(img);
+        }
         const span = document.createElement('span');
         span.className = 'dd-option-label';
         span.textContent = opt.textContent;
         li.appendChild(span);
         li.appendChild(svgIcon('dd-option-check', '0 0 12 10', '12', '10', 'M1 5.5l3.2 3L11 1.5', '1.8'));
         menu.appendChild(li);
-      });
+      };
+      // Walk the select's own children so optgroups become section headers.
+      for (const child of select.children) {
+        if (child.tagName === 'OPTGROUP') {
+          const head = document.createElement('li');
+          head.className = 'dd-group';
+          head.setAttribute('role', 'presentation');
+          head.textContent = child.label;
+          menu.appendChild(head);
+          for (const opt of child.children) if (opt.tagName === 'OPTION') addOption(opt);
+        } else if (child.tagName === 'OPTION') {
+          addOption(child);
+        }
+      }
     }
     function position() {
       const r = trigger.getBoundingClientRect();
@@ -3040,7 +3129,7 @@ function writeJs(glickoUncertainRdThreshold) {
       menu.classList.remove('is-closing');
       position();
       menu.classList.add('is-open');
-      setActive(select.selectedIndex, true);
+      setActive(itemIndexOfOption(select.selectedIndex), true);
       // Safari/Firefox-on-mac don't focus a button on click, so pull focus
       // in explicitly -- the key handlers and aria-activedescendant live on
       // the trigger.
@@ -3079,12 +3168,14 @@ function writeJs(glickoUncertainRdThreshold) {
       const repeat = typeBuffer.length > 0 && typeBuffer.split('').every((c) => c === ch);
       typeBuffer += ch;
       const needle = repeat ? ch : typeBuffer;
-      const labels = [...select.options].map((o) => o.textContent.trim().toLowerCase());
-      const start = (isOpen ? activeIndex : select.selectedIndex) + (needle.length === 1 ? 1 : 0);
+      const list = isOpen ? items() : (renderOptions(), items());
+      const labels = list.map((li) => li.querySelector('.dd-option-label').textContent.trim().toLowerCase());
+      const current = isOpen ? activeIndex : itemIndexOfOption(select.selectedIndex);
+      const start = current + (needle.length === 1 ? 1 : 0);
       for (let k = 0; k < labels.length; k++) {
         const idx = (start + k) % labels.length;
         if (labels[idx].startsWith(needle)) {
-          if (isOpen) setActive(idx, true); else choose(idx);
+          if (isOpen) setActive(idx, true); else choose(parseInt(list[idx].dataset.index, 10));
           return;
         }
       }
@@ -3111,7 +3202,7 @@ function writeJs(glickoUncertainRdThreshold) {
         case 'Enter':
         case ' ':
           e.preventDefault();
-          if (isOpen) choose(activeIndex); else open();
+          if (isOpen) chooseActive(); else open();
           break;
         case 'Escape':
           if (isOpen) { e.preventDefault(); close(); }
@@ -3131,7 +3222,7 @@ function writeJs(glickoUncertainRdThreshold) {
     menu.addEventListener('mousedown', (e) => e.preventDefault());
     menu.addEventListener('mouseover', (e) => {
       const li = e.target.closest('.dd-option');
-      if (li) setActive(parseInt(li.dataset.index, 10), false);
+      if (li) setActive(items().indexOf(li), false);
     });
     menu.addEventListener('click', (e) => {
       const li = e.target.closest('.dd-option');

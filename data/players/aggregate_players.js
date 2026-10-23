@@ -175,6 +175,42 @@ function regionAbbr(rawState, country) {
   return '';
 }
 
+// State-only half of regionAbbr: a raw player-info.json state value, whether
+// abbreviated ("ON") or spelled out ("Ontario"), to its abbreviation. The
+// Location filter dropdown keys players by this, so both spellings of a
+// province land in the same entry instead of showing up as two. Unknown
+// values pass through untouched.
+function stateKeyFor(rawState) {
+  if (!rawState) return '';
+  if (STATE_NAMES[rawState]) return rawState;
+  return STATE_ABBR_BY_NAME[rawState] || rawState;
+}
+
+// Display name + flag for every region/country the Location filter can
+// list (populateStateFilter in generate_output.js builds the actual option
+// list from the rows' data-state/data-country attributes and looks names
+// and flags up here), embedded in index.html as #location-filter-data so
+// the client never has to re-derive flag URLs.
+function buildLocationFilterData() {
+  const regions = {};
+  for (const [abbr, name] of Object.entries(STATE_NAMES)) {
+    const country = CA_PROVINCE_FLAGS[name] ? 'Canada' : 'United States';
+    regions[abbr] = { name, country, flag: flagForInfo({ state: abbr, country }) };
+  }
+  const countries = {};
+  for (const country of Object.keys(COUNTRY_CODES)) {
+    countries[country] = { flag: flagForInfo({ country }) };
+  }
+  return { regions, countries };
+}
+
+// data-state / data-country attributes for a player row or card, read by
+// the Location filter (applyFilters/populateStateFilter in generate_output.js).
+function locationDataAttrs(p) {
+  return (p.locationKey ? ` data-state="${escapeHtml(p.locationKey)}"` : '')
+    + (p.country ? ` data-country="${escapeHtml(p.country)}"` : '');
+}
+
 // ---------------------------------
 
 function readJson(filePath, fallback) {
@@ -1634,17 +1670,18 @@ function buildPlayerRows(players, tournamentMetaByUrl, lastActiveById) {
           ? (STATE_NAMES[info.state] || info.state)
           : (info.country || ''),
         flag: flagForInfo(info),
-        locationSort: [info.state || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
+        locationSort: [stateKeyFor(info.state) || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
         city: info.city || '',
-        state: info.state || '',
+        state: stateKeyFor(info.state),
         // Same default as flagForInfo's flag lookup -- player-info.json's
         // own schema documents `country` as optional, defaulting to United
         // States when omitted (see player-info.json's _schema).
         country: info.country || 'United States',
-        // Location dropdown filter value -- state/province abbreviation when
-        // known, else the country name for players outside the US/Canada
-        // (who have no state/province at all), else '' (unknown location).
-        locationKey: info.state || (info.country && info.country !== 'United States' ? info.country : ''),
+        // Location dropdown's region key -- the state/province abbreviation
+        // (normalized, so "Ontario" and "ON" match), '' when the player has
+        // none (unknown location, or a country with no state-level data);
+        // country-level filtering goes through `country` above instead.
+        locationKey: stateKeyFor(info.state),
         tournaments: [...p.tournaments.entries()].map(([url, label]) => ({
           url,
           label,
@@ -1673,10 +1710,10 @@ function buildPlayerMeta(id, p, lastActiveById) {
       : (info.country || ''),
     flag: flagForInfo(info),
     locAbbr: abbrevForInfo(info),
-    locationSort: [info.state || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
-    state: info.state || '',
-    country: info.country || '',
-    locationKey: info.state || (info.country && info.country !== 'United States' ? info.country : ''),
+    locationSort: [stateKeyFor(info.state) || info.country, info.city].filter(Boolean).join('|').toLowerCase(),
+    state: stateKeyFor(info.state),
+    country: info.country || 'United States',
+    locationKey: stateKeyFor(info.state),
     color: info.color || '',
     lastActive: lastActiveById ? formatMonthYearHuman(lastActiveById.get(id)) : '',
   };
@@ -2222,7 +2259,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       .map((t) => `<a href="tournaments/${escapeHtml(t.slug)}.html"${t.location ? ` title="${escapeHtml(t.location)}"` : ''}>${escapeHtml(t.label)}</a>`)
       .join(', ');
     const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
-    return `<tr${p.locationKey ? ` data-state="${escapeHtml(p.locationKey)}"` : ''}>
+    return `<tr${locationDataAttrs(p)}>
       <td>${nameCell}</td>
       <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${p.flag ? `<img class="loc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : ''}${escapeHtml(p.location)}</td>
       <td class="numeric" data-sort="${p.wins}">${p.wins}</td>
@@ -2304,7 +2341,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
 
   const rankingTableRows = rankingRows.map((p, i) => {
     const nameCell = playerHref(p.id, '') ? `<a href="${escapeHtml(playerHref(p.id, ''))}">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
-    return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.locationKey ? ` data-state="${escapeHtml(p.locationKey)}"` : ''}${p.uncertain ? ' class="uncertain"' : ''}>
+    return `<tr data-games="${p.games}" data-rd="${Math.round(p.rd)}"${locationDataAttrs(p)}${p.uncertain ? ' class="uncertain"' : ''}>
       <td class="rank-num">${i + 1}</td>
       <td>${nameCell}</td>
       <td class="numeric">${Math.round(p.r)}</td>
@@ -2325,7 +2362,7 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
     const nameSpan = href
       ? `<a class="prc-name" href="${escapeHtml(href)}" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</a>`
       : `<span class="prc-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>`;
-    return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${p.locationKey ? ` data-state="${escapeHtml(p.locationKey)}"` : ''}>
+    return `<div class="pr-card ${cardAccent(p.id, p.color)}${p.uncertain ? ' uncertain' : ''}" data-games="${p.games}" data-rd="${Math.round(p.rd)}"${locationDataAttrs(p)}>
 <div class="prc-top">
   <span class="prc-rank"><span class="rank-plain${rankDeltaState(p) ? ` rank-plain-${rankDeltaState(p)}` : ''}">${i + 1}</span>${rankDeltaHtml(p)}</span>${nameSpan}
   ${flagImg}
@@ -2650,6 +2687,7 @@ ${rankingTableRows}
   </div>
 </div>
 <script type="application/json" id="pr-history-data">${JSON.stringify(rankingHistory)}</script>
+<script type="application/json" id="location-filter-data">${JSON.stringify(buildLocationFilterData())}</script>
 
 ${siteFooter('')}
 <script src="index.js"></script>
@@ -4182,6 +4220,7 @@ async function main() {
       flag: meta.flag,
       locAbbr: meta.locAbbr,
       state: meta.state,
+      country: meta.country,
       color: meta.color,
       lastActive: meta.lastActive,
     };

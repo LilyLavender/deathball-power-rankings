@@ -93,6 +93,8 @@ a:hover { text-decoration: underline; }
 .dd-option.is-active { background: #1a1a1a; color: #fff; }
 .dd-option[aria-selected="true"] { color: #3eff8b; font-weight: 700; }
 .dd-option-check { flex-shrink: 0; width: 0.7rem; height: auto; color: #3eff8b; opacity: 0; }
+.dd-flag { flex-shrink: 0; width: 1.4em; height: 1em; object-fit: contain; border-radius: 1px; }
+.dd-group { padding: 0.55rem 0.75rem 0.25rem; margin-top: 4px; border-top: 1px solid #222; color: #666; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: default; }
 .dd-option[aria-selected="true"] .dd-option-check { opacity: 1; }
 .t-dropdown {
   transform-origin: top left;
