@@ -1030,6 +1030,37 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .compare-table th:first-child, .compare-table td:first-child { position: sticky; left: 0; z-index: 2; background: #050505; }
 .compare-table tbody tr:hover td:first-child { background: #0a0a0a; }
 .compare-intro { color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
+/* Chart legend (one entry per plotted player, in column color) above the
+   shared .rating-chart-wrap shell; .chart-line/.chart-dot colors are set
+   inline per series. */
+.compare-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; margin-bottom: 0.75rem; font-weight: 700; font-size: 1rem; }
+.compare-legend-item { display: inline-flex; align-items: center; gap: 0.45rem; }
+.compare-legend-item .compare-chip-dot { background: var(--col-color); box-shadow: 0 0 6px var(--col-color); }
+/* A player's name tinted with their column color wherever it appears
+   inside the Head-to-Head and Shared Tournaments sections. */
+.compare-colored { color: var(--col-color, #3eff8b); font-weight: 700; }
+.compare-colored:hover { color: #fff; }
+.compare-subhead { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #888; margin: 1.5rem 0 0.5rem; }
+.compare-empty-note { color: #666; font-size: 0.95rem; margin: 0.25rem 0; }
+/* Two-player record: name, big score, name. */
+.compare-h2h-record { display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; padding: 1rem 0.5rem; background: rgba(10,10,10,0.35); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; }
+.compare-h2h-side { font-size: 1.3rem; }
+.compare-h2h-score { display: inline-flex; align-items: baseline; gap: 0.5rem; font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900; color: #666; }
+.compare-h2h-lead { color: #f0f0f0; }
+.compare-h2h-dash { color: #444; font-size: 1.4rem; }
+.compare-matrix th { cursor: default; position: static; }
+.compare-matrix th.row-name { text-align: left; }
+/* Common-opponents and shared-tournaments tables reuse .compare-table with
+   a slimmer player header (no flag/location, just the color bar + name). */
+.compare-table th.compare-player-col-compact { min-width: 110px; padding-top: 0.8rem; font-size: 0.95rem; }
+.compare-table td.compare-opp-name { text-transform: none; letter-spacing: 0.02em; font-size: 1rem; color: #f0f0f0; white-space: nowrap; }
+.compare-table td.compare-opp-name a { color: #f0f0f0; }
+.compare-table td.compare-opp-name a:hover { color: #3eff8b; }
+.compare-table td.compare-opp-name .compare-col-sub { margin-top: 0.15rem; }
+.compare-common td.result-win { color: #3eff8b; }
+.compare-common td.result-loss { color: #ff5e5e; }
+.compare-shared td .compare-col-sub { font-weight: 600; }
+.compare-shared td .compare-col-sub a { color: #888; }
 @media (max-width: 700px) {
   /* Let the sticky label column wrap instead of claiming half the phone
      width with a single nowrap line; player columns keep their min-width

@@ -254,6 +254,268 @@
     }).join('');
     return '<div class="table-wrap"><table class="compare-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
   }
+  var PAGE_SIZE = 10;
+  function paginated(rows, listId) {
+    var items = rows.map(function (r, i) { return i >= PAGE_SIZE ? r.replace(/^<(tr|li)/, '<$1 hidden') : r; }).join('');
+    var btn = rows.length > PAGE_SIZE ? '<button type="button" class="show-more-btn" data-list="' + listId + '">Show more</button>' : '';
+    return { items: items, button: btn };
+  }
+  function tourneyLink(slug) {
+    var t = TOURNAMENTS[slug];
+    if (!t) return esc(slug);
+    return flagImg(t.f) + '<a href="' + tourneyHref(slug) + '">' + esc(t.n) + '</a>';
+  }
+  function colorName(slug, i) {
+    return '<a href="' + playerHref(slug) + '" class="compare-colored" style="--col-color:' + COLORS[i] + '">' + esc(PLAYERS[slug].n) + '</a>';
+  }
+  function ordinal(n) {
+    if (n == null) return '—';
+    var mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 13) return n + 'th';
+    switch (n % 10) {
+      case 1: return n + 'st';
+      case 2: return n + 'nd';
+      case 3: return n + 'rd';
+      default: return n + 'th';
+    }
+  }
+  function dayIndex(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    if (!m) return 0;
+    return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / 86400000;
+  }
+  function formatMonthYear(iso) {
+    var m = /^(\d{4})-(\d{2})/.exec(iso || '');
+    if (!m) return iso || '';
+    return MONTHS[Number(m[2]) - 1] + ' ' + m[1];
+  }
+  function renderChart() {
+    var W = 720, H = 220, padL = 14, padR = 14, padT = 24, padB = 10;
+    var series = selected.map(function (slug, i) { return { slug: slug, i: i, p: PLAYERS[slug], rh: PLAYERS[slug].rh || [] }; })
+      .filter(function (s) { return s.rh.length >= 1; });
+    if (!series.some(function (s) { return s.rh.length >= 2; })) return '';
+    var all = [];
+    series.forEach(function (s) { s.rh.forEach(function (h) { all.push(h); }); });
+    var ratings = all.map(function (h) { return h[1]; });
+    var minR = Math.min.apply(null, ratings), maxR = Math.max.apply(null, ratings);
+    if (minR === maxR) { minR -= 50; maxR += 50; }
+    var span = maxR - minR;
+    minR -= span * 0.1; maxR += span * 0.1;
+    var days = all.map(function (h) { return dayIndex(h[0]); });
+    var minD = Math.min.apply(null, days), maxD = Math.max.apply(null, days);
+    var x = function (d) { return padL + (maxD === minD ? 0.5 : (d - minD) / (maxD - minD)) * (W - padL - padR); };
+    var y = function (r) { return padT + (1 - (r - minR) / (maxR - minR)) * (H - padT - padB); };
+    var gridLines = '', yLabels = '';
+    [0, 0.5, 1].forEach(function (t) {
+      var gy = padT + t * (H - padT - padB);
+      var val = Math.round(maxR - t * (maxR - minR));
+      gridLines += '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '" class="chart-grid"/>';
+      yLabels += '<div class="chart-label chart-label-y" style="top:' + ((gy / H) * 100).toFixed(2) + '%">' + val + '</div>';
+    });
+    var lines = '', markers = '';
+    series.forEach(function (s) {
+      var color = COLORS[s.i];
+      var pts = s.rh.map(function (h) { return [x(dayIndex(h[0])), y(h[1])]; });
+      if (pts.length >= 2) {
+        lines += '<polyline points="' + pts.map(function (pt) { return pt[0].toFixed(1) + ',' + pt[1].toFixed(1); }).join(' ') + '" class="chart-line" style="stroke:' + color + '"/>';
+      }
+      s.rh.forEach(function (h, k) {
+        var t = TOURNAMENTS[h[4]] || { n: h[4] };
+        markers += '<a href="' + tourneyHref(h[4]) + '" class="chart-point" tabindex="0"' +
+          ' aria-label="' + esc(s.p.n + ': ' + t.n + ', ' + formatDateHuman(h[0]) + ' - Rating ' + h[1] + ', Rank #' + (h[3] || '?')) + '"' +
+          ' data-player="' + esc(s.p.n) + '" data-color="' + color + '" data-date="' + esc(formatDateHuman(h[0])) + '" data-label="' + esc(t.n) + '" data-rating="' + h[1] + '" data-rank="' + (h[3] || '') + '">' +
+          '<circle cx="' + pts[k][0].toFixed(1) + '" cy="' + pts[k][1].toFixed(1) + '" r="10" class="chart-hit"/>' +
+          '<circle cx="' + pts[k][0].toFixed(1) + '" cy="' + pts[k][1].toFixed(1) + '" r="3.5" class="chart-dot" style="fill:' + color + '"/>' +
+          '</a>';
+      });
+    });
+    var legend = '<div class="compare-legend">' + series.map(function (s) {
+      var last = s.rh[s.rh.length - 1];
+      return '<span class="compare-legend-item" style="--col-color:' + COLORS[s.i] + '"><span class="compare-chip-dot"></span>' + esc(s.p.n) + ' <span class="h2h-record-dim">' + last[1] + '</span></span>';
+    }).join('') + '</div>';
+    return '<div class="tourney-section compare-section"><h2>Historical Rating</h2>' + legend +
+      '<div class="rating-chart-wrap"><div class="rating-chart-inner">' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" class="rating-chart" preserveAspectRatio="none">' + gridLines + lines + markers + '</svg>' +
+      yLabels +
+      '<div class="chart-label chart-label-date-start">' + esc(formatMonthYear(all.reduce(function (a, h) { return a < h[0] ? a : h[0]; }, all[0][0]))) + '</div>' +
+      '<div class="chart-label chart-label-date-end">' + esc(formatMonthYear(all.reduce(function (a, h) { return a > h[0] ? a : h[0]; }, all[0][0]))) + '</div>' +
+      '<div class="chart-tooltip" data-show="false"></div>' +
+      '</div></div></div>';
+  }
+  function wireChart(wrap) {
+    var tooltip = wrap.querySelector('.chart-tooltip');
+    var svg = wrap.querySelector('.rating-chart');
+    if (!tooltip || !svg) return;
+    var points = Array.prototype.slice.call(svg.querySelectorAll('.chart-point'));
+    var show = function (point) {
+      var wasShown = tooltip.dataset.show === 'true';
+      var wrapRect = wrap.getBoundingClientRect();
+      var pointRect = point.getBoundingClientRect();
+      tooltip.innerHTML = '<strong style="color:' + point.dataset.color + '">' + point.dataset.player + '</strong><br>' +
+        point.dataset.label + '<br>' + point.dataset.date + '<br>Rating ' + point.dataset.rating +
+        (point.dataset.rank ? ' &middot; Rank #' + point.dataset.rank : '');
+      var left = (pointRect.left - wrapRect.left) + (pointRect.width / 2);
+      left = Math.max(60, Math.min(left, wrapRect.width - 60));
+      var top = pointRect.top - wrapRect.top;
+      if (!wasShown) {
+        tooltip.style.transition = 'none';
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+        void tooltip.offsetWidth;
+        tooltip.style.transition = '';
+      } else {
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      }
+      tooltip.dataset.show = 'true';
+    };
+    var hide = function () { tooltip.dataset.show = 'false'; };
+    points.forEach(function (point) {
+      point.addEventListener('focus', function () { show(point); });
+      point.addEventListener('blur', hide);
+    });
+    svg.addEventListener('mousemove', function (e) {
+      if (!points.length) return;
+      var nearest = points[0], nearestDist = Infinity;
+      points.forEach(function (p) {
+        var r = p.getBoundingClientRect();
+        var dx = e.clientX - (r.left + r.width / 2);
+        var dy = e.clientY - (r.top + r.height / 2);
+        var dist = dx * dx + dy * dy;
+        if (dist < nearestDist) { nearestDist = dist; nearest = p; }
+      });
+      show(nearest);
+    });
+    svg.addEventListener('mouseleave', hide);
+  }
+  function matchesBetweenSelected() {
+    var out = [];
+    selected.forEach(function (slug, i) {
+      (PLAYERS[slug].m || []).forEach(function (m) {
+        var j = selected.indexOf(m[0]);
+        if (j <= i) return;
+        out.push({ a: i, b: j, aWon: !!m[1], date: m[2], order: m[3], scoreA: m[4], scoreB: m[5], t: m[6], dq: !!m[7] });
+      });
+    });
+    out.sort(function (p, q) { return (q.date || '').localeCompare(p.date || '') || (q.order - p.order); });
+    return out;
+  }
+  function renderHeadToHead() {
+    if (selected.length < 2) return '';
+    var matches = matchesBetweenSelected();
+    var n = selected.length;
+    var wins = [];
+    for (var i = 0; i < n; i++) { wins.push([]); for (var j = 0; j < n; j++) wins[i].push(0); }
+    matches.forEach(function (m) {
+      if (m.aWon) wins[m.a][m.b]++; else wins[m.b][m.a]++;
+    });
+    var summary;
+    if (n === 2) {
+      var w0 = wins[0][1], w1 = wins[1][0];
+      summary = '<div class="compare-h2h-record">' +
+        '<span class="compare-h2h-side">' + colorName(selected[0], 0) + '</span>' +
+        '<span class="compare-h2h-score"><span class="' + (w0 > w1 ? 'compare-h2h-lead' : '') + '">' + w0 + '</span><span class="compare-h2h-dash">&ndash;</span><span class="' + (w1 > w0 ? 'compare-h2h-lead' : '') + '">' + w1 + '</span></span>' +
+        '<span class="compare-h2h-side">' + colorName(selected[1], 1) + '</span>' +
+        '</div>';
+    } else {
+      var head = '<tr><th></th>' + selected.map(function (s, i) { return '<th>' + colorName(s, i) + '</th>'; }).join('') + '</tr>';
+      var body = selected.map(function (s, i) {
+        return '<tr><th class="row-name">' + colorName(s, i) + '</th>' + selected.map(function (o, j) {
+          if (i === j) return '<td class="cell-diag"></td>';
+          var w = wins[i][j], l = wins[j][i];
+          if (!w && !l) return '<td class="cell-empty">&mdash;</td>';
+          var cls = w > l ? 'cell-win' : (l > w ? 'cell-loss' : 'cell-draw');
+          return '<td><span class="crosstable-result ' + cls + '">' + w + '-' + l + '</span></td>';
+        }).join('') + '</tr>';
+      }).join('');
+      summary = '<div class="table-wrap"><table class="crosstable compare-matrix"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
+    }
+    var log;
+    if (!matches.length) {
+      log = '<p class="compare-empty-note">No matches between these players on record.</p>';
+    } else {
+      var rows = matches.map(function (m) {
+        var winner = m.aWon ? m.a : m.b, loser = m.aWon ? m.b : m.a;
+        var scoreW = m.aWon ? m.scoreA : m.scoreB, scoreL = m.aWon ? m.scoreB : m.scoreA;
+        return '<li><span class="standings-rank"><span class="match-score-mini">' + (m.dq ? 'DQ' : scoreW + '-' + scoreL) + '</span></span>' +
+          '<span>' + colorName(selected[winner], winner) + ' <span class="h2h-record-dim">def.</span> ' + colorName(selected[loser], loser) +
+          ' <span class="match-tourney-name">(<a href="' + tourneyHref(m.t) + '">' + esc((TOURNAMENTS[m.t] || { n: m.t }).n) + '</a>)</span></span>' +
+          '<span class="standings-record">' + esc(formatDateHuman(m.date)) + '</span></li>';
+      });
+      var pg = paginated(rows, 'compare-h2h-list');
+      log = '<ol class="standings-list" id="compare-h2h-list">' + pg.items + '</ol>' + pg.button;
+    }
+    var perPlayer = selected.map(function (slug) {
+      var rec = {};
+      (PLAYERS[slug].m || []).forEach(function (m) {
+        if (!m[0] || selected.indexOf(m[0]) >= 0) return;
+        if (!rec[m[0]]) rec[m[0]] = { w: 0, l: 0 };
+        if (m[1]) rec[m[0]].w++; else rec[m[0]].l++;
+      });
+      return rec;
+    });
+    var common = Object.keys(perPlayer[0]).filter(function (opp) {
+      return perPlayer.every(function (rec) { return rec[opp]; });
+    }).map(function (opp) {
+      var total = perPlayer.reduce(function (sum, rec) { return sum + rec[opp].w + rec[opp].l; }, 0);
+      return { slug: opp, total: total };
+    }).sort(function (a, b) { return b.total - a.total || PLAYERS[a.slug].n.localeCompare(PLAYERS[b.slug].n); });
+    var commonHtml;
+    if (!common.length) {
+      commonHtml = '<p class="compare-empty-note">No common opponents on record.</p>';
+    } else {
+      var crows = common.map(function (c) {
+        var p = PLAYERS[c.slug];
+        return '<tr><td class="compare-stat-label compare-opp-name">' + flagImg(p.f) + '<a href="' + playerHref(c.slug) + '">' + esc(p.n) + '</a></td>' +
+          perPlayer.map(function (rec) {
+            var r = rec[c.slug];
+            var cls = r.w > r.l ? 'result-win' : (r.l > r.w ? 'result-loss' : '');
+            return '<td class="' + cls + '">' + r.w + '-' + r.l + '</td>';
+          }).join('') + '</tr>';
+      });
+      var cpg = paginated(crows, 'compare-common-list');
+      commonHtml = '<div class="table-wrap"><table class="compare-table compare-common"><thead><tr><th class="compare-stat-col"></th>' +
+        selected.map(function (s, i) { return '<th class="compare-player-col compare-player-col-compact" style="--col-color:' + COLORS[i] + '"><span class="compare-col-bar"></span>' + esc(PLAYERS[s].n) + '</th>'; }).join('') +
+        '</tr></thead><tbody id="compare-common-list">' + cpg.items + '</tbody></table></div>' + cpg.button;
+    }
+    return '<div class="tourney-section compare-section"><h2>Head-to-Head</h2>' + summary +
+      '<h3 class="compare-subhead">Matches (' + matches.length + ')</h3>' + log +
+      '<h3 class="compare-subhead">Common Opponents (' + common.length + ')</h3>' + commonHtml +
+      '</div>';
+  }
+  function renderSharedTournaments() {
+    if (selected.length < 2) return '';
+    var byTourney = {};
+    selected.forEach(function (slug, i) {
+      (PLAYERS[slug].pl || []).forEach(function (pl) {
+        if (!byTourney[pl[0]]) byTourney[pl[0]] = {};
+        byTourney[pl[0]][i] = pl;
+      });
+    });
+    var shared = Object.keys(byTourney).filter(function (t) { return Object.keys(byTourney[t]).length >= 2; })
+      .sort(function (a, b) { return ((TOURNAMENTS[b] || {}).d || '').localeCompare((TOURNAMENTS[a] || {}).d || ''); });
+    var body;
+    if (!shared.length) {
+      body = '<p class="compare-empty-note">These players have never entered the same tournament.</p>';
+    } else {
+      var rows = shared.map(function (tSlug) {
+        var t = TOURNAMENTS[tSlug] || { n: tSlug, d: '' };
+        var pill = t.db ? ' <span class="doubles-pill">Doubles</span>' : '';
+        return '<tr><td class="compare-stat-label compare-opp-name">' + tourneyLink(tSlug) + pill + '<span class="compare-col-sub">' + esc(formatDateHuman(t.d)) + '</span></td>' +
+          selected.map(function (s, i) {
+            var pl = byTourney[tSlug][i];
+            if (!pl) return '<td class="compare-empty">&mdash;</td>';
+            var partner = pl[5] ? '<span class="compare-col-sub">w/ ' + playerLink(pl[6], pl[7]) + '</span>' : '';
+            return '<td><span class="rank-ordinal">' + ordinal(pl[1]) + '<span class="rank-total">/' + pl[2] + '</span></span> <span class="hist-record">' + pl[3] + '-' + pl[4] + '</span>' + partner + '</td>';
+          }).join('') + '</tr>';
+      });
+      var pg = paginated(rows, 'compare-shared-list');
+      body = '<div class="table-wrap"><table class="compare-table compare-shared"><thead><tr><th class="compare-stat-col"></th>' +
+        selected.map(function (s, i) { return '<th class="compare-player-col compare-player-col-compact" style="--col-color:' + COLORS[i] + '"><span class="compare-col-bar"></span>' + esc(PLAYERS[s].n) + '</th>'; }).join('') +
+        '</tr></thead><tbody id="compare-shared-list">' + pg.items + '</tbody></table></div>' + pg.button;
+    }
+    return '<div class="tourney-section compare-section"><h2>Shared Tournaments (' + shared.length + ')</h2>' + body + '</div>';
+  }
   function renderHint() {
     var text = '';
     if (selected.length === 0) text = 'Search for a player above to start a comparison. Up to four players can be compared at once.';
@@ -265,8 +527,21 @@
     if (!selected.length) { sections.innerHTML = ''; sections.hidden = true; return; }
     sections.hidden = false;
     sections.innerHTML =
-      '<div class="tourney-section compare-section"><h2>Stats</h2>' + renderStatsTable() + '</div>';
+      '<div class="tourney-section compare-section"><h2>Stats</h2>' + renderStatsTable() + '</div>' +
+      renderChart() +
+      renderHeadToHead() +
+      renderSharedTournaments();
+    sections.querySelectorAll('.rating-chart-inner').forEach(wireChart);
   }
+  sections.addEventListener('click', function (e) {
+    var btn = e.target.closest('.show-more-btn');
+    if (!btn) return;
+    var list = document.getElementById(btn.dataset.list);
+    if (!list) return;
+    var hiddenRows = Array.prototype.filter.call(list.children, function (el) { return el.hidden; });
+    hiddenRows.slice(0, PAGE_SIZE).forEach(function (el) { el.hidden = false; });
+    if (hiddenRows.length <= PAGE_SIZE) btn.hidden = true;
+  });
   function updateTitle() {
     var base = 'Compare Players — DeathBall Power Rankings';
     document.title = selected.length ? selected.map(function (s) { return PLAYERS[s].n; }).join(' vs ') + ' — DeathBall Power Rankings' : base;
