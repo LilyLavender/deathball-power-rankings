@@ -986,6 +986,59 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .h2h-compare { position: absolute; top: 0.55rem; right: 0.7rem; display: inline-flex; align-items: center; color: #555; transition: color 150ms ease; }
 .h2h-compare:hover { color: #3eff8b; text-decoration: none; }
 .h2h-compare .h2h-icon { width: 14px; height: 14px; }
+/* --- Compare page (compare.html, see compare_page.js) ---
+   Picker: selected players as chips (slot color dot + flag + linked name +
+   remove), followed by the search input while there's room for another. */
+.compare-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0.5rem 0 1rem; }
+.compare-chip { display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(10,10,10,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 0.4rem 0.5rem 0.4rem 0.7rem; font-size: 1.05rem; font-weight: 600; }
+.compare-chip-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--chip-color, #3eff8b); box-shadow: 0 0 6px var(--chip-color, #3eff8b); flex-shrink: 0; }
+.compare-chip .loc-flag { margin-right: 0; }
+.compare-chip a { color: #f0f0f0; }
+.compare-chip a:hover { color: #3eff8b; }
+.compare-chip-remove { background: none; border: none; color: #666; font-size: 1.2rem; line-height: 1; padding: 0 0.2rem; cursor: pointer; font-family: inherit; transition: color 150ms ease; }
+.compare-chip-remove:hover { color: #ff5e5e; }
+.compare-search-wrap { position: relative; flex: 1 1 220px; max-width: 320px; }
+.compare-search { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #333; border-radius: 3px; color: #f0f0f0; font-family: inherit; font-size: 1rem; font-weight: 600; padding: 0.5rem 0.75rem; }
+.compare-search:focus { outline: none; border-color: #3eff8b; }
+.compare-search::placeholder { color: #555; font-weight: 500; }
+/* Autocomplete list: same shell as the custom dropdown menus elsewhere on
+   the site (.dd-menu), anchored under the search input. */
+.compare-ac-list { position: absolute; top: 100%; left: 0; right: 0; margin-top: 3px; z-index: 60; display: none; background: #0f0f0f; border: 1px solid #333; border-radius: 3px; box-shadow: 0 12px 32px rgba(0,0,0,0.7); max-height: 320px; overflow-y: auto; padding: 4px; }
+.compare-ac-list.visible { display: block; }
+.compare-ac-item { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.4rem 0.75rem; border-radius: 2px; cursor: pointer; color: #bbb; }
+.compare-ac-item.is-active { background: #1a1a1a; color: #fff; }
+.compare-ac-name { font-weight: 700; font-size: 1rem; }
+.compare-ac-meta { font-size: 0.8rem; color: #666; }
+.compare-hint { color: #888; font-size: 0.95rem; margin: 0 0 1.5rem; }
+/* Stats table: label column + one column per player. Global th rules make
+   headers sticky-top and pointer-cursored for the sortable tables; neither
+   applies here. The label column is sticky-left instead so it stays visible
+   while the player columns scroll inside .table-wrap on narrow screens. */
+.compare-table th { position: static; cursor: default; }
+.compare-table th.compare-player-col { position: relative; min-width: 150px; padding-top: 0.9rem; text-transform: none; letter-spacing: 0.02em; font-size: 1.05rem; color: #f0f0f0; }
+.compare-table th.compare-stat-col { width: 1%; }
+.compare-col-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--col-color, #3eff8b); box-shadow: 0 0 8px var(--col-color, #3eff8b); }
+.compare-col-name { display: block; }
+.compare-col-name a { color: #f0f0f0; }
+.compare-col-name a:hover { color: var(--col-color, #3eff8b); }
+.compare-col-sub { display: block; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; color: #666; margin-top: 0.1rem; }
+.compare-table td { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.1rem; }
+.compare-table td.compare-stat-label { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: #666; white-space: nowrap; }
+.compare-table td.compare-empty { color: #3a3a3a; font-weight: 500; }
+.compare-table td.compare-best { color: #3eff8b; }
+.compare-table .compare-note { display: block; font-size: 0.72rem; letter-spacing: 0.04em; color: #3eff8b; }
+.compare-table th:first-child, .compare-table td:first-child { position: sticky; left: 0; z-index: 2; background: #050505; }
+.compare-table tbody tr:hover td:first-child { background: #0a0a0a; }
+.compare-intro { color: #888; font-size: 1.05rem; margin: -1rem 0 0.5rem; }
+@media (max-width: 700px) {
+  /* Let the sticky label column wrap instead of claiming half the phone
+     width with a single nowrap line; player columns keep their min-width
+     and scroll inside .table-wrap. */
+  .compare-table td.compare-stat-label { white-space: normal; max-width: 6.5rem; font-size: 0.72rem; line-height: 1.25; }
+  .compare-table th.compare-player-col { min-width: 130px; }
+  .compare-table .compare-note { white-space: nowrap; }
+  .compare-search-wrap { flex-basis: 100%; max-width: none; }
+}
 .stat-tile { position: relative; background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 1rem 0.9rem; min-height: 5.5rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
 .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
 .stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }

@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const glicko2 = require('./glicko2');
+const { writeComparePage } = require('./compare_page');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
 const { buildBracketData, hashStr } = require('./build_bracket');
 const { slugify } = require('../slugify');
@@ -3697,6 +3698,75 @@ function computePlayerProfile(id, p, hist, rankingRows, officialRows, ratingHist
   };
 }
 
+// Everything compare.html (see compare_page.js) needs, keyed by player slug
+// (the same slug as the player's page URL, so a comparison link is
+// shareable and readable). Field names are deliberately short -- this blob
+// covers every player on the site -- and arrays are positional; keep the
+// layout notes here in sync with the client-side readers in compare_page.js.
+//   rh: [date, rating, rd, rank, tournamentSlug]
+//   m:  [opponentSlug, won, date, order, scoreFor, scoreAgainst, tournamentSlug, isDQ]
+//   pl: [tournamentSlug, rank, totalEntrants, wins, losses, isDoubles, partnerSlug, partnerName]
+// Opponent/partner slugs are null when that player has no page (hidden).
+function buildCompareData(players, histories, rankingRows, ratingHistoryById, allTournaments, lastActiveById) {
+  const officialRows = rankingRows.filter((r) => r.games >= 5 && r.rd <= 150);
+  const slugOf = (id) => playerSlugById.get(id) || null;
+  const record = (e) => ({ w: e.wins, l: e.losses, t: e.total });
+  const pick = (e) => (e ? { s: slugOf(e.opponentId), n: e.opponentName, ...record(e) } : null);
+
+  const out = { players: {}, tournaments: {} };
+  for (const [id, p] of players.entries()) {
+    const slug = slugOf(id);
+    if (!slug) continue;
+    const hist = histories.get(id) || { matches: [], placements: [] };
+    const ratingHistory = ratingHistoryById.get(id) || [];
+    const prof = computePlayerProfile(id, p, hist, rankingRows, officialRows, ratingHistory);
+    out.players[slug] = {
+      n: prof.name,
+      f: prof.flag || null,
+      loc: prof.location,
+      ar: prof.activeRange,
+      la: lastActiveById.get(id) || '',
+      al: prof.aliases,
+      do: prof.isDoublesOnly,
+      w: p.wins,
+      l: p.losses,
+      g: p.games,
+      gf: prof.stocksFor,
+      ga: prof.stocksAgainst,
+      pr: prof.officialIdx >= 0 ? prof.officialIdx + 1 : null,
+      qn: prof.qualNote,
+      or: prof.rankIdx >= 0 ? prof.rankIdx + 1 : null,
+      r: prof.rankingRow ? Math.round(prof.rankingRow.r) : null,
+      rd: prof.rankingRow ? Math.round(prof.rankingRow.rd) : null,
+      peak: prof.peakRating ? { v: prof.peakRating.rating, d: prof.peakRating.date, t: prof.peakRating.slug } : null,
+      lws: prof.h2h.longestWinStreak,
+      lls: prof.h2h.longestLossStreak,
+      tp: prof.totalPlacements,
+      pod: prof.podiumCount,
+      t8: prof.top8Count,
+      gk: prof.h2h.giantKiller,
+      gkM: prof.h2h.giantKillerMajor,
+      uv: prof.h2h.upsetVictim,
+      uvM: prof.h2h.upsetVictimMajor,
+      tc: p.tournaments.size,
+      bw: prof.bestWin ? { s: slugOf(prof.bestWin.opponentId), n: prof.bestWin.opponentName, r: prof.bestWin.rating, rk: prof.bestWin.oppRank, sp: prof.bestWin.spots } : null,
+      rv: pick(prof.h2h.rival),
+      mp: pick(prof.h2h.mostPlayed),
+      bwr: pick(prof.h2h.bestWinRate),
+      wwr: pick(prof.h2h.worstWinRate),
+      mwa: pick(prof.h2h.mostWinsAgainst),
+      mla: pick(prof.h2h.mostLossesAgainst),
+      rh: ratingHistory.map((h) => [h.date, h.rating, h.rd, h.rank, h.slug]),
+      m: hist.matches.map((m) => [slugOf(m.opponentId), m.won ? 1 : 0, m.date, m.order, m.scoreFor, m.scoreAgainst, m.tournamentSlug, m.isDQ ? 1 : 0]),
+      pl: hist.placements.map((pl) => [pl.slug, pl.rank, pl.totalEntrants, pl.wins, pl.losses, pl.isDoubles ? 1 : 0, pl.isDoubles ? slugOf(pl.partnerId) : null, pl.isDoubles ? pl.partnerName : null]),
+    };
+  }
+  for (const t of allTournaments) {
+    out.tournaments[t.slug] = { n: t.label, d: t.date, f: t.locationDisplay.flag || null, db: t.isDoubles ? 1 : 0 };
+  }
+  return out;
+}
+
 function writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById, doublesHistories) {
   const dir = path.join(REPO_ROOT, 'players');
   fs.mkdirSync(dir, { recursive: true });
@@ -4448,6 +4518,12 @@ async function main() {
   writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPlayers, mapAllTournaments, rankingHistory, doublesTeams);
   writeTournamentPages(allTournaments);
   writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById, doublesHistories);
+  writeComparePage({
+    data: buildCompareData(players, histories, rankingRows, ratingHistoryById, allTournaments, lastActiveById),
+    metaTags: embedMetaTags('Compare Players — DeathBall Power Rankings', 'Compare DeathBall players side by side: records, ratings, head-to-head results, and shared tournaments', 'compare.html'),
+    footerHtml: siteFooter(''),
+    outPath: path.join(REPO_ROOT, 'compare.html'),
+  });
 
   console.log(`Unique players: ${playerRows.length}`);
   console.log(`Tournaments:    ${allTournaments.length}`);
