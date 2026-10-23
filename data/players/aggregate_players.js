@@ -3582,6 +3582,118 @@ function buildRatingChartSvg(history) {
 </div>`;
 }
 
+// Every derived per-player number a player page shows (and the comparison
+// page, compare.html, compares) -- computed once here so the two never drift.
+// officialRows is the Power-Rankings-qualified subset of rankingRows (5+
+// games, RD <= 150), passed in rather than recomputed per player.
+function computePlayerProfile(id, p, hist, rankingRows, officialRows, ratingHistory) {
+  const name = displayName(p);
+  const info = lookupPlayerInfo(id, name);
+  const flag = flagForInfo(info);
+  const location = info.city ? [info.city, info.state].filter(Boolean).join(', ')
+    : info.state ? (STATE_NAMES[info.state] || info.state) : (info.country || '');
+
+  const aliases = aliasesUsed(p);
+
+  // A player only ever gets `players` entries via recordMatch (singles) or
+  // registerDoublesParticipants (doubles) -- 0 games means they've never
+  // played a real singles match, i.e. every tournament on file for them is
+  // doubles. Their page shows only the Tournaments list and Doubles
+  // section (see the branch near the bottom of writePlayerPages' loop); top
+  // stat tiles/chart/Match Statistics/match log would all just be empty/zero.
+  const isDoublesOnly = p.games === 0;
+
+  let stocksFor = 0;
+  let stocksAgainst = 0;
+  for (const m of hist.matches) {
+    if (m.isDQ) continue;
+    stocksFor += m.stocksFor;
+    stocksAgainst += m.stocksAgainst;
+  }
+
+  const placementsDesc = [...hist.placements].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const matchesDesc = [...hist.matches].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.order - a.order));
+
+  const h2h = buildHeadToHead(hist.matches);
+
+  const rankIdx = rankingRows.findIndex((r) => r.id === id);
+  const rankingRow = rankIdx >= 0 ? rankingRows[rankIdx] : null;
+  const officialIdx = officialRows.findIndex((r) => r.id === id);
+
+  // Signature win: the highest-rated opponent (rating as they entered that
+  // tournament, not their current rating) this player has beaten. Also
+  // surfaces the opponent's current overall rank and how many spots that
+  // is above/below this player's own rank, for context on how big a scalp
+  // it still is today.
+  const bestWinMatch = hist.matches
+    .filter((m) => m.won && !m.isDQ && m.opponentRatingAtMatch != null)
+    .reduce((best, m) => (!best || m.opponentRatingAtMatch > best.opponentRatingAtMatch ? m : best), null);
+  let bestWin = null;
+  if (bestWinMatch) {
+    const oppRankIdx = rankingRows.findIndex((r) => r.id === bestWinMatch.opponentId);
+    bestWin = {
+      opponentId: bestWinMatch.opponentId,
+      opponentName: bestWinMatch.opponentName,
+      rating: bestWinMatch.opponentRatingAtMatch,
+      oppRank: oppRankIdx >= 0 ? oppRankIdx + 1 : null,
+      spots: (oppRankIdx >= 0 && rankIdx >= 0) ? (rankIdx - oppRankIdx) : null,
+    };
+  }
+
+  const winPct = p.games > 0 ? p.wins / p.games : 0;
+  const stockDiff = stocksFor - stocksAgainst;
+
+  // Years the player has tournament placements in, collapsed to a single
+  // year ("2021") or a range ("2021-2024") for a compact tenure callout
+  // shown in the subtitle rather than a stat tile.
+  // Years with placements, collapsed into contiguous ranges -- a gap of at
+  // least 2 fully inactive years between two active years (year diff >= 3)
+  // starts a new comma-separated segment instead of stretching one range
+  // across a real absence, e.g. "2019 - 2021, 2025" rather than "2019-2025".
+  const activeYearNums = [...new Set(hist.placements.map((pl) => Number((pl.date || '').slice(0, 4))).filter(Boolean))].sort((a, b) => a - b);
+  const activeSegments = [];
+  for (const year of activeYearNums) {
+    const last = activeSegments[activeSegments.length - 1];
+    if (last && year - last[1] < 3) last[1] = year;
+    else activeSegments.push([year, year]);
+  }
+  const activeRange = activeSegments
+    .map(([start, end]) => (start === end ? `${start}` : `${start} - ${end}`))
+    .join(', ');
+
+  // When not qualified, name the specific blocker(s) instead of a blanket
+  // "needs 5+ games, RD <= 150" — a player short on RD only shouldn't be
+  // told they also need more games when they don't.
+  const qualBlockers = [];
+  if (officialIdx < 0) {
+    if (p.games < 5) qualBlockers.push('5+ games');
+    if ((rankingRow ? rankingRow.rd : GLICKO_DEFAULT_RD) > 150) qualBlockers.push('RD ≤ 150');
+  }
+  const qualNote = qualBlockers.length ? `Needs ${qualBlockers.join(', ')}` : '';
+
+  // Podium/Top 8 rate is a Match Statistics tile -- like the rest of that
+  // section, doubles placements don't count toward it (see the isDoubles
+  // guards elsewhere in this file), only hist.placements' singles entries.
+  const singlesPlacements = hist.placements.filter((pl) => !pl.isDoubles);
+  const totalPlacements = singlesPlacements.length;
+  const podiumCount = singlesPlacements.filter((pl) => pl.rank <= 3).length;
+  const top8Count = singlesPlacements.filter((pl) => pl.rank <= 8).length;
+
+  const peakRating = ratingHistory.length
+    ? ratingHistory.reduce((best, h) => (!best || h.rating > best.rating ? h : best), null)
+    : null;
+
+  return {
+    name, info, flag, location, aliases, isDoublesOnly,
+    stocksFor, stocksAgainst, stockDiff, winPct,
+    placementsDesc, matchesDesc, h2h,
+    rankIdx, rankingRow, officialIdx, bestWin,
+    activeRange, qualNote,
+    totalPlacements, podiumCount, top8Count,
+    peakRating,
+  };
+}
+
 function writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById, doublesHistories) {
   const dir = path.join(REPO_ROOT, 'players');
   fs.mkdirSync(dir, { recursive: true });
@@ -3592,84 +3704,19 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
   for (const [id, p] of players.entries()) {
     const slug = playerSlugById.get(id);
     if (!slug) continue;
-    const name = displayName(p);
-    const info = lookupPlayerInfo(id, name);
-    const flag = flagForInfo(info);
-    const location = info.city ? [info.city, info.state].filter(Boolean).join(', ')
-      : info.state ? (STATE_NAMES[info.state] || info.state) : (info.country || '');
-
-    const aliases = aliasesUsed(p);
-
-    // A player only ever gets `players` entries via recordMatch (singles) or
-    // registerDoublesParticipants (doubles) -- 0 games means they've never
-    // played a real singles match, i.e. every tournament on file for them is
-    // doubles. Their page shows only the Tournaments list and Doubles
-    // section (see the branch near the bottom of this loop); top stat
-    // tiles/chart/Match Statistics/match log would all just be empty/zero.
-    const isDoublesOnly = p.games === 0;
-
     const hist = histories.get(id) || { matches: [], placements: [] };
-    let stocksFor = 0;
-    let stocksAgainst = 0;
-    for (const m of hist.matches) {
-      if (m.isDQ) continue;
-      stocksFor += m.stocksFor;
-      stocksAgainst += m.stocksAgainst;
-    }
-
-    const placementsDesc = [...hist.placements].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-    const matchesDesc = [...hist.matches].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.order - a.order));
-
-    const h2h = buildHeadToHead(hist.matches);
     const ratingHistory = ratingHistoryById.get(id) || [];
-
-    const rankIdx = rankingRows.findIndex((r) => r.id === id);
-    const rankingRow = rankIdx >= 0 ? rankingRows[rankIdx] : null;
-    const officialIdx = officialRows.findIndex((r) => r.id === id);
-
-    // Signature win: the highest-rated opponent (rating as they entered that
-    // tournament, not their current rating) this player has beaten. Also
-    // surfaces the opponent's current overall rank and how many spots that
-    // is above/below this player's own rank, for context on how big a scalp
-    // it still is today.
-    const bestWinMatch = hist.matches
-      .filter((m) => m.won && !m.isDQ && m.opponentRatingAtMatch != null)
-      .reduce((best, m) => (!best || m.opponentRatingAtMatch > best.opponentRatingAtMatch ? m : best), null);
-    let bestWin = null;
-    if (bestWinMatch) {
-      const oppRankIdx = rankingRows.findIndex((r) => r.id === bestWinMatch.opponentId);
-      bestWin = {
-        opponentId: bestWinMatch.opponentId,
-        opponentName: bestWinMatch.opponentName,
-        rating: bestWinMatch.opponentRatingAtMatch,
-        oppRank: oppRankIdx >= 0 ? oppRankIdx + 1 : null,
-        spots: (oppRankIdx >= 0 && rankIdx >= 0) ? (rankIdx - oppRankIdx) : null,
-      };
-    }
-
-    const winPct = p.games > 0 ? p.wins / p.games : 0;
-    const stockDiff = stocksFor - stocksAgainst;
+    const {
+      name, info, flag, location, aliases, isDoublesOnly,
+      stocksFor, stocksAgainst, stockDiff, winPct,
+      placementsDesc, matchesDesc, h2h,
+      rankIdx, rankingRow, officialIdx, bestWin,
+      activeRange, qualNote,
+      totalPlacements, podiumCount, top8Count,
+      peakRating,
+    } = computePlayerProfile(id, p, hist, rankingRows, officialRows, ratingHistory);
 
     const flagImg = flag ? `<img class="loc-flag" src="${escapeHtml(flag.src)}" title="${escapeHtml(flag.title)}" alt="${escapeHtml(flag.title)}">` : '';
-
-    // Years the player has tournament placements in, collapsed to a single
-    // year ("2021") or a range ("2021-2024") for a compact tenure callout
-    // shown in the subtitle rather than a stat tile.
-    // Years with placements, collapsed into contiguous ranges -- a gap of at
-    // least 2 fully inactive years between two active years (year diff >= 3)
-    // starts a new comma-separated segment instead of stretching one range
-    // across a real absence, e.g. "2019 - 2021, 2025" rather than "2019-2025".
-    const activeYearNums = [...new Set(hist.placements.map((pl) => Number((pl.date || '').slice(0, 4))).filter(Boolean))].sort((a, b) => a - b);
-    const activeSegments = [];
-    for (const year of activeYearNums) {
-      const last = activeSegments[activeSegments.length - 1];
-      if (last && year - last[1] < 3) last[1] = year;
-      else activeSegments.push([year, year]);
-    }
-    const activeRange = activeSegments
-      .map(([start, end]) => (start === end ? `${start}` : `${start} - ${end}`))
-      .join(', ');
 
     const statTiles = `<div class="stat-tile stat-span-3">
   <div class="stat-multi">
@@ -3689,16 +3736,8 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     // One combined card (Power Ranking, Overall Ranking, Glicko-2 Rating, RD)
     // instead of two separate tiles — same underlying rankingRow/officialIdx
     // data as before, just laid out left-to-right as one stat-multi row.
-    // When not qualified, name the specific blocker(s) instead of a blanket
-    // "needs 5+ games, RD <= 150" — a player short on RD only shouldn't be
-    // told they also need more games when they don't.
-    const qualBlockers = [];
-    if (officialIdx < 0) {
-      if (p.games < 5) qualBlockers.push('5+ games');
-      if ((rankingRow ? rankingRow.rd : GLICKO_DEFAULT_RD) > 150) qualBlockers.push('RD ≤ 150');
-    }
-    const qualNote = qualBlockers.length ? `Needs ${qualBlockers.join(', ')}` : '';
-
+    // qualNote (from computePlayerProfile) names the specific blocker(s) when
+    // the player isn't Power-Rankings-qualified.
     // The note is absolutely positioned (see .stat-note) so it never adds a
     // line to the stat-multi row or changes the tile's height — a
     // Not-Qualified card renders pixel-identical to a qualified one, just
@@ -3741,13 +3780,8 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     // milestones) — same .h2h-tile shell as h2hRow, just a plain value.
     const statTile = (label, valueHtml, iconKey, flip, mobileLabel) => `<div class="h2h-tile"><span class="h2h-label">${h2hIcon(iconKey, flip)}${dualLabelHtml(label, mobileLabel)}</span><span class="h2h-value">${valueHtml}</span></div>`;
 
-    // Podium/Top 8 rate is a Match Statistics tile -- like the rest of that
-    // section, doubles placements don't count toward it (see the isDoubles
-    // guards elsewhere in this file), only hist.placements' singles entries.
-    const singlesPlacements = hist.placements.filter((pl) => !pl.isDoubles);
-    const totalPlacements = singlesPlacements.length;
-    const podiumCount = singlesPlacements.filter((pl) => pl.rank <= 3).length;
-    const top8Count = singlesPlacements.filter((pl) => pl.rank <= 8).length;
+    // Podium/Top 8 rate counts come from computePlayerProfile (singles
+    // placements only, like the rest of Match Statistics).
     const rateValue = (count) => totalPlacements
       ? `${count}/${totalPlacements} <span class="h2h-record-dim">(${((count / totalPlacements) * 100).toFixed(0)}%)</span>`
       : '&mdash;';
@@ -3758,10 +3792,6 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     const gapTierValue = (count, majorCount, showTier = true) => count
       ? `&times;${count}${showTier ? ` <span class="h2h-record-dim">(150+)</span>${majorCount ? ` <span class="h2h-record-dim">&middot; ${majorCount} (200+)</span>` : ''}` : ''}`
       : '&mdash;';
-
-    const peakRating = ratingHistory.length
-      ? ratingHistory.reduce((best, h) => (!best || h.rating > best.rating ? h : best), null)
-      : null;
 
     const h2hSection = `<div class="h2h-grid">
 ${h2hRow('Best Win Rate (Min. 3)', h2h.bestWinRate, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'trendUp', undefined, 'Best Win Rate')}
