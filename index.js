@@ -1116,6 +1116,236 @@
       if (checkpoint) renderRankingHistory(panel, checkpoint);
     });
   }
+  let openDropdown = null;
+  const DROPDOWN_CLOSE_MS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')) || 150;
+  const DROPDOWN_MENU_MAX_PX = 288;
+  const DROPDOWN_MENU_MAX_WIDTH_PX = 416;
+  const DROPDOWN_VIEWPORT_PAD = 8;
+  const DROPDOWN_GAP = 4;
+  let dropdownSeq = 0;
+  function svgIcon(cls, viewBox, w, h, d, strokeWidth) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', cls);
+    svg.setAttribute('viewBox', viewBox);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    svg.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', 'currentColor');
+    p.setAttribute('stroke-width', strokeWidth);
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(p);
+    return svg;
+  }
+  function enhanceDropdown(select) {
+    if (select.dataset.ddEnhanced) return;
+    select.dataset.ddEnhanced = '1';
+    const id = 'dd-' + (++dropdownSeq);
+    const wrap = document.createElement('div');
+    wrap.className = 'dd';
+    wrap.dataset.for = [...select.classList].find((c) => c.endsWith('-select')) || '';
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'dd-trigger';
+    trigger.setAttribute('role', 'combobox');
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', id + '-menu');
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'dd-label';
+    trigger.appendChild(labelSpan);
+    trigger.appendChild(svgIcon('dd-chevron', '0 0 10 6', '10', '6', 'M1 1l4 4 4-4', '1.5'));
+    const menu = document.createElement('ul');
+    menu.className = 'dd-menu t-dropdown';
+    menu.id = id + '-menu';
+    menu.setAttribute('role', 'listbox');
+    menu.tabIndex = -1;
+    menu.dataset.origin = 'top-left';
+    const label = select.closest('label');
+    if (label) {
+      const text = [...label.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim().replace(/:$/, '');
+      if (text) { trigger.setAttribute('aria-label', text); menu.setAttribute('aria-label', text); }
+    }
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(trigger);
+    wrap.appendChild(select);
+    select.hidden = true;
+    select.tabIndex = -1;
+    document.body.appendChild(menu);
+    let isOpen = false;
+    let closeTimer = null;
+    let activeIndex = -1;
+    let typeBuffer = '';
+    let typeTimer = null;
+    function syncTrigger() {
+      const opt = select.options[select.selectedIndex];
+      labelSpan.textContent = opt ? opt.textContent : '';
+    }
+    function setActive(i, scroll) {
+      const items = [...menu.children];
+      if (!items.length) { activeIndex = -1; trigger.removeAttribute('aria-activedescendant'); return; }
+      activeIndex = Math.max(0, Math.min(items.length - 1, i));
+      items.forEach((li, idx) => li.classList.toggle('is-active', idx === activeIndex));
+      const li = items[activeIndex];
+      trigger.setAttribute('aria-activedescendant', li.id);
+      if (scroll) {
+        const top = li.offsetTop, bottom = top + li.offsetHeight;
+        if (top < menu.scrollTop) menu.scrollTop = top;
+        else if (bottom > menu.scrollTop + menu.clientHeight) menu.scrollTop = bottom - menu.clientHeight;
+      }
+    }
+    function renderOptions() {
+      menu.textContent = '';
+      [...select.options].forEach((opt, i) => {
+        const li = document.createElement('li');
+        li.className = 'dd-option';
+        li.id = id + '-opt-' + i;
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', String(i === select.selectedIndex));
+        li.dataset.index = String(i);
+        const span = document.createElement('span');
+        span.className = 'dd-option-label';
+        span.textContent = opt.textContent;
+        li.appendChild(span);
+        li.appendChild(svgIcon('dd-option-check', '0 0 12 10', '12', '10', 'M1 5.5l3.2 3L11 1.5', '1.8'));
+        menu.appendChild(li);
+      });
+    }
+    function position() {
+      const r = trigger.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const below = vh - r.bottom - DROPDOWN_GAP - DROPDOWN_VIEWPORT_PAD;
+      const above = r.top - DROPDOWN_GAP - DROPDOWN_VIEWPORT_PAD;
+      menu.style.minWidth = r.width + 'px';
+      menu.style.maxWidth = Math.max(r.width, Math.min(vw - DROPDOWN_VIEWPORT_PAD * 2, DROPDOWN_MENU_MAX_WIDTH_PX)) + 'px';
+      menu.style.maxHeight = Math.max(96, Math.min(DROPDOWN_MENU_MAX_PX, Math.max(below, above))) + 'px';
+      const mh = menu.offsetHeight, mw = menu.offsetWidth;
+      const up = mh > below && above > below;
+      let left = r.left;
+      if (left + mw > vw - DROPDOWN_VIEWPORT_PAD) left = Math.max(DROPDOWN_VIEWPORT_PAD, vw - DROPDOWN_VIEWPORT_PAD - mw);
+      const top = up ? r.top - DROPDOWN_GAP - mh : r.bottom + DROPDOWN_GAP;
+      menu.style.left = left + 'px';
+      menu.style.top = Math.max(DROPDOWN_VIEWPORT_PAD, top) + 'px';
+      menu.dataset.origin = up ? 'bottom-left' : 'top-left';
+    }
+    function open() {
+      if (isOpen) return;
+      if (openDropdown && openDropdown !== api) openDropdown.close();
+      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+      renderOptions();
+      isOpen = true;
+      openDropdown = api;
+      wrap.classList.add('is-open');
+      trigger.setAttribute('aria-expanded', 'true');
+      menu.classList.remove('is-closing');
+      position();
+      menu.classList.add('is-open');
+      setActive(select.selectedIndex, true);
+      trigger.focus();
+      window.addEventListener('scroll', position, { capture: true, passive: true });
+      window.addEventListener('resize', position);
+    }
+    function close() {
+      if (!isOpen) return;
+      isOpen = false;
+      if (openDropdown === api) openDropdown = null;
+      wrap.classList.remove('is-open');
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.removeAttribute('aria-activedescendant');
+      menu.classList.remove('is-open');
+      menu.classList.add('is-closing');
+      closeTimer = setTimeout(() => { menu.classList.remove('is-closing'); closeTimer = null; }, DROPDOWN_CLOSE_MS);
+      window.removeEventListener('scroll', position, { capture: true });
+      window.removeEventListener('resize', position);
+    }
+    function choose(i) {
+      if (i < 0 || i >= select.options.length) return;
+      const changed = select.selectedIndex !== i;
+      select.selectedIndex = i;
+      syncTrigger();
+      close();
+      trigger.focus();
+      if (changed) select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function typeahead(ch) {
+      if (typeTimer) clearTimeout(typeTimer);
+      typeTimer = setTimeout(() => { typeBuffer = ''; }, 600);
+      const repeat = typeBuffer.length > 0 && typeBuffer.split('').every((c) => c === ch);
+      typeBuffer += ch;
+      const needle = repeat ? ch : typeBuffer;
+      const labels = [...select.options].map((o) => o.textContent.trim().toLowerCase());
+      const start = (isOpen ? activeIndex : select.selectedIndex) + (needle.length === 1 ? 1 : 0);
+      for (let k = 0; k < labels.length; k++) {
+        const idx = (start + k) % labels.length;
+        if (labels[idx].startsWith(needle)) {
+          if (isOpen) setActive(idx, true); else choose(idx);
+          return;
+        }
+      }
+    }
+    trigger.addEventListener('click', () => { if (isOpen) close(); else open(); });
+    trigger.addEventListener('keydown', (e) => {
+      const n = select.options.length;
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (!isOpen) open(); else setActive(activeIndex + 1, true);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (!isOpen) open(); else setActive(activeIndex - 1, true);
+          break;
+        case 'Home':
+          if (isOpen) { e.preventDefault(); setActive(0, true); }
+          break;
+        case 'End':
+          if (isOpen) { e.preventDefault(); setActive(n - 1, true); }
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          if (isOpen) choose(activeIndex); else open();
+          break;
+        case 'Escape':
+          if (isOpen) { e.preventDefault(); close(); }
+          break;
+        case 'Tab':
+          close();
+          break;
+        default:
+          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            typeahead(e.key.toLowerCase());
+          }
+      }
+    });
+    menu.addEventListener('mousedown', (e) => e.preventDefault());
+    menu.addEventListener('mouseover', (e) => {
+      const li = e.target.closest('.dd-option');
+      if (li) setActive(parseInt(li.dataset.index, 10), false);
+    });
+    menu.addEventListener('click', (e) => {
+      const li = e.target.closest('.dd-option');
+      if (li) choose(parseInt(li.dataset.index, 10));
+    });
+    new MutationObserver(() => {
+      syncTrigger();
+      if (isOpen) { renderOptions(); setActive(activeIndex, false); position(); }
+    }).observe(select, { childList: true, subtree: true, characterData: true, attributes: true });
+    syncTrigger();
+    const api = { close, contains: (node) => wrap.contains(node) || menu.contains(node) || (!!label && label.contains(node)) };
+    return api;
+  }
+  function enhanceDropdowns() {
+    document.querySelectorAll('.tab-controls select').forEach(enhanceDropdown);
+    document.addEventListener('pointerdown', (e) => {
+      if (openDropdown && !openDropdown.contains(e.target)) openDropdown.close();
+    }, true);
+  }
   function initPanel(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -1161,6 +1391,7 @@
   enableOptionsToggle();
   initPanel('players-tab');
   initPanel('rankings-tab');
+  enhanceDropdowns();
   enableCsvDownloadButtons();
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));

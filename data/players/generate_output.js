@@ -162,6 +162,11 @@ function writeCss() {
   --acc-expand: 250ms;
   --acc-collapse: 250ms;
   --acc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dropdown-open-dur: 250ms;
+  --dropdown-close-dur: 150ms;
+  --dropdown-pre-scale: 0.97;
+  --dropdown-closing-scale: 0.99;
+  --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --icon-swap-dur: 250ms;
   --icon-swap-blur: 2px;
   --icon-swap-start-scale: 0.25;
@@ -240,16 +245,90 @@ a:hover { text-decoration: underline; }
    accordion's collapsible content) inside the mobile media query below. */
 .rankings-options-inner { display: contents; }
 .tab-controls label { color: #888; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem; }
-/* appearance:none drops the native arrow entirely, so a chevron is drawn as
-   a background image instead (color-scheme:dark keeps the native option
-   popup itself dark too, since that part can't be styled directly). */
-.tab-controls select { background: #111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.65rem center; background-size: 0.6rem; color: #f0f0f0; border: 1px solid #333; border-radius: 3px; padding: 0.32rem 1.8rem 0.32rem 0.7rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; transition: border-color 150ms, background-color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; color-scheme: dark; }
-.tab-controls select:hover { border-color: #555; background-color: #161616; }
+/* Dropdowns. Every select in a .tab-controls row is progressively enhanced
+   by enhanceDropdowns() in writeJs: the native select is hidden (still the
+   source of truth for .value/.options and still the thing that fires change,
+   so applyFilters and friends never know the difference) and replaced with a
+   .dd-trigger button plus a .dd-menu listbox. The native select keeps the
+   same closed-control skin as the trigger so a no-JS page still matches
+   (appearance:none drops the native arrow, so a chevron is drawn as a
+   background image; color-scheme:dark keeps the native option popup dark). */
+.tab-controls select, .dd-trigger { background-color: #111; color: #f0f0f0; border: 1px solid #333; border-radius: 3px; padding: 0.32rem 0.7rem; font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; letter-spacing: 0; text-transform: none; line-height: normal; transition: border-color 150ms, background-color 150ms, color 150ms; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.tab-controls select { padding-right: 1.8rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.65rem center; background-size: 0.6rem; color-scheme: dark; }
+.tab-controls select:hover, .dd-trigger:hover { border-color: #555; background-color: #161616; }
 .tab-controls select:focus { outline: none; border-color: #3eff8b; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233eff8b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
-/* Option text ("July, 2025 - Combo Breaker 2026") can run long -- clip the
-   closed control itself so the whole toolbar row stays on one line; the
-   open dropdown's own option list is unaffected and still shows full text. */
-.pr-history-select { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd { position: relative; display: inline-flex; min-width: 0; }
+.dd-trigger { display: inline-flex; align-items: center; gap: 0.6rem; min-width: 0; max-width: 100%; text-align: left; }
+.dd-trigger:focus { outline: none; }
+.dd-trigger:focus-visible, .dd.is-open .dd-trigger { border-color: #3eff8b; }
+.dd.is-open .dd-trigger { background-color: #161616; }
+.dd-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The chevron is an inline SVG (not a background image like the no-JS
+   select's) so it can flip while the menu is open, same cue as the mobile
+   options accordion's caret. */
+.dd-chevron { flex-shrink: 0; width: 0.6rem; height: auto; color: #888; transition: transform var(--duration-fast) var(--ease-smooth-out), color 150ms; }
+.dd-trigger:hover .dd-chevron { color: #aaa; }
+.dd.is-open .dd-chevron, .dd-trigger:focus-visible .dd-chevron { color: #3eff8b; }
+.dd.is-open .dd-chevron { transform: rotate(180deg); }
+/* The long "Rankings at" checkpoint labels are clipped on the closed control
+   so the toolbar row stays on one line; the open menu still shows full text. */
+.dd[data-for="pr-history-select"] .dd-trigger { max-width: 12rem; }
+/* The menu lives directly under body (enhanceDropdowns appends it there) and
+   is position:fixed, so it can never be clipped by an overflow:hidden
+   ancestor -- which the mobile Power Rankings options accordion
+   (.rankings-options-inner) is. z-index sits above the mobile tabs drawer. */
+.dd-menu { position: fixed; z-index: 60; margin: 0; padding: 4px; list-style: none; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #333 transparent; background: #0f0f0f; border: 1px solid #333; border-radius: 3px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(62, 255, 139, 0.05); font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 600; }
+.dd-menu::-webkit-scrollbar { width: 6px; }
+.dd-menu::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+.dd-option { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 2px; color: #bbb; cursor: pointer; transition: background-color 100ms, color 100ms; }
+/* Long labels (the Rankings-at checkpoints) wrap rather than clip, since the open menu is where the full text is meant to be readable. */
+.dd-option-label { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.dd-option.is-active { background: #1a1a1a; color: #fff; }
+.dd-option[aria-selected="true"] { color: #3eff8b; font-weight: 700; }
+.dd-option-check { flex-shrink: 0; width: 0.7rem; height: auto; color: #3eff8b; opacity: 0; }
+.dd-option[aria-selected="true"] .dd-option-check { opacity: 1; }
+/* transitions.dev menu-dropdown: grows out of the trigger's edge (top-left
+   when opening downward, bottom-left when flipped above), softer and
+   quicker on the way out. */
+.t-dropdown {
+  transform-origin: top left;
+  transform: scale(var(--dropdown-pre-scale));
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    transform var(--dropdown-open-dur) var(--dropdown-ease),
+    opacity   var(--dropdown-open-dur) var(--dropdown-ease),
+    visibility 0s linear var(--dropdown-open-dur);
+  will-change: transform, opacity;
+}
+.t-dropdown[data-origin="top-right"]     { transform-origin: top right; }
+.t-dropdown[data-origin="top-center"]    { transform-origin: top center; }
+.t-dropdown[data-origin="bottom-left"]   { transform-origin: bottom left; }
+.t-dropdown[data-origin="bottom-center"] { transform-origin: bottom center; }
+.t-dropdown[data-origin="bottom-right"]  { transform-origin: bottom right; }
+.t-dropdown.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition:
+    transform var(--dropdown-open-dur) var(--dropdown-ease),
+    opacity   var(--dropdown-open-dur) var(--dropdown-ease),
+    visibility 0s;
+}
+.t-dropdown.is-closing {
+  transform: scale(var(--dropdown-closing-scale));
+  opacity: 0;
+  pointer-events: none;
+  visibility: visible;
+  transition:
+    transform var(--dropdown-close-dur) var(--dropdown-ease),
+    opacity   var(--dropdown-close-dur) var(--dropdown-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-dropdown, .dd-chevron { transition: none !important; }
+}
 .filter-count, .ranking-count { color: #555; font-size: 0.9rem; font-weight: 500; }
 #count { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
 .view-toggle { display: flex; gap: 0; background: #111; border: 1px solid #333; border-radius: 3px; padding: 2px; flex-shrink: 0; position: relative; }
@@ -1144,7 +1223,11 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   .rankings-options-inner {
     display: grid;
     overflow: hidden;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, 1fr), not bare 1fr: a bare 1fr track has an auto minimum
+       equal to its content's min-content width, and the Rankings-at
+       dropdown trigger's nowrap label would otherwise push its column past
+       the grid (clipped by overflow:hidden, but the control ran off-screen). */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0.65rem 0.75rem;
     align-items: end;
     opacity: 0;
@@ -1169,7 +1252,10 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
      non-important rule regardless of selector specificity or source order. */
   .rank-delta-toggle[hidden] { display: flex !important; visibility: hidden; }
   .rankings-options-inner label { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
-  .rankings-options-inner label select { width: 100%; }
+  .rankings-options-inner label select, .rankings-options-inner label .dd, .rankings-options-inner label .dd-trigger { width: 100%; }
+  .rankings-options-inner label .dd[data-for="pr-history-select"] .dd-trigger { max-width: none; }
+  /* Finger-sized rows for the custom dropdown menu. */
+  .dd-option { padding: 0.55rem 0.8rem; }
   @media (prefers-reduced-motion: reduce) {
     #rankings-options-panel, .rankings-options-inner { transition: none !important; }
   }
@@ -2800,6 +2886,278 @@ function writeJs(glickoUncertainRdThreshold) {
     });
   }
 
+  // Progressive enhancement for every select in a .tab-controls row: hides
+  // the native select behind a styled button + listbox (see .dd-* in
+  // writeCss). The select stays in the DOM as the source of truth -- the
+  // custom menu is rebuilt from select.options every time it opens, picking
+  // an option sets select.selectedIndex and dispatches a real change event,
+  // and a MutationObserver on the select keeps the closed trigger's text in
+  // sync when other code rewrites option labels (applyFilters appends live
+  // counts to every location option) or appends options after the fact
+  // (populateStateFilter, enablePrHistorySelect). So the existing filter
+  // code reads/listens to the select exactly as before and never has to
+  // know the enhancement exists.
+  //
+  // Each menu is appended to body and position:fixed'd under its trigger on
+  // open (re-measured on scroll/resize while open) rather than nested in the
+  // .dd wrapper, because the mobile Power Rankings options accordion is an
+  // overflow:hidden box with a filter on it -- nothing positioned inside it
+  // could escape that clip.
+  let openDropdown = null;
+  const DROPDOWN_CLOSE_MS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')) || 150;
+  const DROPDOWN_MENU_MAX_PX = 288; // 18rem
+  const DROPDOWN_MENU_MAX_WIDTH_PX = 416; // 26rem
+  const DROPDOWN_VIEWPORT_PAD = 8;
+  const DROPDOWN_GAP = 4;
+  let dropdownSeq = 0;
+
+  function svgIcon(cls, viewBox, w, h, d, strokeWidth) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', cls);
+    svg.setAttribute('viewBox', viewBox);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    svg.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', 'currentColor');
+    p.setAttribute('stroke-width', strokeWidth);
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(p);
+    return svg;
+  }
+
+  function enhanceDropdown(select) {
+    if (select.dataset.ddEnhanced) return;
+    select.dataset.ddEnhanced = '1';
+    const id = 'dd-' + (++dropdownSeq);
+    const wrap = document.createElement('div');
+    wrap.className = 'dd';
+    // The select's own class (min-games-select etc.) so CSS can target one
+    // dropdown's trigger specifically, e.g. the pr-history clip width.
+    wrap.dataset.for = [...select.classList].find((c) => c.endsWith('-select')) || '';
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'dd-trigger';
+    trigger.setAttribute('role', 'combobox');
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', id + '-menu');
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'dd-label';
+    trigger.appendChild(labelSpan);
+    trigger.appendChild(svgIcon('dd-chevron', '0 0 10 6', '10', '6', 'M1 1l4 4 4-4', '1.5'));
+    const menu = document.createElement('ul');
+    menu.className = 'dd-menu t-dropdown';
+    menu.id = id + '-menu';
+    menu.setAttribute('role', 'listbox');
+    menu.tabIndex = -1;
+    menu.dataset.origin = 'top-left';
+    // Name the listbox after the visible "Min games:" / "Location:" label
+    // text so screen readers announce what the list is for.
+    const label = select.closest('label');
+    if (label) {
+      const text = [...label.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim().replace(/:$/, '');
+      if (text) { trigger.setAttribute('aria-label', text); menu.setAttribute('aria-label', text); }
+    }
+
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(trigger);
+    wrap.appendChild(select);
+    select.hidden = true;
+    select.tabIndex = -1;
+    document.body.appendChild(menu);
+
+    let isOpen = false;
+    let closeTimer = null;
+    let activeIndex = -1;
+    let typeBuffer = '';
+    let typeTimer = null;
+
+    function syncTrigger() {
+      const opt = select.options[select.selectedIndex];
+      labelSpan.textContent = opt ? opt.textContent : '';
+    }
+    function setActive(i, scroll) {
+      const items = [...menu.children];
+      if (!items.length) { activeIndex = -1; trigger.removeAttribute('aria-activedescendant'); return; }
+      activeIndex = Math.max(0, Math.min(items.length - 1, i));
+      items.forEach((li, idx) => li.classList.toggle('is-active', idx === activeIndex));
+      const li = items[activeIndex];
+      trigger.setAttribute('aria-activedescendant', li.id);
+      if (scroll) {
+        const top = li.offsetTop, bottom = top + li.offsetHeight;
+        if (top < menu.scrollTop) menu.scrollTop = top;
+        else if (bottom > menu.scrollTop + menu.clientHeight) menu.scrollTop = bottom - menu.clientHeight;
+      }
+    }
+    function renderOptions() {
+      menu.textContent = '';
+      [...select.options].forEach((opt, i) => {
+        const li = document.createElement('li');
+        li.className = 'dd-option';
+        li.id = id + '-opt-' + i;
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', String(i === select.selectedIndex));
+        li.dataset.index = String(i);
+        const span = document.createElement('span');
+        span.className = 'dd-option-label';
+        span.textContent = opt.textContent;
+        li.appendChild(span);
+        li.appendChild(svgIcon('dd-option-check', '0 0 12 10', '12', '10', 'M1 5.5l3.2 3L11 1.5', '1.8'));
+        menu.appendChild(li);
+      });
+    }
+    function position() {
+      const r = trigger.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const below = vh - r.bottom - DROPDOWN_GAP - DROPDOWN_VIEWPORT_PAD;
+      const above = r.top - DROPDOWN_GAP - DROPDOWN_VIEWPORT_PAD;
+      menu.style.minWidth = r.width + 'px';
+      menu.style.maxWidth = Math.max(r.width, Math.min(vw - DROPDOWN_VIEWPORT_PAD * 2, DROPDOWN_MENU_MAX_WIDTH_PX)) + 'px';
+      menu.style.maxHeight = Math.max(96, Math.min(DROPDOWN_MENU_MAX_PX, Math.max(below, above))) + 'px';
+      const mh = menu.offsetHeight, mw = menu.offsetWidth;
+      const up = mh > below && above > below;
+      let left = r.left;
+      if (left + mw > vw - DROPDOWN_VIEWPORT_PAD) left = Math.max(DROPDOWN_VIEWPORT_PAD, vw - DROPDOWN_VIEWPORT_PAD - mw);
+      const top = up ? r.top - DROPDOWN_GAP - mh : r.bottom + DROPDOWN_GAP;
+      menu.style.left = left + 'px';
+      menu.style.top = Math.max(DROPDOWN_VIEWPORT_PAD, top) + 'px';
+      menu.dataset.origin = up ? 'bottom-left' : 'top-left';
+    }
+    function open() {
+      if (isOpen) return;
+      if (openDropdown && openDropdown !== api) openDropdown.close();
+      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+      renderOptions();
+      isOpen = true;
+      openDropdown = api;
+      wrap.classList.add('is-open');
+      trigger.setAttribute('aria-expanded', 'true');
+      menu.classList.remove('is-closing');
+      position();
+      menu.classList.add('is-open');
+      setActive(select.selectedIndex, true);
+      // Safari/Firefox-on-mac don't focus a button on click, so pull focus
+      // in explicitly -- the key handlers and aria-activedescendant live on
+      // the trigger.
+      trigger.focus();
+      window.addEventListener('scroll', position, { capture: true, passive: true });
+      window.addEventListener('resize', position);
+    }
+    function close() {
+      if (!isOpen) return;
+      isOpen = false;
+      if (openDropdown === api) openDropdown = null;
+      wrap.classList.remove('is-open');
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.removeAttribute('aria-activedescendant');
+      menu.classList.remove('is-open');
+      menu.classList.add('is-closing');
+      closeTimer = setTimeout(() => { menu.classList.remove('is-closing'); closeTimer = null; }, DROPDOWN_CLOSE_MS);
+      window.removeEventListener('scroll', position, { capture: true });
+      window.removeEventListener('resize', position);
+    }
+    function choose(i) {
+      if (i < 0 || i >= select.options.length) return;
+      const changed = select.selectedIndex !== i;
+      select.selectedIndex = i;
+      syncTrigger();
+      close();
+      trigger.focus();
+      if (changed) select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    // Native-select style type-to-jump: typing letters hops to the first
+    // option starting with them; repeating one letter cycles through its
+    // matches. Works on the closed control too (picks directly).
+    function typeahead(ch) {
+      if (typeTimer) clearTimeout(typeTimer);
+      typeTimer = setTimeout(() => { typeBuffer = ''; }, 600);
+      const repeat = typeBuffer.length > 0 && typeBuffer.split('').every((c) => c === ch);
+      typeBuffer += ch;
+      const needle = repeat ? ch : typeBuffer;
+      const labels = [...select.options].map((o) => o.textContent.trim().toLowerCase());
+      const start = (isOpen ? activeIndex : select.selectedIndex) + (needle.length === 1 ? 1 : 0);
+      for (let k = 0; k < labels.length; k++) {
+        const idx = (start + k) % labels.length;
+        if (labels[idx].startsWith(needle)) {
+          if (isOpen) setActive(idx, true); else choose(idx);
+          return;
+        }
+      }
+    }
+
+    trigger.addEventListener('click', () => { if (isOpen) close(); else open(); });
+    trigger.addEventListener('keydown', (e) => {
+      const n = select.options.length;
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (!isOpen) open(); else setActive(activeIndex + 1, true);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (!isOpen) open(); else setActive(activeIndex - 1, true);
+          break;
+        case 'Home':
+          if (isOpen) { e.preventDefault(); setActive(0, true); }
+          break;
+        case 'End':
+          if (isOpen) { e.preventDefault(); setActive(n - 1, true); }
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          if (isOpen) choose(activeIndex); else open();
+          break;
+        case 'Escape':
+          if (isOpen) { e.preventDefault(); close(); }
+          break;
+        case 'Tab':
+          close();
+          break;
+        default:
+          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            typeahead(e.key.toLowerCase());
+          }
+      }
+    });
+    // Keep keyboard focus on the trigger while the mouse works the menu, so
+    // aria-activedescendant and the key handlers above stay live.
+    menu.addEventListener('mousedown', (e) => e.preventDefault());
+    menu.addEventListener('mouseover', (e) => {
+      const li = e.target.closest('.dd-option');
+      if (li) setActive(parseInt(li.dataset.index, 10), false);
+    });
+    menu.addEventListener('click', (e) => {
+      const li = e.target.closest('.dd-option');
+      if (li) choose(parseInt(li.dataset.index, 10));
+    });
+
+    new MutationObserver(() => {
+      syncTrigger();
+      if (isOpen) { renderOptions(); setActive(activeIndex, false); position(); }
+    }).observe(select, { childList: true, subtree: true, characterData: true, attributes: true });
+    syncTrigger();
+
+    const api = { close, contains: (node) => wrap.contains(node) || menu.contains(node) || (!!label && label.contains(node)) };
+    return api;
+  }
+
+  function enhanceDropdowns() {
+    document.querySelectorAll('.tab-controls select').forEach(enhanceDropdown);
+    // Click/tap anywhere outside the open dropdown closes it. The wrapping
+    // label counts as inside: a click on its text re-dispatches a click on
+    // the trigger, which would otherwise close-then-reopen the menu.
+    document.addEventListener('pointerdown', (e) => {
+      if (openDropdown && !openDropdown.contains(e.target)) openDropdown.close();
+    }, true);
+  }
+
   function initPanel(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -2863,6 +3221,7 @@ function writeJs(glickoUncertainRdThreshold) {
   enableOptionsToggle();
   initPanel('players-tab');
   initPanel('rankings-tab');
+  enhanceDropdowns();
   enableCsvDownloadButtons();
   enableMapToggle(document.getElementById('map-tab'));
   enableMapRegions(document.getElementById('map-tab'));
