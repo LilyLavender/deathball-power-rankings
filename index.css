@@ -464,20 +464,30 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .swiss-match-card .player-active { border-radius: 0; }
 h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .alias-list { color: #888; font-size: 0.9rem; }
-.player-stats-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 0.75rem; }
+.player-stats-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 0.75rem; }
+.stat-span-2 { grid-column: span 2; }
 .stat-span-3 { grid-column: span 3; }
 .stat-span-4 { grid-column: span 4; }
 .stat-span-6 { grid-column: span 6; }
 @media (max-width: 700px) {
   .player-stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .stat-span-3, .stat-span-4, .stat-span-6 { grid-column: span 2; }
+  .stat-span-2, .stat-span-3, .stat-span-4, .stat-span-6 { grid-column: span 2; }
 }
+.compare-tile { align-items: center; text-align: center; color: #888; text-decoration: none; gap: 0.4rem; transition: border-color 150ms ease, color 150ms ease; }
+.compare-tile:hover { text-decoration: none; color: #f0f0f0; border-color: rgba(62,255,139,0.5); }
+.compare-tile-icon { display: flex; }
+.compare-tile-icon .h2h-icon { width: 24px; height: 24px; color: #3eff8b; }
+.compare-tile-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.h2h-tile { position: relative; }
+.h2h-compare { position: absolute; top: 0.55rem; right: 0.7rem; display: inline-flex; align-items: center; color: #555; transition: color 150ms ease; }
+.h2h-compare:hover { color: #3eff8b; text-decoration: none; }
+.h2h-compare .h2h-icon { width: 14px; height: 14px; }
 .stat-tile { position: relative; background: rgba(10,10,10,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; padding: 1rem 0.9rem; min-height: 5.5rem; display: flex; flex-direction: column; gap: 0.15rem; justify-content: center; }
 .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.4rem; font-weight: 700; color: #f0f0f0; }
 .stat-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #666; }
 .stat-sub { font-size: 1rem; font-weight: 700; color: #3eff8b; }
 .stat-multi { display: flex; gap: 1.25rem; flex-wrap: wrap; row-gap: 0.4rem; }
-.stat-multi > span { display: flex; flex-direction: column; gap: 0.15rem; }
+.stat-multi > span { display: flex; flex-direction: column; gap: 0.15rem; flex: 1 1 auto; }
 .stat-note { position: absolute; left: 0.9rem; right: 0.9rem; bottom: 0.6rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: #3eff8b; }
 .rank-total { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666; }
 .rank-ordinal { display: inline-block; width: 2.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }

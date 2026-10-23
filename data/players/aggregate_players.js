@@ -1811,7 +1811,10 @@ const H2H_ICONS = {
   swords: '<circle cx="8" cy="8" r="6"/><path d="M5.3 8.2l1.8 1.8 3.6-4"/>', // "swords" name is stale — used for Most Wins Against, now a check-circle glyph
   shield: '<circle cx="8" cy="8" r="6"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4"/>', // "shield" name is stale — used for Most Losses Against, now an x-circle glyph
   loop: '<circle cx="8" cy="8.7" r="5.3"/><path d="M8 5.7v3l2.4 1.4"/><path d="M4.2 2.3L2.7 3.8"/>', // "loop" name is stale — used for Most Played, now a history-clock glyph
-  vs: '<path d="M8 2v11"/><path d="M3 5h10"/><path d="M3 5l-1.7 4.2a2 2 0 0 0 3.9 0L3 5z"/><path d="M13 5l-1.7 4.2a2 2 0 0 0 3.9 0L13 5z"/><path d="M6 13h4"/>', // "vs" name is stale — used for Rival, now a balance-scale glyph
+  vs: '<path d="M8 2v11"/><path d="M3 5h10"/><path d="M3 5l-1.7 4.2a2 2 0 0 0 3.9 0L3 5z"/><path d="M13 5l-1.7 4.2a2 2 0 0 0 3.9 0L13 5z"/><path d="M6 13h4"/>', // balance-scale glyph — the "compare" affordance (compare tile + per-opponent compare links on player pages)
+  // Crossed swords for Rival: two diagonal blades, each with a crossguard
+  // near its lower end and a short grip past it.
+  rival: '<path d="M3 3l8 8"/><path d="M9.5 12.5l3-3"/><path d="M11 11l2 2"/><path d="M13 3l-8 8"/><path d="M6.5 12.5l-3-3"/><path d="M5 11l-2 2"/>',
   star: '<path d="M8 2l1.8 3.8 4.2.4-3.2 2.9.9 4.1L8 11.2 4.3 13.2l.9-4.1L2 6.2l4.2-.4L8 2z"/>',
   mountain: '<path d="M2 13L6 5l2.5 4L11 5l3 8H2z"/>',
   flame: '<path d="M8 14c-3 0-4.5-2-4.5-4.2C3.5 7 5 5.5 5.5 3c1 1.5 1 3 2 3 .5-2 2-3 2-4.5 2 2 3.5 4 3.5 6.5C13 12 11 14 8 14z"/>',
@@ -3752,6 +3755,25 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
   ${qualNote ? `<div class="stat-note">${escapeHtml(qualNote)}</div>` : ''}
 </div>`;
 
+    // Entry point to the comparison page (compare.html, repo root) with this
+    // player pre-selected -- compare.html is deliberately not in the main
+    // nav, player pages are the only way in. Sized as a 2-track tile so the
+    // row's existing 3+4+6 tiles stay the same relative widths.
+    const compareHref = `../compare.html?p=${encodeURIComponent(slug)}`;
+    const compareTile = `<a class="stat-tile compare-tile stat-span-2" href="${compareHref}">
+  <span class="compare-tile-icon">${h2hIcon('vs')}</span>
+  <span class="compare-tile-label">Compare to...</span>
+</a>`;
+
+    // Small per-opponent compare affordance pinned to the top-right corner
+    // of a Match Statistics tile (see .h2h-compare): opens compare.html with
+    // this player and that opponent both pre-selected.
+    const compareIconLink = (oppId, oppName) => {
+      const oppSlug = playerSlugById.get(oppId);
+      if (!oppSlug) return '';
+      return `<a class="h2h-compare" href="../compare.html?p=${encodeURIComponent(slug)},${encodeURIComponent(oppSlug)}" title="Compare with ${escapeHtml(oppName)}" aria-label="Compare with ${escapeHtml(oppName)}">${h2hIcon('vs')}</a>`;
+    };
+
     const recentMatchesHtml = paginatedListHtml(matchesDesc, 'recent-matches-list', (m, hidden) =>
       `      <li${hidden ? ' hidden' : ''}><span class="standings-rank ${m.won ? 'result-win' : 'result-loss'}"><span class="result-letter">${m.won ? 'W' : 'L'}</span> <span class="match-score-mini">${m.isDQ ? 'DQ' : `${m.scoreFor}-${m.scoreAgainst}`}</span></span><span>vs ${opponentLinkHtml(m.opponentId, m.opponentName)} <span class="match-tourney-name">(<a href="../tournaments/${escapeHtml(m.tournamentSlug)}.html">${escapeHtml(m.tournamentLabel)}</a>)</span></span><span class="standings-record">${dateDualHtml(m.date)}</span></li>`,
       'No matches on record.');
@@ -3769,7 +3791,7 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
       const icon = h2hIcon(iconKey, flip);
       const labelHtml = dualLabelHtml(label, mobileLabel);
       if (!entry) return `<div class="h2h-tile"><span class="h2h-label">${icon}${labelHtml}</span><span class="h2h-value">&mdash;</span></div>`;
-      return `<div class="h2h-tile"><span class="h2h-label">${icon}${labelHtml}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
+      return `<div class="h2h-tile">${compareIconLink(entry.opponentId, entry.opponentName)}<span class="h2h-label">${icon}${labelHtml}</span><span class="h2h-value">${opponentLinkHtml(entry.opponentId, entry.opponentName)} <span class="h2h-count">${formatMetric(entry)}</span></span></div>`;
     };
     const bestWinMetric = (e) => {
       const rankLabel = e.oppRank != null ? `#${e.oppRank}` : 'Unranked';
@@ -3799,7 +3821,7 @@ ${h2hRow('Worst Win Rate (Min. 3)', h2h.worstWinRate, (e) => `${(e.winPct * 100)
 ${h2hRow('Most Wins Against', h2h.mostWinsAgainst, (e) => `&times;${e.wins}`, 'swords', undefined, 'Most Wins Vs')}
 ${h2hRow('Most Losses Against', h2h.mostLossesAgainst, (e) => `&times;${e.losses}`, 'shield', undefined, 'Most Losses Vs')}
 ${h2hRow('Most Played', h2h.mostPlayed, (e) => `&times;${e.total}`, 'loop')}
-${h2hRow('Rival (Min. 3)', h2h.rival, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'vs', undefined, 'Rival')}
+${h2hRow('Rival (Min. 3)', h2h.rival, (e) => `${(e.winPct * 100).toFixed(0)}% <span class="h2h-record-dim">(${e.wins}-${e.losses})</span>`, 'rival', undefined, 'Rival')}
 ${h2hRow('Best Win', bestWin, bestWinMetric, 'star')}
 ${statTile('Peak Rating', peakRating ? `<a href="../tournaments/${escapeHtml(peakRating.slug)}.html">${peakRating.rating}</a> <span class="h2h-record-dim">${escapeHtml(formatDateHuman(peakRating.date))}</span>` : '&mdash;', 'mountain')}
 ${statTile('Longest Win Streak', `${h2h.longestWinStreak}`, 'flame')}
@@ -3924,6 +3946,7 @@ ${doublesSectionHtml}
 ${statTiles}
 ${goalsTile}
 ${rankingTiles}
+${compareTile}
   </div>
 </div>
 
