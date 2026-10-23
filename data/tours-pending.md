@@ -3,7 +3,7 @@ Future tournaments:
 Need to add:
 
 - get paper tours from Ross
-- reach out to I/O about 2024 tournament
+- reached out to I/O about 2024 tournament, waiting to hear back
 
 Need to confirm if actually DeathBall:
 

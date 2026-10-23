@@ -20,6 +20,28 @@
       "image": "https://images.squarespace-cdn.com/content/v1/58c4533403596e9dc421ecf4/1523550561829-0I2WW6TPCTT8LIY2PWFO/clearsmall.png?format=1500w",
       "color": "48, 100%, 50%",
       "description": "An inaugural doubles tournament for I/O's 4-player cab."
+    },
+    {
+      "date": "2026-10-30",
+      "link": "https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youmacon-2026/event/deathball-singles-1v1/brackets",
+      "city": "Detroit",
+      "state": "MI",
+      "location": "Youmacon",
+      "name": "Youmacon 2026 (1v1)",
+      "description": "DeathBall singles bracket at Youmacon 2026. Hosted by Psychic Drive Arcade",
+      "image": "https://images.start.gg/images/profileWidgetPageLayout/4508061/image-07d89f8e0e7c5d585d7335b878b8506a-optimized.webp",
+      "color": "34, 87%, 57%"
+    },
+    {
+      "date": "2026-10-31",
+      "link": "https://www.start.gg/tournament/psychic-drive-arcade-tournaments-youmacon-2026/event/deathball-doubles-2v2-sign-up-on-site-with-to/brackets",
+      "city": "Detroit",
+      "state": "MI",
+      "location": "Youmacon",
+      "name": "Youmacon 2026 (2v2)",
+      "description": "DeathBall doubles bracket at Youmacon 2026. Hosted by Psychic Drive Arcade",
+      "image": "https://images.start.gg/images/profileWidgetPageLayout/4508061/image-07d89f8e0e7c5d585d7335b878b8506a-optimized.webp",
+      "color": "269, 100%, 62%"
     }
   ]
 }
