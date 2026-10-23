@@ -227,6 +227,18 @@ th.no-sort { cursor: default; }
 th.no-sort:hover { background: #111; color: #666; }
 th.sorted-asc::after { content: " \25B2"; }
 th.sorted-desc::after { content: " \25BC"; }
+.info-tip { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; margin-left: 0.4em; padding: 0; border: 0; background: transparent; color: #777; vertical-align: middle; position: relative; top: -0.07em; cursor: help; transition: color 150ms ease; }
+.info-tip svg { display: block; width: 100%; height: 100%; }
+.info-tip:hover, .info-tip:focus-visible, .info-tip.is-active { color: #3eff8b; outline: none; }
+.h2h-tile-info { position: absolute; top: 0.55rem; right: 0.7rem; width: 14px; height: 14px; margin: 0; }
+.h2h-tile.has-info .h2h-label { padding-right: 1.4rem; }
+.info-tooltip strong { display: block; margin-bottom: 0.15rem; color: #f0f0f0; font-weight: 700; }
+.info-tooltip { position: fixed; left: 0; top: 0; z-index: 1000; box-sizing: border-box; max-width: min(280px, calc(100vw - 16px)); padding: 0.5rem 0.7rem; background: #111; border: 1px solid #333; border-radius: 3px; color: #ddd; font-size: 0.8rem; font-weight: 400; line-height: 1.45; letter-spacing: normal; text-transform: none; text-align: left; white-space: normal; pointer-events: none; opacity: 0; scale: var(--tt-scale); transform-origin: 50% 100%; transition: opacity var(--tt-out-dur) var(--tt-out-ease), scale var(--tt-out-dur) var(--tt-out-ease), left var(--tt-move-dur) var(--tt-move-ease), top var(--tt-move-dur) var(--tt-move-ease); }
+.info-tooltip[data-flip="true"] { transform-origin: 50% 0; }
+.info-tooltip[data-show="true"] { opacity: 1; scale: 1; transition: opacity var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay), scale var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay), left var(--tt-move-dur) var(--tt-move-ease), top var(--tt-move-dur) var(--tt-move-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .info-tooltip { transition: none !important; }
+}
 tbody tr { transition: background 150ms; }
 tbody tr:hover td { background: rgba(62,255,139,0.04); }
 tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
@@ -568,6 +580,8 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .doubles-col { grid-area: doubles; min-width: 0; }
 .doubles-col h2 { margin-top: 0; }
 .h2h-col .doubles-col { margin-top: 1.25rem; }
+.advanced-col { margin-top: 1.25rem; min-width: 0; }
+.advanced-col h2 { margin-top: 0; }
 .player-grid.doubles-only-grid { grid-template-areas: "tournaments doubles doubles"; }
 @media (max-width: 900px) {
   .player-grid { grid-template-columns: 1fr; grid-template-areas: "chart" "h2h" "matches" "tournaments"; }

@@ -6,6 +6,75 @@
   const PR_HISTORY = PR_HISTORY_DATA.checkpoints || [];
   const LOCATION_FILTER = JSON.parse(document.getElementById('location-filter-data')?.textContent || '{"regions":{},"countries":{}}');
   const PR_UNCERTAIN_RD_THRESHOLD = 150;
+  function enableInfoTips() {
+    const triggers = [...document.querySelectorAll('.info-tip[data-tip]')];
+    if (!triggers.length) return;
+    const tip = document.createElement('div');
+    tip.className = 'info-tooltip';
+    tip.setAttribute('role', 'tooltip');
+    tip.dataset.show = 'false';
+    document.body.appendChild(tip);
+    let active = null;
+    let shownAt = 0;
+    function hide() {
+      if (active) active.classList.remove('is-active');
+      active = null;
+      tip.dataset.show = 'false';
+    }
+    function place(trigger) {
+      const showing = tip.dataset.show === 'true';
+      if (active && active !== trigger) active.classList.remove('is-active');
+      active = trigger;
+      trigger.classList.add('is-active');
+      tip.textContent = '';
+      if (trigger.dataset.tipTitle) {
+        const title = document.createElement('strong');
+        title.textContent = trigger.dataset.tipTitle;
+        tip.appendChild(title);
+      }
+      tip.appendChild(document.createTextNode(trigger.dataset.tip));
+      const r = trigger.getBoundingClientRect();
+      const w = tip.offsetWidth;
+      const h = tip.offsetHeight;
+      const gap = 8;
+      const margin = 8;
+      let left = r.left + r.width / 2 - w / 2;
+      left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
+      let top = r.top - h - gap;
+      const flip = top < margin;
+      if (flip) top = r.bottom + gap;
+      tip.dataset.flip = flip ? 'true' : 'false';
+      if (!showing) {
+        tip.style.transition = 'none';
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+        void tip.offsetWidth;
+        tip.style.transition = '';
+      } else {
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+      }
+      tip.dataset.show = 'true';
+      shownAt = performance.now();
+    }
+    triggers.forEach((t) => {
+      t.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') place(t); });
+      t.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && active === t) hide(); });
+      t.addEventListener('focus', () => place(t));
+      t.addEventListener('blur', () => { if (active === t) hide(); });
+      t.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const showing = active === t && tip.dataset.show === 'true';
+        if (showing && performance.now() - shownAt > 400) hide();
+        else if (!showing) place(t);
+      });
+    });
+    document.addEventListener('click', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+    window.addEventListener('scroll', hide, { capture: true, passive: true });
+    window.addEventListener('resize', hide);
+  }
   function enableSorting(table) {
     const tbody = table.tBodies[0];
     const headers = [...table.querySelectorAll('th')];
@@ -21,8 +90,15 @@
           const cellA = a.cells[colIndex];
           const cellB = b.cells[colIndex];
           if (type === 'number') {
-            const valA = Number(cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent);
-            const valB = Number(cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent);
+            const rawA = cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent;
+            const rawB = cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent;
+            if (th.dataset.blankLast === 'true') {
+              const blankA = rawA.trim() === '';
+              const blankB = rawB.trim() === '';
+              if (blankA !== blankB) return blankA ? 1 : -1;
+            }
+            const valA = Number(rawA);
+            const valB = Number(rawB);
             return asc ? valA - valB : valB - valA;
           }
           const valA = (cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent).trim().toLowerCase();
@@ -1080,6 +1156,11 @@
     addNumeric(String(row.losses), row.losses);
     addNumeric(String(row.games), row.games);
     addNumeric((row.winPct * 100).toFixed(1) + '%', row.winPct);
+    const signedText = (v, digits) => (v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(digits));
+    addNumeric(signedText(row.wae, 1), row.wae == null ? '' : row.wae);
+    addNumeric(row.sos == null ? '—' : String(row.sos), row.sos == null ? '' : row.sos);
+    addNumeric(signedText(row.gdPerMatch, 2), row.gdPerMatch == null ? '' : row.gdPerMatch);
+    addNumeric(signedText(row.aboveFiveHundred, 0), row.aboveFiveHundred);
     const lastActiveTd = document.createElement('td');
     lastActiveTd.textContent = meta.lastActive || '';
     tr.appendChild(lastActiveTd);
@@ -1093,12 +1174,13 @@
     return tr;
   }
   function normalizeRow(arr) {
-    const [id, r, rd, wins, losses, games, isNew, placementChange] = arr;
+    const [id, r, rd, wins, losses, games, isNew, placementChange, wae, sos, gdPerMatch, aboveFiveHundred] = arr;
     return {
       id, r, rd, wins, losses, games,
       winPct: games > 0 ? wins / games : 0,
       uncertain: rd > PR_UNCERTAIN_RD_THRESHOLD,
       isNew, placementChange,
+      wae, sos, gdPerMatch, aboveFiveHundred,
     };
   }
   function renderRankingHistory(panel, checkpoint) {
@@ -1453,6 +1535,7 @@
     }
   }
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
+  enableInfoTips();
   enableTabs();
   enableTabsMenu();
   activateTabFromQuery();

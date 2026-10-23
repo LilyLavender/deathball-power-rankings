@@ -43,6 +43,76 @@
 </div>
 </div>
 <script>
+  function enableInfoTips() {
+    const triggers = [...document.querySelectorAll('.info-tip[data-tip]')];
+    if (!triggers.length) return;
+    const tip = document.createElement('div');
+    tip.className = 'info-tooltip';
+    tip.setAttribute('role', 'tooltip');
+    tip.dataset.show = 'false';
+    document.body.appendChild(tip);
+    let active = null;
+    let shownAt = 0;
+    function hide() {
+      if (active) active.classList.remove('is-active');
+      active = null;
+      tip.dataset.show = 'false';
+    }
+    function place(trigger) {
+      const showing = tip.dataset.show === 'true';
+      if (active && active !== trigger) active.classList.remove('is-active');
+      active = trigger;
+      trigger.classList.add('is-active');
+      tip.textContent = '';
+      if (trigger.dataset.tipTitle) {
+        const title = document.createElement('strong');
+        title.textContent = trigger.dataset.tipTitle;
+        tip.appendChild(title);
+      }
+      tip.appendChild(document.createTextNode(trigger.dataset.tip));
+      const r = trigger.getBoundingClientRect();
+      const w = tip.offsetWidth;
+      const h = tip.offsetHeight;
+      const gap = 8;
+      const margin = 8;
+      let left = r.left + r.width / 2 - w / 2;
+      left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
+      let top = r.top - h - gap;
+      const flip = top < margin;
+      if (flip) top = r.bottom + gap;
+      tip.dataset.flip = flip ? 'true' : 'false';
+      if (!showing) {
+        tip.style.transition = 'none';
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+        void tip.offsetWidth;
+        tip.style.transition = '';
+      } else {
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+      }
+      tip.dataset.show = 'true';
+      shownAt = performance.now();
+    }
+    triggers.forEach((t) => {
+      t.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') place(t); });
+      t.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && active === t) hide(); });
+      t.addEventListener('focus', () => place(t));
+      t.addEventListener('blur', () => { if (active === t) hide(); });
+      t.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const showing = active === t && tip.dataset.show === 'true';
+        if (showing && performance.now() - shownAt > 400) hide();
+        else if (!showing) place(t);
+      });
+    });
+    document.addEventListener('click', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+    window.addEventListener('scroll', hide, { capture: true, passive: true });
+    window.addEventListener('resize', hide);
+  }
+  enableInfoTips();
   document.querySelectorAll('.show-more-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const list = document.getElementById(btn.dataset.list);

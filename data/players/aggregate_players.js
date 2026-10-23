@@ -21,7 +21,7 @@ const { writeComparePage } = require('./compare_page');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
 const { buildBracketData, hashStr } = require('./build_bracket');
 const { slugify } = require('../slugify');
-const { writeCss, writeJs, stripCommentsInHeadBlocks } = require('./generate_output');
+const { writeCss, writeJs, stripCommentsInHeadBlocks, INFO_TIPS_JS } = require('./generate_output');
 
 const DATA_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -438,6 +438,12 @@ function getPlayer(map, identity) {
   if (!map.has(key)) {
     map.set(key, {
       wins: 0, losses: 0, games: 0,
+      // Running totals behind the advanced metrics (Wins Above Expected,
+      // Strength of Schedule, Game Diff / Match) -- accumulated per non-DQ
+      // singles match by accumulateAdvancedStats, read back through
+      // deriveAdvancedStats. ratedWins/ratedMatches are the DQ-free
+      // counterparts of wins/games, so expectedWins compares like with like.
+      ratedWins: 0, ratedMatches: 0, expectedWins: 0, oppRatingSum: 0, goalDiff: 0,
       tournaments: new Map(),
       nameCounts: new Map(),
       // Raw in-tournament spellings actually typed, keyed before alias/split
@@ -487,6 +493,101 @@ function recordMatch(map, winnerRawName, loserRawName, tournamentUrl, tournament
   loser.losses += 1;
   loser.games += 1;
   loser.tournaments.set(tournamentUrl, tournamentLabel);
+}
+
+// Per-match goal totals for both sides. A manual match with real per-game
+// goal scores (m.games) sums those; everything else falls back to the set
+// score (winnerSets/loserSets), which is a games-won count like 3-1 rather
+// than actual goals, with an unscored match treated as 1-0. Shared by the
+// player page's Goals Scored/Allowed/Diff tiles (buildPlayerHistories) and
+// the Game Diff / Match running total (accumulateAdvancedStats) so the two
+// can never disagree.
+function matchGoalTotals(m) {
+  if (m.games && m.games.length) {
+    return {
+      winnerGoals: m.games.reduce((sum, g) => sum + g.winnerGoals, 0),
+      loserGoals: m.games.reduce((sum, g) => sum + g.loserGoals, 0),
+    };
+  }
+  return {
+    winnerGoals: m.winnerSets != null ? m.winnerSets : 1,
+    loserGoals: m.loserSets != null ? m.loserSets : 0,
+  };
+}
+
+// Adds one non-DQ singles match to both players' advanced-metric totals
+// (see getPlayer). preStates holds each side's pre-tournament Glicko state
+// (processChronologically's originalPreStates), so the expectation is what
+// the ratings predicted going into the event -- the same basis the
+// giant-killer/upset-victim stats use -- not the converging per-pass
+// estimate. One expectation per match (not per game), so Wins Above
+// Expected is in the same unit as the W/L record.
+function accumulateAdvancedStats(players, winnerId, loserId, preStates, match) {
+  const winner = players.get(winnerId);
+  const loser = players.get(loserId);
+  const winnerPre = preStates.get(winnerId);
+  const loserPre = preStates.get(loserId);
+  if (!winner || !loser || !winnerPre || !loserPre) return;
+  const { winnerGoals, loserGoals } = matchGoalTotals(match);
+  const margin = winnerGoals - loserGoals;
+  winner.ratedWins += 1;
+  winner.ratedMatches += 1;
+  winner.expectedWins += glicko2.expectedScore(winnerPre, loserPre);
+  winner.oppRatingSum += loserPre.r;
+  winner.goalDiff += margin;
+  loser.ratedMatches += 1;
+  loser.expectedWins += glicko2.expectedScore(loserPre, winnerPre);
+  loser.oppRatingSum += winnerPre.r;
+  loser.goalDiff -= margin;
+}
+
+// Advanced metrics from a player's running totals -- works on a live player
+// record or a checkpoint's stats snapshot alike, since both carry the same
+// fields. wae/sos/gdPerMatch are null with no rated match to base them on;
+// aboveFiveHundred comes straight from the W/L record (DQs included, same
+// as the Record tile).
+function deriveAdvancedStats(s) {
+  const n = s.ratedMatches || 0;
+  return {
+    wae: n > 0 ? s.ratedWins - s.expectedWins : null,
+    sos: n > 0 ? s.oppRatingSum / n : null,
+    gdPerMatch: n > 0 ? s.goalDiff / n : null,
+    aboveFiveHundred: s.wins - s.losses,
+  };
+}
+
+// Explanations shown by the "i" icons on the Power Rankings table's column
+// headers and the Advanced Stats tiles on player pages. Rendered as a custom
+// body-level tooltip (INFO_TIPS_JS / enableInfoTips in generate_output.js),
+// not the browser's native title bubble.
+// Each tip is a bold title line followed by the explanation on its own line.
+const STAT_TIPS = {
+  rating: { title: 'Glicko-2 Rating', body: 'An estimate of playing strength, starting at 1500 for a new player. The table is ordered by the conservative rating (rating minus twice the RD), so an uncertain rating ranks below a well-established one of the same value.' },
+  rd: { title: 'Rating Deviation', body: `How uncertain the rating is. It shrinks as a player plays more matches and grows again during inactivity. Players above ${GLICKO_UNCERTAIN_RD_THRESHOLD} are dimmed and not yet Power Ranking qualified.` },
+  wae: { title: 'Wins Above Expected', body: 'Actual wins minus the wins Glicko-2 predicted from both players\' ratings going into each tournament. Positive means the player has beaten their rating; negative means they have fallen short of it.' },
+  sos: { title: 'Strength of Schedule', body: 'The average rating of every opponent faced, as they were rated going into each tournament.' },
+  gdm: { title: 'Game Diff per Match', body: 'The average games-won margin per match, so a 3-1 win counts as +2 and a 1-2 loss as -1.' },
+  aboveFiveHundred: { title: 'Wins Above .500', body: 'Wins minus losses.' },
+};
+
+// A small info-icon button (inline SVG: circle with an "i") that carries its
+// explanation in data-tip-title / data-tip; see .info-tip / .info-tooltip in
+// generate_output.js. extraClass positions it (e.g. h2h-tile-info pins it to
+// a tile's top-right corner like the compare icon).
+function infoTipHtml(tip, extraClass) {
+  const title = escapeHtml(tip.title);
+  const body = escapeHtml(tip.body);
+  return `<button type="button" class="info-tip${extraClass ? ` ${extraClass}` : ''}" data-tip-title="${title}" data-tip="${body}" aria-label="${title}: ${body}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r="0.35" fill="currentColor" stroke="none"/></svg></button>`;
+}
+
+// "+3.2" / "-0.85" / "0" style formatting for the signed advanced metrics;
+// a null metric renders as a dash. A value that rounds to zero loses its
+// sign so a tiny negative never prints as "-0.0".
+function signedFixed(v, digits) {
+  if (v == null) return '—';
+  let s = v.toFixed(digits);
+  if (Number(s) === 0) s = Math.abs(Number(s)).toFixed(digits);
+  return (Number(s) > 0 ? '+' : '') + s;
 }
 
 function formatLocation(loc) {
@@ -1337,7 +1438,7 @@ function loadManualMatches(knownUrls) {
 // snapshots, if passed, is filled with one entry per tournament (in
 // chronological order): { url, date, participantIds: Set<playerId>,
 // ratings: Map<playerId, glickoState>, stats: Map<playerId, { wins, losses,
-// games }> }. ratings/stats are full clones of the glicko/players maps as
+// games, ...advanced-metric totals (see getPlayer) }> }. ratings/stats are full clones of the glicko/players maps as
 // they stood right after that tournament's results were locked in — i.e.
 // every player's rating and cumulative record as of that point in history,
 // not just this tournament's participants — so the whole field's standings
@@ -1395,6 +1496,10 @@ function processChronologically(allTournaments, players, glicko, preTournamentRa
         const loserState = currentStates.get(loserId);
         if (!winnerState || !loserState) continue;
 
+        // Advanced-metric totals, once per match (first pass only, like the
+        // W/L stats), against the fixed pre-tournament states.
+        if (pass === 0) accumulateAdvancedStats(players, winnerId, loserId, originalPreStates, match);
+
         const { winnerResults, loserResults } = expandScore(match);
 
         if (!periodResults.has(winnerId)) periodResults.set(winnerId, []);
@@ -1439,7 +1544,10 @@ function processChronologically(allTournaments, players, glicko, preTournamentRa
         // loop above already applied them to `players`) -- lets a historical
         // checkpoint (see groupCheckpoints in main()) reconstruct the full
         // ranking-card stat line, not just the rating.
-        stats: new Map([...players.entries()].map(([id, p]) => [id, { wins: p.wins, losses: p.losses, games: p.games }])),
+        stats: new Map([...players.entries()].map(([id, p]) => [id, {
+          wins: p.wins, losses: p.losses, games: p.games,
+          ratedWins: p.ratedWins, ratedMatches: p.ratedMatches, expectedWins: p.expectedWins, oppRatingSum: p.oppRatingSum, goalDiff: p.goalDiff,
+        }])),
       });
     }
   }
@@ -1537,15 +1645,7 @@ function buildPlayerHistories(allTournaments, preTournamentRatings) {
       // games-won tally (winnerSets/loserSets) for goal totals — winnerSets/
       // loserSets is just a 2-1-style set score, not actual goals scored, so
       // it undercounts whenever the real per-game numbers are on file.
-      let winnerGoals;
-      let loserGoals;
-      if (m.games && m.games.length) {
-        winnerGoals = m.games.reduce((sum, g) => sum + g.winnerGoals, 0);
-        loserGoals = m.games.reduce((sum, g) => sum + g.loserGoals, 0);
-      } else {
-        winnerGoals = m.winnerSets != null ? m.winnerSets : 1;
-        loserGoals = m.loserSets != null ? m.loserSets : 0;
-      }
+      const { winnerGoals, loserGoals } = matchGoalTotals(m);
       const winnerSets = m.winnerSets != null ? m.winnerSets : 1;
       const loserSets = m.loserSets != null ? m.loserSets : 0;
       // order carries the source platform's play-order/id for this match —
@@ -1723,7 +1823,10 @@ function buildPlayerMeta(id, p, lastActiveById) {
 // Shared by buildRankingRows (current standings) and buildRankingRowsAt
 // (a historical checkpoint) — everything about a ranking row except which
 // wins/losses/games/rating snapshot it's built from.
-function buildRankingRow(id, p, wins, losses, games, g, lastActiveById) {
+// stats is either the live player record or a checkpoint's stats snapshot
+// (same fields either way -- see getPlayer / processChronologically).
+function buildRankingRow(id, p, stats, g, lastActiveById) {
+  const { wins, losses, games } = stats;
   return {
     id,
     ...buildPlayerMeta(id, p, lastActiveById),
@@ -1734,6 +1837,7 @@ function buildRankingRow(id, p, wins, losses, games, g, lastActiveById) {
     losses,
     games,
     winPct: games > 0 ? wins / games : 0,
+    ...deriveAdvancedStats(stats),
     uncertain: Math.round(g.rd) > GLICKO_UNCERTAIN_RD_THRESHOLD,
   };
 }
@@ -1768,7 +1872,7 @@ function buildRankingRows(players, glicko, previousRanks, participantIds, lastAc
   const rows = [...players.entries()]
     .map(([id, p]) => {
       const g = glicko.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
-      return buildRankingRow(id, p, p.wins, p.losses, p.games, g, lastActiveById);
+      return buildRankingRow(id, p, p, g, lastActiveById);
     })
     .filter((r) => r.games > 0)
     .sort((a, b) => b.conservativeRating - a.conservativeRating);
@@ -1787,7 +1891,7 @@ function buildRankingRowsAt(players, ratings, stats, previousRanks, participantI
       const p = players.get(id);
       if (!p) return null;
       const g = ratings.get(id) || { r: GLICKO_DEFAULT_R, rd: GLICKO_DEFAULT_RD, sigma: GLICKO_DEFAULT_SIGMA };
-      return buildRankingRow(id, p, s.wins, s.losses, s.games, g, lastActiveById);
+      return buildRankingRow(id, p, s, g, lastActiveById);
     })
     .filter((r) => r && r.games > 0)
     .sort((a, b) => b.conservativeRating - a.conservativeRating);
@@ -2354,6 +2458,10 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       <td class="numeric" data-sort="${p.losses}">${p.losses}</td>
       <td class="numeric" data-sort="${p.games}">${p.games}</td>
       <td class="numeric" data-sort="${p.winPct}">${(p.winPct * 100).toFixed(1)}%</td>
+      <td class="numeric" data-sort="${p.wae == null ? '' : p.wae}">${signedFixed(p.wae, 1)}</td>
+      <td class="numeric" data-sort="${p.sos == null ? '' : p.sos}">${p.sos == null ? '&mdash;' : Math.round(p.sos)}</td>
+      <td class="numeric" data-sort="${p.gdPerMatch == null ? '' : p.gdPerMatch}">${signedFixed(p.gdPerMatch, 2)}</td>
+      <td class="numeric" data-sort="${p.aboveFiveHundred}">${signedFixed(p.aboveFiveHundred, 0)}</td>
       <td class="numeric">${escapeHtml(p.lastActive)}</td>
       <td data-sort="${escapeHtml(p.locationSort)}" class="col-location">${p.flag ? `<img class="loc-flag" src="${escapeHtml(p.flag.src)}" title="${escapeHtml(p.flag.title)}" alt="${escapeHtml(p.flag.title)}">` : ''}${escapeHtml(p.location)}</td>
     </tr>`;
@@ -2674,12 +2782,16 @@ ${rankingCardItems}
       <tr>
         <th data-type="number" class="sorted-asc rank-num">#</th>
         <th data-type="string">Player</th>
-        <th data-type="number">Rating</th>
-        <th data-type="number">RD</th>
+        <th data-type="number">Rating${infoTipHtml(STAT_TIPS.rating)}</th>
+        <th data-type="number">RD${infoTipHtml(STAT_TIPS.rd)}</th>
         <th data-type="number">W</th>
         <th data-type="number">L</th>
         <th data-type="number">Games</th>
         <th data-type="number">Win %</th>
+        <th data-type="number" data-blank-last="true">WAE${infoTipHtml(STAT_TIPS.wae)}</th>
+        <th data-type="number" data-blank-last="true">SoS${infoTipHtml(STAT_TIPS.sos)}</th>
+        <th data-type="number" data-blank-last="true">GD/M${infoTipHtml(STAT_TIPS.gdm)}</th>
+        <th data-type="number">+/&minus;${infoTipHtml(STAT_TIPS.aboveFiveHundred)}</th>
         <th data-type="string">Last Active</th>
         <th data-type="string" data-blank-last="true" class="col-location">Location</th>
       </tr>
@@ -3646,6 +3758,7 @@ function computePlayerProfile(id, p, hist, rankingRows, officialRows, ratingHist
 
   const winPct = p.games > 0 ? p.wins / p.games : 0;
   const stockDiff = stocksFor - stocksAgainst;
+  const { wae, sos, gdPerMatch, aboveFiveHundred } = deriveAdvancedStats(p);
 
   // Years the player has tournament placements in, collapsed to a single
   // year ("2021") or a range ("2021-2024") for a compact tenure callout
@@ -3690,6 +3803,7 @@ function computePlayerProfile(id, p, hist, rankingRows, officialRows, ratingHist
   return {
     name, info, flag, location, aliases, isDoublesOnly,
     stocksFor, stocksAgainst, stockDiff, winPct,
+    wae, sos, gdPerMatch, aboveFiveHundred,
     placementsDesc, matchesDesc, h2h,
     rankIdx, rankingRow, officialIdx, bestWin,
     activeRange, qualNote,
@@ -3733,6 +3847,10 @@ function buildCompareData(players, histories, rankingRows, ratingHistoryById, al
       g: p.games,
       gf: prof.stocksFor,
       ga: prof.stocksAgainst,
+      wae: prof.wae == null ? null : Number(prof.wae.toFixed(1)),
+      sos: prof.sos == null ? null : Math.round(prof.sos),
+      gdm: prof.gdPerMatch == null ? null : Number(prof.gdPerMatch.toFixed(2)),
+      a5: prof.aboveFiveHundred,
       pr: prof.officialIdx >= 0 ? prof.officialIdx + 1 : null,
       qn: prof.qualNote,
       or: prof.rankIdx >= 0 ? prof.rankIdx + 1 : null,
@@ -3782,6 +3900,7 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
     const {
       name, info, flag, location, aliases, isDoublesOnly,
       stocksFor, stocksAgainst, stockDiff, winPct,
+      wae, sos, gdPerMatch, aboveFiveHundred,
       placementsDesc, matchesDesc, h2h,
       rankIdx, rankingRow, officialIdx, bestWin,
       activeRange, qualNote,
@@ -3834,6 +3953,25 @@ function writePlayerPages(players, glicko, histories, rankingRows, ratingHistory
   <span class="compare-tile-icon">${h2hIcon('vs')}</span>
   <span class="compare-tile-label">Compare to...</span>
 </a>`;
+
+    // Advanced metrics (see deriveAdvancedStats): their own section nested
+    // directly under Match Statistics (inside .h2h-col on the chart layout,
+    // inside that column's .player-col otherwise -- same nesting/margin
+    // treatment as the Doubles Teams section), rendered as a row of
+    // Match-Statistics-style tiles. The null-metric dash only appears for a
+    // player whose every match was a DQ.
+    // The info icon sits in the tile's top-right corner, where the compare
+    // icon sits on Match Statistics tiles (see .h2h-compare / .h2h-tile-info).
+    const advancedStat = (label, tip, value) => `<div class="h2h-tile has-info">${infoTipHtml(tip, 'h2h-tile-info')}<span class="h2h-label">${label}</span><span class="h2h-value"><span class="h2h-count">${value}</span></span></div>`;
+    const advancedSection = `<div class="tourney-section advanced-col">
+  <h2>Advanced Stats</h2>
+  <div class="h2h-grid">
+    ${advancedStat('Wins Above Expected', STAT_TIPS.wae, signedFixed(wae, 1))}
+    ${advancedStat('Strength of Schedule', STAT_TIPS.sos, sos == null ? '&mdash;' : Math.round(sos))}
+    ${advancedStat('Game Diff / Match', STAT_TIPS.gdm, signedFixed(gdPerMatch, 2))}
+    ${advancedStat('Wins Above .500', STAT_TIPS.aboveFiveHundred, signedFixed(aboveFiveHundred, 0))}
+  </div>
+</div>`;
 
     // Small per-opponent compare affordance pinned to the top-right corner
     // of a Match Statistics tile (see .h2h-compare): opens compare.html with
@@ -4029,7 +4167,7 @@ ${hasChart
 
   <div class="tourney-section h2h-col">
     <h2>Match Statistics</h2>
-    ${h2hSection}${doublesSectionHtml}
+    ${h2hSection}${advancedSection}${doublesSectionHtml}
   </div>
 
   <div class="tourney-section matches-col">
@@ -4055,11 +4193,13 @@ ${hasChart
 
   <div class="tourney-section player-col">
     <h2>Match Statistics</h2>
-    ${h2hSection}${doublesSectionHtml ? `
+    ${h2hSection}${advancedSection}${doublesSectionHtml ? `
     ${doublesSectionHtml}` : ''}
   </div>
 </div>`}`}
 <script>
+${INFO_TIPS_JS}
+  enableInfoTips();
   document.querySelectorAll('.show-more-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const list = document.getElementById(btn.dataset.list);
@@ -4354,7 +4494,10 @@ async function main() {
   // checkpoint was most of this payload's weight. winPct/uncertain are
   // cheap to recompute client-side (wins/games, rd > threshold) so they
   // aren't shipped at all. Order: [id, r, rd, wins, losses, games, isNew,
-  // placementChange] -- keep normalizeRow() in writeJs() in sync with this.
+  // placementChange, wae, sos, gdPerMatch, aboveFiveHundred] -- keep
+  // normalizeRow() in writeJs() in sync with this. The last four are the
+  // advanced metrics (deriveAdvancedStats), already rounded to display
+  // precision; wae/sos/gdPerMatch are null for a player with no rated match.
   const toClientRow = (r) => [
     r.id,
     Math.round(r.r),
@@ -4364,6 +4507,10 @@ async function main() {
     r.games,
     !!r.isNew,
     r.placementChange == null ? null : r.placementChange,
+    r.wae == null ? null : Number(r.wae.toFixed(1)),
+    r.sos == null ? null : Math.round(r.sos),
+    r.gdPerMatch == null ? null : Number(r.gdPerMatch.toFixed(2)),
+    r.aboveFiveHundred,
   ];
 
   // The final checkpoint always reuses the already-computed live rankingRows

@@ -121,4 +121,16 @@ function conservativeRating(player) {
   return player.r - 2 * player.rd;
 }
 
-module.exports = { createPlayer, updatePeriod, decayRd, conservativeRating };
+// Expected score (win probability in [0,1]) of player against opponent under
+// the Glicko-2 model -- the same E term updatePeriod uses internally, exposed
+// so callers can compare actual results against what the ratings predicted
+// (see accumulateAdvancedStats in aggregate_players.js). Note the opponent's
+// RD discounts the expectation (gFn), so E(a vs b) + E(b vs a) is only
+// exactly 1 when both RDs are equal.
+function expectedScore(player, opponent) {
+  const { mu } = toScale(player.r, player.rd);
+  const { mu: muJ, phi: phiJ } = toScale(opponent.r, opponent.rd);
+  return eFn(mu, muJ, phiJ);
+}
+
+module.exports = { createPlayer, updatePeriod, decayRd, conservativeRating, expectedScore };

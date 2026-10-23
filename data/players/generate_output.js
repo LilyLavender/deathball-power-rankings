@@ -484,6 +484,28 @@ th.no-sort { cursor: default; }
 th.no-sort:hover { background: #111; color: #666; }
 th.sorted-asc::after { content: " \\25B2"; }
 th.sorted-desc::after { content: " \\25BC"; }
+/* Small "i" icon inside a column header. Its explanation (data-tip) is shown
+   by the one shared body-level .info-tooltip below (enableInfoTips in
+   writeJs) rather than a native title bubble: it can be styled, it fades in
+   and travels between icons like the chart tooltip, and being outside the
+   table-wrap it can't be clipped by that wrapper's overflow-x. The icon is a
+   real button so it's keyboard-focusable; its click never reaches the th
+   (which would sort the column). */
+.info-tip { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; margin-left: 0.4em; padding: 0; border: 0; background: transparent; color: #777; vertical-align: middle; position: relative; top: -0.07em; cursor: help; transition: color 150ms ease; }
+.info-tip svg { display: block; width: 100%; height: 100%; }
+.info-tip:hover, .info-tip:focus-visible, .info-tip.is-active { color: #3eff8b; outline: none; }
+/* On an Advanced Stats tile the icon is pinned to the top-right corner,
+   exactly where .h2h-compare sits on a Match Statistics tile; the label
+   reserves room on the right so it never runs underneath it. */
+.h2h-tile-info { position: absolute; top: 0.55rem; right: 0.7rem; width: 14px; height: 14px; margin: 0; }
+.h2h-tile.has-info .h2h-label { padding-right: 1.4rem; }
+.info-tooltip strong { display: block; margin-bottom: 0.15rem; color: #f0f0f0; font-weight: 700; }
+.info-tooltip { position: fixed; left: 0; top: 0; z-index: 1000; box-sizing: border-box; max-width: min(280px, calc(100vw - 16px)); padding: 0.5rem 0.7rem; background: #111; border: 1px solid #333; border-radius: 3px; color: #ddd; font-size: 0.8rem; font-weight: 400; line-height: 1.45; letter-spacing: normal; text-transform: none; text-align: left; white-space: normal; pointer-events: none; opacity: 0; scale: var(--tt-scale); transform-origin: 50% 100%; transition: opacity var(--tt-out-dur) var(--tt-out-ease), scale var(--tt-out-dur) var(--tt-out-ease), left var(--tt-move-dur) var(--tt-move-ease), top var(--tt-move-dur) var(--tt-move-ease); }
+.info-tooltip[data-flip="true"] { transform-origin: 50% 0; }
+.info-tooltip[data-show="true"] { opacity: 1; scale: 1; transition: opacity var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay), scale var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay), left var(--tt-move-dur) var(--tt-move-ease), top var(--tt-move-dur) var(--tt-move-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .info-tooltip { transition: none !important; }
+}
 tbody tr { transition: background 150ms; }
 tbody tr:hover td { background: rgba(62,255,139,0.04); }
 tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
@@ -1122,6 +1144,11 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .doubles-col { grid-area: doubles; min-width: 0; }
 .doubles-col h2 { margin-top: 0; }
 .h2h-col .doubles-col { margin-top: 1.25rem; }
+/* Advanced Stats is always nested right under Match Statistics (in .h2h-col
+   on the chart layout, in that .player-col otherwise), so it takes the same
+   nested-section spacing as .doubles-col above: one margin, heading flush. */
+.advanced-col { margin-top: 1.25rem; min-width: 0; }
+.advanced-col h2 { margin-top: 0; }
 /* Doubles-only players (no singles play at all) skip the chart/stats/match
    log entirely -- Tournaments takes the left 1 of 3 columns, Doubles the
    right 2, same 3-column grid as everyone else's page. */
@@ -1480,6 +1507,96 @@ body.card-purple { background: radial-gradient(ellipse at 20% 0%, rgba(40, 0, 70
   fs.writeFileSync(path.join(REPO_ROOT, 'index.css'), stripCssComments(css));
 }
 
+// Shared by index.js (writeJs) and the inline script on every player page
+// (writePlayerPages in aggregate_players.js): the tooltip behind the "i"
+// icons on the Power Rankings column headers and the Advanced Stats tiles.
+// Plain template literal, same no-backtick rule as writeJs itself.
+const INFO_TIPS_JS = `  // One body-level tooltip shared by every .info-tip icon (Power Rankings
+  // column headers, Advanced Stats tiles on player pages). Hovering or focusing an icon writes the
+  // tooltip's text and fixed-position geometry: snapped while hidden so
+  // only the fade/scale plays, tweened while already showing so the bubble
+  // travels to the next icon (same pattern as the chart tooltip). Tap or
+  // click toggles it for touch users, and the click never bubbles to the
+  // th, which would otherwise sort the column.
+  function enableInfoTips() {
+    const triggers = [...document.querySelectorAll('.info-tip[data-tip]')];
+    if (!triggers.length) return;
+    const tip = document.createElement('div');
+    tip.className = 'info-tooltip';
+    tip.setAttribute('role', 'tooltip');
+    tip.dataset.show = 'false';
+    document.body.appendChild(tip);
+    let active = null;
+    // When the tooltip was shown; a click that lands right after a hover/
+    // focus already showed it (mouse click, or a tap's focus-then-click
+    // sequence) keeps it open instead of toggling it straight back off.
+    let shownAt = 0;
+
+    function hide() {
+      if (active) active.classList.remove('is-active');
+      active = null;
+      tip.dataset.show = 'false';
+    }
+
+    function place(trigger) {
+      const showing = tip.dataset.show === 'true';
+      if (active && active !== trigger) active.classList.remove('is-active');
+      active = trigger;
+      trigger.classList.add('is-active');
+      // Bold title line, explanation on its own line below it.
+      tip.textContent = '';
+      if (trigger.dataset.tipTitle) {
+        const title = document.createElement('strong');
+        title.textContent = trigger.dataset.tipTitle;
+        tip.appendChild(title);
+      }
+      tip.appendChild(document.createTextNode(trigger.dataset.tip));
+      const r = trigger.getBoundingClientRect();
+      const w = tip.offsetWidth;
+      const h = tip.offsetHeight;
+      const gap = 8;
+      const margin = 8;
+      let left = r.left + r.width / 2 - w / 2;
+      left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
+      let top = r.top - h - gap;
+      const flip = top < margin;
+      if (flip) top = r.bottom + gap;
+      tip.dataset.flip = flip ? 'true' : 'false';
+      if (!showing) {
+        tip.style.transition = 'none';
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+        void tip.offsetWidth;
+        tip.style.transition = '';
+      } else {
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+      }
+      tip.dataset.show = 'true';
+      shownAt = performance.now();
+    }
+
+    triggers.forEach((t) => {
+      t.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') place(t); });
+      t.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && active === t) hide(); });
+      t.addEventListener('focus', () => place(t));
+      t.addEventListener('blur', () => { if (active === t) hide(); });
+      t.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const showing = active === t && tip.dataset.show === 'true';
+        if (showing && performance.now() - shownAt > 400) hide();
+        else if (!showing) place(t);
+      });
+    });
+    document.addEventListener('click', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+    // Fixed positioning is only right for the moment it was measured.
+    window.addEventListener('scroll', hide, { capture: true, passive: true });
+    window.addEventListener('resize', hide);
+  }
+`;
+
 function writeJs(glickoUncertainRdThreshold) {
   const stateNamesJson = JSON.stringify({
     AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
@@ -1509,6 +1626,8 @@ function writeJs(glickoUncertainRdThreshold) {
   const LOCATION_FILTER = JSON.parse(document.getElementById('location-filter-data')?.textContent || '{"regions":{},"countries":{}}');
   const PR_UNCERTAIN_RD_THRESHOLD = ${glickoUncertainRdThreshold};
 
+${INFO_TIPS_JS}
+
   function enableSorting(table) {
     const tbody = table.tBodies[0];
     const headers = [...table.querySelectorAll('th')];
@@ -1525,8 +1644,17 @@ function writeJs(glickoUncertainRdThreshold) {
           const cellA = a.cells[colIndex];
           const cellB = b.cells[colIndex];
           if (type === 'number') {
-            const valA = Number(cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent);
-            const valB = Number(cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent);
+            const rawA = cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent;
+            const rawB = cellB.dataset.sort !== undefined ? cellB.dataset.sort : cellB.textContent;
+            // A blank numeric cell (e.g. an advanced metric with no rated
+            // match behind it) would otherwise coerce to 0 and land mid-table.
+            if (th.dataset.blankLast === 'true') {
+              const blankA = rawA.trim() === '';
+              const blankB = rawB.trim() === '';
+              if (blankA !== blankB) return blankA ? 1 : -1;
+            }
+            const valA = Number(rawA);
+            const valB = Number(rawB);
             return asc ? valA - valB : valB - valA;
           }
           const valA = (cellA.dataset.sort !== undefined ? cellA.dataset.sort : cellA.textContent).trim().toLowerCase();
@@ -2963,6 +3091,13 @@ function writeJs(glickoUncertainRdThreshold) {
     addNumeric(String(row.losses), row.losses);
     addNumeric(String(row.games), row.games);
     addNumeric((row.winPct * 100).toFixed(1) + '%', row.winPct);
+    // Advanced metrics (already rounded server-side, see toClientRow); a
+    // null metric shows a dash and sorts as blank.
+    const signedText = (v, digits) => (v == null ? '\u2014' : (v > 0 ? '+' : '') + v.toFixed(digits));
+    addNumeric(signedText(row.wae, 1), row.wae == null ? '' : row.wae);
+    addNumeric(row.sos == null ? '\u2014' : String(row.sos), row.sos == null ? '' : row.sos);
+    addNumeric(signedText(row.gdPerMatch, 2), row.gdPerMatch == null ? '' : row.gdPerMatch);
+    addNumeric(signedText(row.aboveFiveHundred, 0), row.aboveFiveHundred);
 
     const lastActiveTd = document.createElement('td');
     lastActiveTd.textContent = meta.lastActive || '';
@@ -2980,15 +3115,17 @@ function writeJs(glickoUncertainRdThreshold) {
   }
 
   // Mirrors toClientRow()'s array order in aggregate_players.js:
-  // [id, r, rd, wins, losses, games, isNew, placementChange]. winPct/uncertain
-  // aren't shipped (cheap to recompute) so they're filled back in here.
+  // [id, r, rd, wins, losses, games, isNew, placementChange, wae, sos,
+  // gdPerMatch, aboveFiveHundred]. winPct/uncertain aren't shipped (cheap to
+  // recompute) so they're filled back in here.
   function normalizeRow(arr) {
-    const [id, r, rd, wins, losses, games, isNew, placementChange] = arr;
+    const [id, r, rd, wins, losses, games, isNew, placementChange, wae, sos, gdPerMatch, aboveFiveHundred] = arr;
     return {
       id, r, rd, wins, losses, games,
       winPct: games > 0 ? wins / games : 0,
       uncertain: rd > PR_UNCERTAIN_RD_THRESHOLD,
       isNew, placementChange,
+      wae, sos, gdPerMatch, aboveFiveHundred,
     };
   }
 
@@ -3418,6 +3555,7 @@ function writeJs(glickoUncertainRdThreshold) {
   }
 
   document.querySelectorAll('table[data-sortable]').forEach(enableSorting);
+  enableInfoTips();
   enableTabs();
   enableTabsMenu();
   activateTabFromQuery();
@@ -3462,4 +3600,4 @@ function stripCommentsInHeadBlocks(html) {
     .replace(/(<script[^>]*>)([\s\S]*?)(<\/script>)/g, (m, open, body, close) => open + stripJsComments(body) + close);
 }
 
-module.exports = { writeCss, writeJs, stripCssComments, stripJsComments, stripCommentsInHeadBlocks };
+module.exports = { writeCss, writeJs, stripCssComments, stripJsComments, stripCommentsInHeadBlocks, INFO_TIPS_JS };

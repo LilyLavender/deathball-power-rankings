@@ -53,6 +53,13 @@ const CLIENT_JS = String.raw`(function () {
   function pct(x) { return (x * 100).toFixed(0) + '%'; }
   function dim(s) { return ' <span class="h2h-record-dim">' + s + '</span>'; }
   function signed(n) { return (n > 0 ? '+' : '') + n; }
+  // Fixed-precision variant for the fractional advanced metrics; a value that
+  // rounds to zero loses its sign so it never prints as "-0.0".
+  function signedFixed(n, digits) {
+    var s = n.toFixed(digits);
+    if (Number(s) === 0) s = Math.abs(Number(s)).toFixed(digits);
+    return (Number(s) > 0 ? '+' : '') + s;
+  }
 
   // --- URL state -------------------------------------------------------
   function readSelectionFromUrl() {
@@ -214,6 +221,10 @@ const CLIENT_JS = String.raw`(function () {
     { label: 'Goals Scored', cell: singles(function (p) { return p.gf; }), num: singles(function (p) { return p.gf; }), dir: 1 },
     { label: 'Goals Allowed', cell: singles(function (p) { return p.ga; }), num: singles(function (p) { return p.ga; }), dir: -1 },
     { label: 'Goal Diff.', cell: singles(function (p) { return signed(p.gf - p.ga); }), num: singles(function (p) { return p.gf - p.ga; }), dir: 1 },
+    { label: 'Wins Above Expected', cell: singles(function (p) { return p.wae == null ? null : signedFixed(p.wae, 1); }), num: singles(function (p) { return p.wae; }), dir: 1 },
+    { label: 'Strength of Schedule', cell: singles(function (p) { return p.sos; }), num: singles(function (p) { return p.sos; }), dir: 1 },
+    { label: 'Game Diff / Match', cell: singles(function (p) { return p.gdm == null ? null : signedFixed(p.gdm, 2); }), num: singles(function (p) { return p.gdm; }), dir: 1 },
+    { label: 'Wins Above .500', cell: singles(function (p) { return signed(p.a5); }), num: singles(function (p) { return p.a5; }), dir: 1 },
     { label: 'Power Ranking', cell: singles(function (p) { return p.pr ? '#' + p.pr : 'Not Qualified' + (p.qn ? '<span class="compare-note">' + esc(p.qn) + '</span>' : ''); }), num: function (p) { return p.pr; }, dir: -1 },
     { label: 'Overall Ranking', cell: singles(function (p) { return p.or ? '#' + p.or : 'Unranked'; }), num: function (p) { return p.or; }, dir: -1 },
     { label: 'Glicko-2 Rating', cell: singles(function (p) { return p.r; }), num: function (p) { return p.r; }, dir: 1 },
