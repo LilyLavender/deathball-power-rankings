@@ -1084,6 +1084,14 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
    vertical centering within it) stays identical whether or not the note is
    present, instead of the row growing/shifting when it appears. */
 .stat-note { position: absolute; left: 0.9rem; right: 0.9rem; bottom: 0.6rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: #3eff8b; }
+/* On phones the tiles stack one per row, so the note no longer has to stay
+   out of flow to keep a row's heights equal -- and once the ranking tile's
+   four stats wrap to two lines, the absolutely positioned note would sit on
+   top of the second line's labels. Must follow the base rule above to win
+   the same-specificity tie. */
+@media (max-width: 700px) {
+  .stat-note { position: static; margin-top: 0.5rem; }
+}
 .rank-total { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666; }
 /* Fixed width so "1st"/"21st" etc. don't shift the record that follows it. */
 .rank-ordinal { display: inline-block; width: 2.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }

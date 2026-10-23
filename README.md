@@ -14,7 +14,7 @@ Requires Node.js, No other dependencies.
 
 Runs: `node data\players\aggregate_players.js` & `node data\players\player_graph.js`.
 
-Rebuilds `index.html`/`index.css`/`index.js`, `players.csv`, and every `tournaments/<slug>.html` / `players/<slug>.html` page from the cached tournament data and the manual config files below. Use this after changing any generation logic or manual config, without re-fetching anything.
+Rebuilds `index.html`/`index.css`/`index.js`, `compare.html`, `players.csv`, and every `tournaments/<slug>.html` / `players/<slug>.html` page from the cached tournament data and the manual config files below. Use this after changing any generation logic or manual config, without re-fetching anything.
 
 ## Adding tournaments
 

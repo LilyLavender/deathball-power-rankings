@@ -553,6 +553,9 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .stat-multi { display: flex; gap: 1.25rem; flex-wrap: wrap; row-gap: 0.4rem; }
 .stat-multi > span { display: flex; flex-direction: column; gap: 0.15rem; flex: 1 1 auto; }
 .stat-note { position: absolute; left: 0.9rem; right: 0.9rem; bottom: 0.6rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: #3eff8b; }
+@media (max-width: 700px) {
+  .stat-note { position: static; margin-top: 0.5rem; }
+}
 .rank-total { font-family: 'Rajdhani', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666; }
 .rank-ordinal { display: inline-block; width: 2.8em; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.05rem; color: #f0f0f0; }
 .player-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
