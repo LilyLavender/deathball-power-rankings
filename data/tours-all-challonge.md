@@ -121,3 +121,6 @@ https://challonge.com/qc26deathball2
 https://challonge.com/matsuricondb1
 https://challonge.com/matsuricondb2
 https://challonge.com/amt63j4j
+https://challonge.com/uddeathball
+https://challonge.com/MNgatefairDeathball
+https://challonge.com/w1bik1bm

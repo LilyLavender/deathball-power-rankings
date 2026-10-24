@@ -71,7 +71,7 @@
     { "names": ["Josh Freeman", "Josh F", "podcastboy69", "Joshua Wade Freeman", "Joshua F"], "canonical": "Josh Freeman", "id": "josh-1203-keg" },
     { "names": ["Josh k"], "canonical": "Josh k", "id": "josh-2019-league" },
     { "names": ["LongDickJohnson"], "canonical": "doodooheadjones" },
-    { "names": ["Kasi White", "Kasi"], "canonical": "Kasi White" },
+    { "names": ["Kasi White", "Kasi", "kasi w"], "canonical": "Kasi White" },
     { "names": ["Lev Bakin", "Lev"], "canonical": "Lev Bakin" },
     { "names": ["Matthew", "Matt Hew"], "canonical": "Matthew", "id": "matt-may-july-2019" },
     { "names": ["Mickey", "Micky"], "canonical": "Mickey" },
@@ -115,7 +115,10 @@
     { "names": ["Truitt Crozier", "Truitt"], "canonical": "Truitt Crozier" },
     { "names": ["D-Overmind", "Overmind"], "canonical": "D-Overmind" },
     { "names": ["LilyLambda", "Lily"], "canonical": "LilyLambda" },
-    { "names": ["Con", "Connor"], "canonical": "Con" }
+    { "names": ["Con", "Connor"], "canonical": "Con" },
+    { "names": ["Ryan", "Ryan rismon"], "canonical": "Ryan", "id": "ryan-deathball" },
+    { "names": ["Kevan S", "Kevan!"], "canonical": "Kevan S", "id": "kevan-deathball-combined" },
+    { "names": ["zachaction", "Zack"], "canonical": "zachaction" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -142,7 +145,8 @@
         { "id": "alex-three-nations-brew", "canonical": "Alex", "tournaments": ["https://challonge.com/h8jgrfg4"] },
         { "id": "alex-llglory-you-know", "canonical": "Alex", "tournaments": ["https://challonge.com/cbj2mbse", "https://challonge.com/jtmg4kel"] },
         { "id": "alex-leaderboard-shad-5", "canonical": "Alex", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview"] },
-        { "id": "alex-cq", "canonical": "Alex", "tournaments": ["https://challonge.com/CQHPD"] }
+        { "id": "alex-cq", "canonical": "Alex", "tournaments": ["https://challonge.com/CQHPD"] },
+        { "id": "alex zick", "canonical": "Alex Zick", "tournaments": ["https://challonge.com/uddeathball"] }
       ]
     },
     {
@@ -155,7 +159,7 @@
     {
       "name": "Arde",
       "resolutions": [
-        { "id": "arde-dbmpls", "canonical": "Arde", "tournaments": ["https://challonge.com/DBmpls"] },
+        { "id": "arde-dbmpls", "canonical": "Arde", "tournaments": ["https://challonge.com/DBmpls", "https://challonge.com/w1bik1bm"] },
         { "id": "arde-baltimore-brawl", "canonical": "Arde", "tournaments": ["https://challonge.com/BaltDB"] }
       ]
     },
@@ -347,7 +351,7 @@
     {
       "name": "Kevan",
       "resolutions": [
-        { "id": "kevan-deathball-combined", "canonical": "Kevan S", "tournaments": ["https://challonge.com/DBmpls"] },
+        { "id": "kevan-deathball-combined", "canonical": "Kevan S", "tournaments": ["https://challonge.com/DBmpls", "https://challonge.com/uddeathball"] },
         { "id": "kevan-bb4-combined", "canonical": "Kevan S", "tournaments": ["https://challonge.com/b9jolkfa"] }
       ]
     },
@@ -420,7 +424,7 @@
     {
       "name": "Ryan",
       "resolutions": [
-        { "id": "ryan-deathball", "canonical": "Ryan", "tournaments": ["https://challonge.com/DBmpls"] },
+        { "id": "ryan-deathball", "canonical": "Ryan", "tournaments": ["https://challonge.com/DBmpls", "https://challonge.com/uddeathball"] },
         { "id": "ryan-campdb", "canonical": "Ryan", "tournaments": ["https://challonge.com/CampDB"] },
         { "id": "ryan-recent", "canonical": "Ryan", "tournaments": ["https://challonge.com/8m265y1c", "https://challonge.com/y7upbs7h", "https://challonge.com/my7fsi0o", "https://challonge.com/9yxjnhn"] },
         { "id": "ryan-popup-sept", "canonical": "Ryan", "tournaments": ["https://challonge.com/db20190406", "https://challonge.com/dbcha20190911"] },
@@ -432,7 +436,7 @@
     {
       "name": "Sam",
       "resolutions": [
-        { "id": "sam-beerandball", "canonical": "Sam", "tournaments": ["https://challonge.com/beerandball"] },
+        { "id": "sam-beerandball", "canonical": "Sam", "tournaments": ["https://challonge.com/beerandball", "https://challonge.com/uddeathball"] },
         { "id": "sam-gdc", "canonical": "Sam", "tournaments": ["https://challonge.com/dbgdc"] },
         { "id": "sam-shad5", "canonical": "Sam", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-5/events/deathball-1v1-bracket/brackets/2216798/3218890/overview"] },
         { "id": "samueljh", "canonical": "SamuelJH", "tournaments": ["https://challonge.com/fb7fg5mo"] },
@@ -541,14 +545,16 @@
     {
       "name": "Taylor",
       "resolutions": [
-        { "id": "taylor-sep-2026", "canonical": "Taylor", "tournaments": ["https://challonge.com/matsuricondb2"] }
+        { "id": "taylor-sep-2026", "canonical": "Taylor", "tournaments": ["https://challonge.com/matsuricondb2"] },
+        { "id": "taylor-jul-2018", "canonical": "Taylor", "tournaments": ["https://challonge.com/w1bik1bm", "https://challonge.com/uddeathball"] }
       ],
       "default": { "id": "taylor", "canonical": "Taylor" }
     },
     {
       "name": "Kevin",
       "resolutions": [
-        { "id": "kevin-sep-2026", "canonical": "Kevin", "tournaments": ["https://challonge.com/matsuricondb2"] }
+        { "id": "kevin-sep-2026", "canonical": "Kevin", "tournaments": ["https://challonge.com/matsuricondb2"] },
+        { "id": "kevin-dec-2018", "canonical": "Kevin", "tournaments": ["https://challonge.com/uddeathball"] }
       ],
       "default": { "id": "kevin", "canonical": "Kevin" }
     },
@@ -558,6 +564,20 @@
         { "id": "nate-sep-2026", "canonical": "Nate", "tournaments": ["https://challonge.com/amt63j4j"] }
       ],
       "default": { "id": "nate", "canonical": "nate" }
+    },
+    {
+      "name": "Francis S",
+      "resolutions": [
+        { "id": "francis-s-aug-2018", "canonical": "Francis S", "tournaments": ["https://challonge.com/MNgatefairDeathball"] }
+      ],
+      "default": { "id": "francis s", "canonical": "Francis S" }
+    },
+    {
+      "name": "Jack",
+      "resolutions": [
+        { "id": "jack j", "canonical": "Jack J", "tournaments": ["https://challonge.com/uddeathball"] }
+      ],
+      "default": { "id": "jack", "canonical": "jack" }
     }
   ],
   "_hidden_example": "Raw names listed here are dropped entirely: matches involving them are skipped (not counted as a win/loss for either side), and they never appear as a player.",

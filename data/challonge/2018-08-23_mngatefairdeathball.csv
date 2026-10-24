@@ -1,0 +1,9 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,kasi w,0,,,false,,Dexter c,1,,,false
+B,,Francis S,1,,,false,,Dexter c,0,,,false
+C,,Kelli g,0,,,false,,Jack s,1,,,false
+D,,Francis S,0,,,false,,Jack s,1,,,false
+G,,Kelli g,0,,,false,,kasi w,1,,,false
+H,,Dexter c,0,,,false,,kasi w,69,,,false
+I,,Francis S,1,,,false,,kasi w,0,,,false
+E,,Jack s,1,,,false,,Francis S,0,,,false

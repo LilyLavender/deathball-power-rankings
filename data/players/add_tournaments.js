@@ -22,12 +22,16 @@
 //          still confirmed ("same player?") rather than silently merged --
 //          a name having only ever belonged to one person so far doesn't
 //          mean a new appearance of it is that same person. Saying "no"
-//          turns it into a split on the spot.
+//          turns it into a split on the spot. This applies equally to a
+//          name that only matches via an alias's secondary spelling (e.g.
+//          "Torre" listed under SkitsSkoots): an alias records that the
+//          spelling HAS meant that person, not that it always will, so it
+//          gets the same "same player?" confirmation, and a "no" strips the
+//          spelling from the alias as the new split takes over.
 //        - a name that doesn't exactly match anything seen before, but is a
 //          close spelling match to an existing player (possible alias)
-//      Only names already covered by an alias or a split resolution that
-//      already lists this tournament are left to auto-resolve without a
-//      prompt.
+//      Only names covered by a split resolution that already lists this
+//      tournament are left to auto-resolve without a prompt.
 //   4. For each new tournament, asks for city/state/venue (blank = skip) and
 //      writes them to tournament-locations.json.
 //   5. For genuinely new players, asks for city/state/country (blank = skip)
@@ -431,11 +435,20 @@ async function handleSplitCollision(rl, splitEntry, rawName, tournament, knownBy
 // spelling (or removed entirely if that was its only one) so the name stops
 // silently claiming a new occurrence is the same old person -- the fresh
 // split created below takes over disambiguating it from here on.
-async function handleExactMatchConfirmation(rl, rawName, tournament, existing) {
-  console.log(`\n"${rawName}" (${tournament.label}, ${tournament.date}) matches an existing player:`);
+async function handleExactMatchConfirmation(rl, rawName, tournament, existing, priorAlias = null) {
+  const via = priorAlias ? ` (via alias of "${existing.displayName}")` : '';
+  console.log(`\n"${rawName}" (${tournament.label}, ${tournament.date}) matches an existing player${via}:`);
   console.log(`  ${describeCandidate(existing)}`);
   const answer = (await ask(rl, 'Same player? [Y/n] (default y): ')).trim().toLowerCase();
   if (answer === '' || answer === 'y' || answer === 'yes') return;
+
+  if (priorAlias) {
+    const lower = normName(rawName).toLowerCase();
+    priorAlias.names = (priorAlias.names || []).filter((n) => normName(n).toLowerCase() !== lower);
+    if (priorAlias.names.length === 0) {
+      identities.aliases = identities.aliases.filter((a) => a !== priorAlias);
+    }
+  }
 
   const newId = generateId(rawName, tournament.date);
   identities.splits = identities.splits || [];
@@ -720,7 +733,23 @@ async function main() {
 
         const identity = resolveIdentity(rawName, t.url);
         const isDefaultFallback = identity.id === lower;
-        if (!isDefaultFallback) continue; // already resolved via alias
+        if (!isDefaultFallback) {
+          // Resolved through an alias's secondary spelling. That alias only
+          // proves the spelling has belonged to this person before, not that
+          // this new occurrence does too (a Minneapolis "Torre" once landed
+          // silently on an Iowa player this way) -- so confirm it exactly
+          // like a plain exact match, passing the alias along so a "no" can
+          // retire this spelling from it.
+          const priorAlias = (identities.aliases || []).find(
+            (a) => (a.names || []).some((n) => normName(n).toLowerCase() === lower)
+          );
+          const existing = knownById.get(identity.id) || {
+            id: identity.id, displayName: identity.name, allNames: [rawName],
+            games: 0, lastDate: '', lastLabel: '',
+          };
+          await handleExactMatchConfirmation(rl, rawName, t, existing, priorAlias);
+          continue;
+        }
 
         if (knownById.has(lower)) {
           await handleExactMatchConfirmation(rl, rawName, t, knownById.get(lower));

@@ -134,6 +134,9 @@
     "https://challonge.com/matsuricondb1": { "city": "Columbus", "state": "OH", "location": "Matsuricon" },
     "https://challonge.com/matsuricondb2": { "name": "Matsuricon 2026 DeathBall 2v2", "city": "Columbus", "state": "OH", "location": "Matsuricon" },
     "https://challonge.com/amt63j4j": { "name": "Final Denton DeathBall 09/10", "date": "2026-09-10", "city": "Denton", "state": "TX" },
-    "https://www.start.gg/tournament/detroit-slam-dance-ii-electric-snake-boogaloo/events/deathball/brackets/2397524/3456218/overview": { "date": "2026-09-13", "city": "Warren", "state": "MI", "location": "Detroit Slam Dance" }
+    "https://www.start.gg/tournament/detroit-slam-dance-ii-electric-snake-boogaloo/events/deathball/brackets/2397524/3456218/overview": { "date": "2026-09-13", "city": "Warren", "state": "MI", "location": "Detroit Slam Dance" },
+    "https://challonge.com/w1bik1bm": { "date": "2018-07-23", "city": "Minneapolis", "state": "MN", "location": "Up-Down" },
+    "https://challonge.com/MNgatefairDeathball": { "name": "MN Gate Fair 2018", "city": "Minneapolis", "state": "MN", "location": "Up-Down" },
+    "https://challonge.com/uddeathball": { "date": "2018-12-11", "city": "Minneapolis", "state": "MN", "location": "Up-Down" }
   }
 }

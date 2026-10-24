@@ -1,0 +1,32 @@
+Match Identifier,Top Player Prefix,Top Player Name,Top Player Stocks,Top Player Character,Top Player Character IDs,Top Player DQ,Bottom Player Prefix,Bottom Player Name,Bottom Player Stocks,Bottom Player Character,Bottom Player Character IDs,Bottom Player DQ
+A,,Jack,2,,,false,,Quintin,1,,,false
+B,,Alex,2,,,false,,Keli,1,,,false
+C,,Frank,0,,,false,,Zack,2,,,false
+D,,Stabs,1,,,false,,Torre,2,,,false
+E,,Ryan,2,,,false,,Mark L,0,,,false
+F,,Kasi,1,,,false,,Kevan,2,,,false
+G,,Azul,2,,,false,,Kevin,0,,,false
+H,,Taylor,2,,,false,,Sam,0,,,false
+I,,Jack,2,,,false,,Alex,0,,,false
+J,,Zack,2,,,false,,Torre,0,,,false
+K,,Ryan,0,,,false,,Kevan,2,,,false
+L,,Azul,1,,,false,,Taylor,2,,,false
+M,,Jack,0,,,false,,Zack,2,,,false
+N,,Kevan,1,,,false,,Taylor,2,,,false
+O,,Zack,3,,,false,,Taylor,2,,,false
+R,,Quintin,2,,,false,,Keli,0,,,false
+S,,Frank,2,,,false,,Stabs,0,,,false
+T,,Mark L,2,,,false,,Kasi,0,,,false
+U,,Kevin,0,,,false,,Sam,2,,,false
+V,,Azul,1,,,false,,Quintin,2,,,false
+W,,Ryan,1,,,false,,Frank,2,,,false
+X,,Torre,2,,,false,,Mark L,0,,,false
+Y,,Alex,1,,,false,,Sam,2,,,false
+Z,,Quintin,2,,,false,,Frank,1,,,false
+AA,,Torre,2,,,false,,Sam,1,,,false
+AB,,Jack,2,,,false,,Quintin,0,,,false
+AC,,Kevan,0,,,false,,Torre,2,,,false
+AD,,Jack,0,,,false,,Torre,2,,,false
+AE,,Taylor,0,,,false,,Torre,3,,,false
+P,,Zack,,,,false,,Torre,,,,false
+Q,,,,,,false,,,,,,false
