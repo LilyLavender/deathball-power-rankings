@@ -1038,14 +1038,57 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
    while the player columns scroll inside .table-wrap on narrow screens. */
 .compare-table th { position: static; cursor: default; }
 .compare-table th.compare-player-col { position: relative; min-width: 150px; padding-top: 0.9rem; text-transform: none; letter-spacing: 0.02em; font-size: 1.05rem; color: #f0f0f0; }
-.compare-table th.compare-stat-col { width: 1%; }
 .compare-col-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--col-color, #3eff8b); box-shadow: 0 0 8px var(--col-color, #3eff8b); }
 .compare-col-name { display: block; }
 .compare-col-name a { color: #f0f0f0; }
 .compare-col-name a:hover { color: var(--col-color, #3eff8b); }
 .compare-col-sub { display: block; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; color: #666; margin-top: 0.1rem; }
-.compare-table td { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.1rem; }
+.compare-table td { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.1rem; padding-top: 0.3rem; padding-bottom: 0.3rem; }
+/* Links inside stat cells take the cell's color (white, or green when the
+   cell holds the row's best value) instead of the global green link color,
+   so a linked value (Peak Rating's tournament, Best Win's opponent) only
+   reads as "best" when it actually is. */
+.compare-table td a { color: inherit; }
+.compare-table td a:hover { color: #3eff8b; }
 .compare-table td.compare-stat-label { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: #666; white-space: nowrap; }
+.compare-table .compare-cell-sub { font-size: 0.95rem; font-weight: 600; color: #bbb; }
+.compare-table td.compare-best .compare-cell-sub { color: inherit; }
+/* Named group header rows inside the stats table (Record, Ranking, ...). */
+.compare-table tr.compare-group th { position: static; text-align: left; background: transparent; color: #3eff8b; font-size: 0.8rem; letter-spacing: 0.12em; padding: 1.1rem 0.75rem 0.35rem; border-bottom: 1px solid #222; }
+.compare-table tr.compare-group:first-child th { padding-top: 0.5rem; }
+.compare-table tbody tr.compare-group:hover th { background: transparent; box-shadow: none; }
+/* Comparison tables size to their columns (label + one fixed-width column
+   per player) instead of stretching to the page, so two players make a
+   compact table and each added player widens it; past the viewport the
+   .table-wrap scrolls. */
+.compare-table { width: auto; max-width: 100%; }
+.compare-table th.compare-player-col { width: 230px; }
+.compare-table th.compare-player-col-compact { width: 170px; }
+/* The stats table is centered under its heading (auto margins collapse to
+   zero once it's wider than the wrap, so narrow screens still scroll it). */
+.compare-stats-section .compare-table { margin-left: auto; margin-right: auto; }
+/* Two-column section rows (chart | head-to-head, common opponents | shared
+   tournaments, ...). A lone chart (one player) is centered at half width.
+   Rows collapse to a single full-width column in the compare mobile block. */
+.compare-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.5rem; align-items: start; }
+.compare-row > .tourney-section { min-width: 0; }
+.compare-row-centered { grid-template-columns: 1fr; justify-items: center; }
+.compare-row-centered > .compare-chart-section { width: 50%; }
+/* Inside a half-width row column, the compact tables tighten up: narrower
+   player columns and wrapping tournament names, so three players fit
+   without a scrollbar (four still scroll inside .table-wrap). */
+.compare-row .compare-table th.compare-player-col-compact { width: 115px; min-width: 95px; }
+.compare-row .compare-table td.compare-opp-name { white-space: normal; max-width: 13rem; }
+/* Common Opponents fills whatever column it's in, with the player columns
+   sharing the remaining width evenly (the opponent-name column takes what
+   its content needs). */
+.compare-common { width: 100%; }
+.compare-common th.compare-player-col { width: auto; min-width: 0; }
+.compare-row .compare-common td.compare-opp-name { white-space: nowrap; max-width: none; }
+.compare-row .compare-common th, .compare-row .compare-common td { padding-left: 0.5rem; padding-right: 0.5rem; }
+.compare-row .compare-common th.compare-player-col { font-size: 0.95rem; }
+.compare-row .compare-common .compare-col-sub { font-size: 0.72rem; }
+.compare-h2h-record-top { margin: 0.25rem 0 2rem; }
 .compare-table td.compare-empty { color: #3a3a3a; font-weight: 500; }
 .compare-table td.compare-best { color: #3eff8b; }
 .compare-table .compare-note { display: block; font-size: 0.72rem; letter-spacing: 0.04em; color: #3eff8b; }
@@ -1082,12 +1125,17 @@ h1 img.loc-flag { height: 0.75em; margin-right: 0.4em; }
 .compare-common td.result-win { color: #3eff8b; }
 .compare-common td.result-loss { color: #ff5e5e; }
 .compare-shared td .compare-col-sub { font-weight: 600; }
+/* Placement + record take the cell's color (white, or green on the row's
+   best placement) rather than .hist-record's always-green default. */
+.compare-shared td .rank-ordinal, .compare-shared td .hist-record { color: inherit; }
 .compare-shared td .compare-col-sub a { color: #888; }
 @media (max-width: 700px) {
   /* Let the sticky label column wrap instead of claiming half the phone
      width with a single nowrap line; player columns keep their min-width
      and scroll inside .table-wrap. */
   .compare-table td.compare-stat-label { white-space: normal; max-width: 6.5rem; font-size: 0.72rem; line-height: 1.25; }
+  .compare-row { grid-template-columns: 1fr; }
+  .compare-row-centered > .compare-chart-section { width: 100%; }
   .compare-table th.compare-player-col { min-width: 130px; }
   .compare-table .compare-note { white-space: nowrap; }
   .compare-search-wrap { flex-basis: 100%; max-width: none; }

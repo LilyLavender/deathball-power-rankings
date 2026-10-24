@@ -3821,11 +3821,11 @@ function computePlayerProfile(id, p, hist, rankingRows, officialRows, ratingHist
 //   m:  [opponentSlug, won, date, order, scoreFor, scoreAgainst, tournamentSlug, isDQ]
 //   pl: [tournamentSlug, rank, totalEntrants, wins, losses, isDoubles, partnerSlug, partnerName]
 // Opponent/partner slugs are null when that player has no page (hidden).
-function buildCompareData(players, histories, rankingRows, ratingHistoryById, allTournaments, lastActiveById) {
+// c is the player's own card accent ('green'/'purple', same cardAccent() as
+// their page) -- the compare page prefers it when picking column colors.
+function buildCompareData(players, histories, rankingRows, ratingHistoryById, allTournaments) {
   const officialRows = rankingRows.filter((r) => r.games >= 5 && r.rd <= 150);
   const slugOf = (id) => playerSlugById.get(id) || null;
-  const record = (e) => ({ w: e.wins, l: e.losses, t: e.total });
-  const pick = (e) => (e ? { s: slugOf(e.opponentId), n: e.opponentName, ...record(e) } : null);
 
   const out = { players: {}, tournaments: {} };
   for (const [id, p] of players.entries()) {
@@ -3839,8 +3839,8 @@ function buildCompareData(players, histories, rankingRows, ratingHistoryById, al
       f: prof.flag || null,
       loc: prof.location,
       ar: prof.activeRange,
-      la: lastActiveById.get(id) || '',
       al: prof.aliases,
+      c: cardAccent(id, prof.info.color) === 'card-purple' ? 'purple' : 'green',
       do: prof.isDoublesOnly,
       w: p.wins,
       l: p.losses,
@@ -3868,12 +3868,6 @@ function buildCompareData(players, histories, rankingRows, ratingHistoryById, al
       uvM: prof.h2h.upsetVictimMajor,
       tc: p.tournaments.size,
       bw: prof.bestWin ? { s: slugOf(prof.bestWin.opponentId), n: prof.bestWin.opponentName, r: prof.bestWin.rating, rk: prof.bestWin.oppRank, sp: prof.bestWin.spots } : null,
-      rv: pick(prof.h2h.rival),
-      mp: pick(prof.h2h.mostPlayed),
-      bwr: pick(prof.h2h.bestWinRate),
-      wwr: pick(prof.h2h.worstWinRate),
-      mwa: pick(prof.h2h.mostWinsAgainst),
-      mla: pick(prof.h2h.mostLossesAgainst),
       rh: ratingHistory.map((h) => [h.date, h.rating, h.rd, h.rank, h.slug]),
       m: hist.matches.map((m) => [slugOf(m.opponentId), m.won ? 1 : 0, m.date, m.order, m.scoreFor, m.scoreAgainst, m.tournamentSlug, m.isDQ ? 1 : 0]),
       pl: hist.placements.map((pl) => [pl.slug, pl.rank, pl.totalEntrants, pl.wins, pl.losses, pl.isDoubles ? 1 : 0, pl.isDoubles ? slugOf(pl.partnerId) : null, pl.isDoubles ? pl.partnerName : null]),
@@ -4666,7 +4660,7 @@ async function main() {
   writeTournamentPages(allTournaments);
   writePlayerPages(players, glicko, histories, rankingRows, ratingHistoryById, doublesHistories);
   writeComparePage({
-    data: buildCompareData(players, histories, rankingRows, ratingHistoryById, allTournaments, lastActiveById),
+    data: buildCompareData(players, histories, rankingRows, ratingHistoryById, allTournaments),
     metaTags: embedMetaTags('Compare Players — DeathBall Power Rankings', 'Compare DeathBall players side by side: records, ratings, head-to-head results, and shared tournaments', 'compare.html'),
     footerHtml: siteFooter(''),
     outPath: path.join(REPO_ROOT, 'compare.html'),

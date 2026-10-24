@@ -21,9 +21,29 @@ const CLIENT_JS = String.raw`(function () {
   var PLAYERS = DATA.players;
   var TOURNAMENTS = DATA.tournaments;
   var MAX_PLAYERS = 4;
-  // Per-column accent, assigned by slot position (not by the player's own
-  // card color) so every selected player is always visually distinct.
-  var COLORS = ['#3eff8b', '#b04fff', '#ffd84d', '#4da6ff'];
+  // Column colors: each player gets their own card accent (green/purple,
+  // the color their player page uses) when it's still free, first come
+  // first served; anyone whose preferred color is already taken is then
+  // given the remaining palette colors in order. Recomputed by
+  // assignColors() into colors[] (indexed like selected[]) on every update.
+  var PALETTE = { green: '#3eff8b', purple: '#b04fff', gold: '#ffd84d', blue: '#4da6ff' };
+  var PALETTE_ORDER = ['green', 'purple', 'gold', 'blue'];
+  var colors = [];
+  function assignColors() {
+    var taken = {};
+    var names = selected.map(function (slug) {
+      var pref = PLAYERS[slug].c;
+      if (pref && PALETTE[pref] && !taken[pref]) { taken[pref] = true; return pref; }
+      return null;
+    });
+    names = names.map(function (name) {
+      if (name) return name;
+      var next = PALETTE_ORDER.filter(function (c) { return !taken[c]; })[0];
+      taken[next] = true;
+      return next;
+    });
+    colors = names.map(function (name) { return PALETTE[name]; });
+  }
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   var selected = [];
@@ -85,7 +105,7 @@ const CLIENT_JS = String.raw`(function () {
     var html = '';
     selected.forEach(function (slug, i) {
       var p = PLAYERS[slug];
-      html += '<span class="compare-chip" style="--chip-color:' + COLORS[i] + '">' +
+      html += '<span class="compare-chip" style="--chip-color:' + colors[i] + '">' +
         '<span class="compare-chip-dot"></span>' +
         flagImg(p.f) + '<a href="' + playerHref(slug) + '">' + esc(p.n) + '</a>' +
         '<button type="button" class="compare-chip-remove" data-slug="' + esc(slug) + '" aria-label="Remove ' + esc(p.n) + '">&times;</button>' +
@@ -211,50 +231,53 @@ const CLIENT_JS = String.raw`(function () {
     }
     return s;
   }
-  function oppCell(e, metric) { return e ? playerLink(e.s, e.n) + ' <span class="h2h-count">' + metric(e) + '</span>' : null; }
-  function winRateMetric(e) { return pct(e.w / e.t) + dim('(' + e.w + '-' + e.l + ')'); }
 
-  var ROWS = [
-    { label: 'Record', cell: singles(function (p) { return p.w + '-' + p.l; }), num: singles(function (p) { return p.g ? p.w / p.g : null; }), dir: 1 },
-    { label: 'Win %', cell: singles(function (p) { return p.g ? (p.w / p.g * 100).toFixed(1) + '%' : null; }), num: singles(function (p) { return p.g ? p.w / p.g : null; }), dir: 1 },
-    { label: 'Games Played', cell: singles(function (p) { return p.g; }), num: singles(function (p) { return p.g; }), dir: 1 },
-    { label: 'Goals Scored', cell: singles(function (p) { return p.gf; }), num: singles(function (p) { return p.gf; }), dir: 1 },
-    { label: 'Goals Allowed', cell: singles(function (p) { return p.ga; }), num: singles(function (p) { return p.ga; }), dir: -1 },
-    { label: 'Goal Diff.', cell: singles(function (p) { return signed(p.gf - p.ga); }), num: singles(function (p) { return p.gf - p.ga; }), dir: 1 },
-    { label: 'Wins Above Expected', cell: singles(function (p) { return p.wae == null ? null : signedFixed(p.wae, 1); }), num: singles(function (p) { return p.wae; }), dir: 1 },
-    { label: 'Strength of Schedule', cell: singles(function (p) { return p.sos; }), num: singles(function (p) { return p.sos; }), dir: 1 },
-    { label: 'Game Diff / Match', cell: singles(function (p) { return p.gdm == null ? null : signedFixed(p.gdm, 2); }), num: singles(function (p) { return p.gdm; }), dir: 1 },
-    { label: 'Wins Above .500', cell: singles(function (p) { return signed(p.a5); }), num: singles(function (p) { return p.a5; }), dir: 1 },
-    { label: 'Power Ranking', cell: singles(function (p) { return p.pr ? '#' + p.pr : 'Not Qualified' + (p.qn ? '<span class="compare-note">' + esc(p.qn) + '</span>' : ''); }), num: function (p) { return p.pr; }, dir: -1 },
-    { label: 'Overall Ranking', cell: singles(function (p) { return p.or ? '#' + p.or : 'Unranked'; }), num: function (p) { return p.or; }, dir: -1 },
-    { label: 'Glicko-2 Rating', cell: singles(function (p) { return p.r; }), num: function (p) { return p.r; }, dir: 1 },
-    { label: 'RD', cell: singles(function (p) { return p.rd != null ? '&plusmn;' + p.rd : null; }), num: function (p) { return p.rd; }, dir: -1 },
-    { label: 'Peak Rating', cell: function (p) { return p.peak ? '<a href="' + tourneyHref(p.peak.t) + '">' + p.peak.v + '</a>' + dim(esc(formatDateHuman(p.peak.d))) : null; }, num: function (p) { return p.peak ? p.peak.v : null; }, dir: 1 },
-    { label: 'Longest Win Streak', cell: singles(function (p) { return p.lws; }), num: singles(function (p) { return p.lws; }), dir: 1 },
-    { label: 'Longest Loss Streak', cell: singles(function (p) { return p.lls; }), num: singles(function (p) { return p.lls; }), dir: -1 },
-    { label: 'Podium Rate (Top 3)', cell: function (p) { return rateCell(p.pod, p.tp); }, num: function (p) { return p.tp ? p.pod / p.tp : null; }, dir: 1 },
-    { label: 'Top 8 Rate', cell: function (p) { return rateCell(p.t8, p.tp); }, num: function (p) { return p.tp ? p.t8 / p.tp : null; }, dir: 1 },
-    { label: 'Giant Killer Wins', cell: singles(function (p) { return tierCell(p.gk, p.gkM, true); }), num: singles(function (p) { return p.gk; }), dir: 1 },
-    { label: 'Upset Victim Losses', cell: singles(function (p) { return tierCell(p.uv, p.uvM, false); }), num: singles(function (p) { return p.uv; }), dir: -1 },
-    { label: 'Tournaments', cell: function (p) { return p.tc; }, num: function (p) { return p.tc; }, dir: 1 },
-    { label: 'Last Active', cell: function (p) { return p.la ? esc(formatDateHuman(p.la)) : null; }, num: function (p) { return p.la ? Number(p.la.replace(/-/g, '')) : null; }, dir: 1 },
-    { label: 'Best Win', cell: function (p) {
-      if (!p.bw) return null;
-      var rank = p.bw.rk != null ? '#' + p.bw.rk : 'Unranked';
-      var spots = p.bw.sp != null ? dim('(' + signed(p.bw.sp) + ')') : '';
-      return playerLink(p.bw.s, p.bw.n) + ' <span class="h2h-count">' + rank + '</span>' + spots;
-    }, dir: 0 },
-    { label: 'Rival (Min. 3)', cell: function (p) { return oppCell(p.rv, winRateMetric); }, dir: 0 },
-    { label: 'Most Played', cell: function (p) { return oppCell(p.mp, function (e) { return '&times;' + e.t; }); }, dir: 0 },
-    { label: 'Best Win Rate (Min. 3)', cell: function (p) { return oppCell(p.bwr, winRateMetric); }, dir: 0 },
-    { label: 'Worst Win Rate (Min. 3)', cell: function (p) { return oppCell(p.wwr, winRateMetric); }, dir: 0 },
-    { label: 'Most Wins Against', cell: function (p) { return oppCell(p.mwa, function (e) { return '&times;' + e.w; }); }, dir: 0 },
-    { label: 'Most Losses Against', cell: function (p) { return oppCell(p.mla, function (e) { return '&times;' + e.l; }); }, dir: 0 },
+  // Rows grouped under named section headers (rendered as full-width
+  // header rows inside the one table so the player columns stay aligned
+  // across groups). Groups/labels follow the player page's own sections.
+  var GROUPS = [
+    { title: 'Record', rows: [
+      { label: 'Record', cell: singles(function (p) { return p.w + '-' + p.l; }), num: singles(function (p) { return p.g ? p.w / p.g : null; }), dir: 1 },
+      { label: 'Win %', cell: singles(function (p) { return p.g ? (p.w / p.g * 100).toFixed(1) + '%' : null; }), num: singles(function (p) { return p.g ? p.w / p.g : null; }), dir: 1 },
+      { label: 'Games Played', cell: singles(function (p) { return p.g; }), num: singles(function (p) { return p.g; }), dir: 1 },
+      { label: 'Wins Above .500', cell: singles(function (p) { return signed(p.a5); }), num: singles(function (p) { return p.a5; }), dir: 1 },
+      { label: 'Goals Scored', cell: singles(function (p) { return p.gf; }), num: singles(function (p) { return p.gf; }), dir: 1 },
+      { label: 'Goals Allowed', cell: singles(function (p) { return p.ga; }), num: singles(function (p) { return p.ga; }), dir: -1 },
+      { label: 'Goal Diff.', cell: singles(function (p) { return signed(p.gf - p.ga); }), num: singles(function (p) { return p.gf - p.ga; }), dir: 1 },
+      { label: 'Game Diff / Match', cell: singles(function (p) { return p.gdm == null ? null : signedFixed(p.gdm, 2); }), num: singles(function (p) { return p.gdm; }), dir: 1 },
+    ] },
+    { title: 'Ranking', rows: [
+      { label: 'Power Ranking', cell: singles(function (p) { return p.pr ? '#' + p.pr : 'Not Qualified' + (p.qn ? '<span class="compare-note">' + esc(p.qn) + '</span>' : ''); }), num: function (p) { return p.pr; }, dir: -1 },
+      { label: 'Overall Ranking', cell: singles(function (p) { return p.or ? '#' + p.or : 'Unranked'; }), num: function (p) { return p.or; }, dir: -1 },
+      { label: 'Glicko-2 Rating', cell: singles(function (p) { return p.r; }), num: function (p) { return p.r; }, dir: 1 },
+      { label: 'RD', cell: singles(function (p) { return p.rd != null ? '&plusmn;' + p.rd : null; }), num: function (p) { return p.rd; }, dir: -1 },
+      { label: 'Peak Rating', cell: function (p) { return p.peak ? '<a href="' + tourneyHref(p.peak.t) + '">' + p.peak.v + '</a>' + dim(esc(formatDateHuman(p.peak.d))) : null; }, num: function (p) { return p.peak ? p.peak.v : null; }, dir: 1 },
+      { label: 'Strength of Schedule', cell: singles(function (p) { return p.sos; }), num: singles(function (p) { return p.sos; }), dir: 1 },
+      { label: 'Wins Above Expected', cell: singles(function (p) { return p.wae == null ? null : signedFixed(p.wae, 1); }), num: singles(function (p) { return p.wae; }), dir: 1 },
+    ] },
+    { title: 'Match Statistics', rows: [
+      { label: 'Giant Killer Wins', cell: singles(function (p) { return tierCell(p.gk, p.gkM, true); }), num: singles(function (p) { return p.gk; }), dir: 1 },
+      { label: 'Upset Victim Losses', cell: singles(function (p) { return tierCell(p.uv, p.uvM, false); }), num: singles(function (p) { return p.uv; }), dir: -1 },
+      // Best Win leads with the beaten opponent's current overall rank as
+      // the emphasized number (lower rank = better win), then their name
+      // and how many spots above/below this player they sit.
+      { label: 'Best Win', cell: function (p) {
+        if (!p.bw) return null;
+        var rank = p.bw.rk != null ? '#' + p.bw.rk : 'Unranked';
+        var spots = p.bw.sp != null ? dim('(' + signed(p.bw.sp) + ')') : '';
+        return '<span class="h2h-count">' + rank + '</span> <span class="compare-cell-sub">' + playerLink(p.bw.s, p.bw.n) + '</span>' + spots;
+      }, num: function (p) { return p.bw && p.bw.rk != null ? p.bw.rk : null; }, dir: -1 },
+      { label: 'Tournaments', cell: function (p) { return p.tc; }, num: function (p) { return p.tc; }, dir: 1 },
+      { label: 'Podium Rate (Top 3)', cell: function (p) { return rateCell(p.pod, p.tp); }, num: function (p) { return p.tp ? p.pod / p.tp : null; }, dir: 1 },
+      { label: 'Top 8 Rate', cell: function (p) { return rateCell(p.t8, p.tp); }, num: function (p) { return p.tp ? p.t8 / p.tp : null; }, dir: 1 },
+      { label: 'Longest Win Streak', cell: singles(function (p) { return p.lws; }), num: singles(function (p) { return p.lws; }), dir: 1 },
+      { label: 'Longest Loss Streak', cell: singles(function (p) { return p.lls; }), num: singles(function (p) { return p.lls; }), dir: -1 },
+    ] },
   ];
 
   function playerHeaderCell(slug, i) {
     var p = PLAYERS[slug];
-    return '<th class="compare-player-col" style="--col-color:' + COLORS[i] + '">' +
+    return '<th class="compare-player-col" style="--col-color:' + colors[i] + '">' +
       '<span class="compare-col-bar"></span>' +
       '<span class="compare-col-name">' + flagImg(p.f) + '<a href="' + playerHref(slug) + '">' + esc(p.n) + '</a></span>' +
       (p.loc ? '<span class="compare-col-sub">' + esc(p.loc) + '</span>' : '') +
@@ -264,7 +287,7 @@ const CLIENT_JS = String.raw`(function () {
   function renderStatsTable() {
     var players = selected.map(function (s) { return PLAYERS[s]; });
     var head = '<tr><th class="compare-stat-col"></th>' + selected.map(playerHeaderCell).join('') + '</tr>';
-    var body = ROWS.map(function (row) {
+    var renderRow = function (row) {
       var nums = row.num ? players.map(row.num) : players.map(function () { return null; });
       var present = nums.filter(function (n) { return n != null; });
       var best = null;
@@ -280,6 +303,9 @@ const CLIENT_JS = String.raw`(function () {
         return '<td' + (isBest ? ' class="compare-best"' : '') + '>' + html + '</td>';
       }).join('');
       return '<tr><td class="compare-stat-label">' + esc(row.label) + '</td>' + cells + '</tr>';
+    };
+    var body = GROUPS.map(function (group) {
+      return '<tr class="compare-group"><th colspan="' + (players.length + 1) + '">' + esc(group.title) + '</th></tr>' + group.rows.map(renderRow).join('');
     }).join('');
     return '<div class="table-wrap"><table class="compare-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
   }
@@ -300,7 +326,7 @@ const CLIENT_JS = String.raw`(function () {
     return flagImg(t.f) + '<a href="' + tourneyHref(slug) + '">' + esc(t.n) + '</a>';
   }
   function colorName(slug, i) {
-    return '<a href="' + playerHref(slug) + '" class="compare-colored" style="--col-color:' + COLORS[i] + '">' + esc(PLAYERS[slug].n) + '</a>';
+    return '<a href="' + playerHref(slug) + '" class="compare-colored" style="--col-color:' + colors[i] + '">' + esc(PLAYERS[slug].n) + '</a>';
   }
   function ordinal(n) {
     if (n == null) return '—';
@@ -357,7 +383,7 @@ const CLIENT_JS = String.raw`(function () {
 
     var lines = '', markers = '';
     series.forEach(function (s) {
-      var color = COLORS[s.i];
+      var color = colors[s.i];
       var pts = s.rh.map(function (h) { return [x(dayIndex(h[0])), y(h[1])]; });
       if (pts.length >= 2) {
         lines += '<polyline points="' + pts.map(function (pt) { return pt[0].toFixed(1) + ',' + pt[1].toFixed(1); }).join(' ') + '" class="chart-line" style="stroke:' + color + '"/>';
@@ -375,10 +401,10 @@ const CLIENT_JS = String.raw`(function () {
 
     var legend = '<div class="compare-legend">' + series.map(function (s) {
       var last = s.rh[s.rh.length - 1];
-      return '<span class="compare-legend-item" style="--col-color:' + COLORS[s.i] + '"><span class="compare-chip-dot"></span>' + esc(s.p.n) + ' <span class="h2h-record-dim">' + last[1] + '</span></span>';
+      return '<span class="compare-legend-item" style="--col-color:' + colors[s.i] + '"><span class="compare-chip-dot"></span>' + esc(s.p.n) + ' <span class="h2h-record-dim">' + last[1] + '</span></span>';
     }).join('') + '</div>';
 
-    return '<div class="tourney-section compare-section"><h2>Historical Rating</h2>' + legend +
+    return '<div class="tourney-section compare-section compare-chart-section"><h2>Historical Rating</h2>' + legend +
       '<div class="rating-chart-wrap"><div class="rating-chart-inner">' +
       '<svg viewBox="0 0 ' + W + ' ' + H + '" class="rating-chart" preserveAspectRatio="none">' + gridLines + lines + markers + '</svg>' +
       yLabels +
@@ -455,25 +481,40 @@ const CLIENT_JS = String.raw`(function () {
     return out;
   }
 
-  function renderHeadToHead() {
-    if (selected.length < 2) return '';
-    var matches = matchesBetweenSelected();
+  function h2hWinMatrix(matches) {
     var n = selected.length;
     var wins = [];
     for (var i = 0; i < n; i++) { wins.push([]); for (var j = 0; j < n; j++) wins[i].push(0); }
     matches.forEach(function (m) {
       if (m.aWon) wins[m.a][m.b]++; else wins[m.b][m.a]++;
     });
+    return wins;
+  }
 
-    var summary;
-    if (n === 2) {
-      var w0 = wins[0][1], w1 = wins[1][0];
-      summary = '<div class="compare-h2h-record">' +
-        '<span class="compare-h2h-side">' + colorName(selected[0], 0) + '</span>' +
-        '<span class="compare-h2h-score"><span class="' + (w0 > w1 ? 'compare-h2h-lead' : '') + '">' + w0 + '</span><span class="compare-h2h-dash">&ndash;</span><span class="' + (w1 > w0 ? 'compare-h2h-lead' : '') + '">' + w1 + '</span></span>' +
-        '<span class="compare-h2h-side">' + colorName(selected[1], 1) + '</span>' +
-        '</div>';
-    } else {
+  // Two-player matchup score, shown above everything else (only with
+  // exactly two players; three or more get the matrix inside Head-to-Head).
+  function renderH2HScore() {
+    if (selected.length !== 2) return '';
+    var wins = h2hWinMatrix(matchesBetweenSelected());
+    var w0 = wins[0][1], w1 = wins[1][0];
+    return '<div class="compare-h2h-record compare-h2h-record-top">' +
+      '<span class="compare-h2h-side">' + colorName(selected[0], 0) + '</span>' +
+      '<span class="compare-h2h-score"><span class="' + (w0 > w1 ? 'compare-h2h-lead' : '') + '">' + w0 + '</span><span class="compare-h2h-dash">&ndash;</span><span class="' + (w1 > w0 ? 'compare-h2h-lead' : '') + '">' + w1 + '</span></span>' +
+      '<span class="compare-h2h-side">' + colorName(selected[1], 1) + '</span>' +
+      '</div>';
+  }
+
+  function renderHeadToHead() {
+    if (selected.length < 2) return '';
+    var matches = matchesBetweenSelected();
+    var n = selected.length;
+    var wins = h2hWinMatrix(matches);
+
+    // Returned in parts (matrix, match log, common opponents, with counts)
+    // so renderSections can lay them out differently for two players vs.
+    // three or more.
+    var summary = '';
+    if (n > 2) {
       var head = '<tr><th></th>' + selected.map(function (s, i) { return '<th>' + colorName(s, i) + '</th>'; }).join('') + '</tr>';
       var body = selected.map(function (s, i) {
         return '<tr><th class="row-name">' + colorName(s, i) + '</th>' + selected.map(function (o, j) {
@@ -535,15 +576,19 @@ const CLIENT_JS = String.raw`(function () {
           }).join('') + '</tr>';
       });
       var cpg = paginated(crows, 'compare-common-list');
+      // Same full player headers (flag, name, location) as the Stats table.
       commonHtml = '<div class="table-wrap"><table class="compare-table compare-common"><thead><tr><th class="compare-stat-col"></th>' +
-        selected.map(function (s, i) { return '<th class="compare-player-col compare-player-col-compact" style="--col-color:' + COLORS[i] + '"><span class="compare-col-bar"></span>' + esc(PLAYERS[s].n) + '</th>'; }).join('') +
+        selected.map(playerHeaderCell).join('') +
         '</tr></thead><tbody id="compare-common-list">' + cpg.items + '</tbody></table></div>' + cpg.button;
     }
 
-    return '<div class="tourney-section compare-section"><h2>Head-to-Head</h2>' + summary +
-      '<h3 class="compare-subhead">Matches (' + matches.length + ')</h3>' + log +
-      '<h3 class="compare-subhead">Common Opponents (' + common.length + ')</h3>' + commonHtml +
-      '</div>';
+    return {
+      matrix: summary,
+      matches: log,
+      matchCount: matches.length,
+      common: commonHtml,
+      commonCount: common.length,
+    };
   }
 
   // --- Shared tournaments ----------------------------------------------
@@ -565,17 +610,27 @@ const CLIENT_JS = String.raw`(function () {
       var rows = shared.map(function (tSlug) {
         var t = TOURNAMENTS[tSlug] || { n: tSlug, d: '' };
         var pill = t.db ? ' <span class="doubles-pill">Doubles</span>' : '';
+        // Best placement (lowest rank) among the selected players who
+        // entered this tournament is highlighted; ties highlight each,
+        // and a row where everyone tied highlights no one.
+        var ranks = selected.map(function (s, i) { return byTourney[tSlug][i] ? byTourney[tSlug][i][1] : null; }).filter(function (r) { return r != null; });
+        var bestRank = null;
+        if (ranks.length >= 2) {
+          var minRank = Math.min.apply(null, ranks);
+          if (!ranks.every(function (r) { return r === minRank; })) bestRank = minRank;
+        }
         return '<tr><td class="compare-stat-label compare-opp-name">' + tourneyLink(tSlug) + pill + '<span class="compare-col-sub">' + esc(formatDateHuman(t.d)) + '</span></td>' +
           selected.map(function (s, i) {
             var pl = byTourney[tSlug][i];
             if (!pl) return '<td class="compare-empty">&mdash;</td>';
             var partner = pl[5] ? '<span class="compare-col-sub">w/ ' + playerLink(pl[6], pl[7]) + '</span>' : '';
-            return '<td><span class="rank-ordinal">' + ordinal(pl[1]) + '<span class="rank-total">/' + pl[2] + '</span></span> <span class="hist-record">' + pl[3] + '-' + pl[4] + '</span>' + partner + '</td>';
+            var isBest = bestRank != null && pl[1] === bestRank;
+            return '<td' + (isBest ? ' class="compare-best"' : '') + '><span class="rank-ordinal">' + ordinal(pl[1]) + '<span class="rank-total">/' + pl[2] + '</span></span> <span class="hist-record">' + pl[3] + '-' + pl[4] + '</span>' + partner + '</td>';
           }).join('') + '</tr>';
       });
       var pg = paginated(rows, 'compare-shared-list');
       body = '<div class="table-wrap"><table class="compare-table compare-shared"><thead><tr><th class="compare-stat-col"></th>' +
-        selected.map(function (s, i) { return '<th class="compare-player-col compare-player-col-compact" style="--col-color:' + COLORS[i] + '"><span class="compare-col-bar"></span>' + esc(PLAYERS[s].n) + '</th>'; }).join('') +
+        selected.map(function (s, i) { return '<th class="compare-player-col compare-player-col-compact" style="--col-color:' + colors[i] + '"><span class="compare-col-bar"></span>' + esc(PLAYERS[s].n) + '</th>'; }).join('') +
         '</tr></thead><tbody id="compare-shared-list">' + pg.items + '</tbody></table></div>' + pg.button;
     }
     return '<div class="tourney-section compare-section"><h2>Shared Tournaments (' + shared.length + ')</h2>' + body + '</div>';
@@ -593,11 +648,28 @@ const CLIENT_JS = String.raw`(function () {
   function renderSections() {
     if (!selected.length) { sections.innerHTML = ''; sections.hidden = true; return; }
     sections.hidden = false;
-    sections.innerHTML =
-      '<div class="tourney-section compare-section"><h2>Stats</h2>' + renderStatsTable() + '</div>' +
-      renderChart() +
-      renderHeadToHead() +
-      renderSharedTournaments();
+    var chart = renderChart();
+    var h2h = renderHeadToHead();
+    var shared = renderSharedTournaments();
+    var section = function (title, body) { return '<div class="tourney-section compare-section"><h2>' + title + '</h2>' + body + '</div>'; };
+    var row = function (a, b) { return '<div class="compare-row">' + a + b + '</div>'; };
+    var html = renderH2HScore() +
+      '<div class="tourney-section compare-section compare-stats-section"><h2>Stats</h2>' + renderStatsTable() + '</div>';
+    if (selected.length === 1) {
+      if (chart) html += '<div class="compare-row compare-row-centered">' + chart + '</div>';
+    } else if (selected.length === 2) {
+      // Two players: the score card is already at the top, so Head-to-Head
+      // here is the match log. Chart | matches, then common opponents |
+      // shared tournaments.
+      html += row(chart, section('Head-to-Head Matches (' + h2h.matchCount + ')', h2h.matches)) +
+        row(section('Common Opponents (' + h2h.commonCount + ')', h2h.common), shared);
+    } else {
+      // Three or more: chart | matrix with common opponents under it, then
+      // shared tournaments | match log.
+      html += row(chart, section('Head-to-Head', h2h.matrix + '<h3 class="compare-subhead">Common Opponents (' + h2h.commonCount + ')</h3>' + h2h.common)) +
+        row(shared, section('Matches (' + h2h.matchCount + ')', h2h.matches));
+    }
+    sections.innerHTML = html;
     sections.querySelectorAll('.rating-chart-inner').forEach(wireChart);
   }
 
@@ -620,6 +692,7 @@ const CLIENT_JS = String.raw`(function () {
 
   function update(focusSearch) {
     writeSelectionToUrl();
+    assignColors();
     renderPicker(focusSearch);
     renderHint();
     renderSections();
