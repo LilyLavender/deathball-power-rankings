@@ -28,7 +28,7 @@
     { "names": ["Eduardo2332", "Eduardo Gabriel Martinez Banda", "Eduardo"], "canonical": "Eduardo" },
     { "names": ["Mosspassion", "nickyD"], "canonical": "Mosspassion" },
     { "names": ["Scott Wilkewitz", "Scott W."], "canonical": "Scott Wilkewitz" },
-    { "names": ["SliceFury", "NotNormalProductions"], "canonical": "SliceFury" },
+    { "names": ["SliceFury", "NotNormalProductions", "Ethan", "Ethan Bouchard"], "canonical": "SliceFury" },
     { "names": ["spoom", "Spoom"], "canonical": "Spoom" },
     { "names": ["tcarsonj", "TJ Carson"], "canonical": "tcarsonj" },
     { "names": ["andrewrobk", "Turbo"], "canonical": "andrewrobk" },
@@ -328,13 +328,6 @@
         { "id": "josh-1203-keg", "canonical": "Josh Freeman", "tournaments": ["https://challonge.com/cld4i6ns", "https://challonge.com/5a9f6xwe", "https://challonge.com/2j44aun6"] },
         { "id": "josh-2019-league", "canonical": "Josh k", "tournaments": ["https://challonge.com/db20190406", "https://challonge.com/dbcha20190807", "https://challonge.com/dbcha20190814", "https://challonge.com/dbcha20190830", "https://challonge.com/dbcha20190821", "https://challonge.com/dbcha20190828", "https://challonge.com/dbcha20190904", "https://challonge.com/dbcha20190925", "https://challonge.com/dbcha20191002", "https://challonge.com/dbcha20191009", "https://challonge.com/dbcha20191016", "https://challonge.com/dbcha20191023", "https://challonge.com/dbcha20191101", "https://challonge.com/dbcha20191106", "https://challonge.com/dbcha20191113", "https://challonge.com/dbcha20191120", "https://challonge.com/dbcha20191211", "https://challonge.com/dbcha20200202", "https://challonge.com/cbj2mbse", "https://challonge.com/dbc8", "https://challonge.com/a2ai2n6q"] }
       ]
-    },
-    {
-      "name": "Ethan",
-      "resolutions": [
-        { "id": "ethan-yomi158", "canonical": "Ethan", "tournaments": ["https://www.start.gg/tournament/yomi-158/events/wednesday-unwind-deathball/brackets/1745566/2590463/overview"] }
-      ],
-      "default": { "id": "ethan-dfw", "canonical": "Ethan" }
     },
     {
       "name": "Jordan",
