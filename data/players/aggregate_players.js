@@ -239,16 +239,32 @@ const playerInfoByLowerKey = new Map(Object.keys(playerInfo).map((k) => [k.toLow
 // keying split entries by id). Names with just one id behind them (most
 // aliases, e.g. "James Matthews") are unambiguous and can still fall back
 // to a name-keyed entry.
+//
+// A split's own `name` counts as shared by every id in that split, whatever
+// each resolution displays as -- that raw name has, by definition, been
+// used by more than one person. Without this, a split whose default
+// displays under a longer name (a "Rachel" split defaulting to "Rachel
+// Maria") left the bare name tracked under a single id, and a brand-new
+// "Rachel" resolution silently inherited a stale name-keyed "Rachel"
+// location that had belonged to the other person. Keys are lowercased so
+// a split name's casing can't dodge the check either.
 const canonicalNameIds = new Map();
 function trackCanonicalName(id, canonical) {
   if (!id || !canonical) return;
-  if (!canonicalNameIds.has(canonical)) canonicalNameIds.set(canonical, new Set());
-  canonicalNameIds.get(canonical).add(id);
+  const key = canonical.toLowerCase();
+  if (!canonicalNameIds.has(key)) canonicalNameIds.set(key, new Set());
+  canonicalNameIds.get(key).add(id);
 }
 for (const a of identities.aliases || []) trackCanonicalName(a.id || a.canonical.toLowerCase(), a.canonical);
 for (const s of identities.splits || []) {
-  for (const r of s.resolutions || []) trackCanonicalName(r.id, r.canonical);
-  if (s.default) trackCanonicalName(s.default.id, s.default.canonical);
+  for (const r of s.resolutions || []) {
+    trackCanonicalName(r.id, r.canonical);
+    trackCanonicalName(r.id, s.name);
+  }
+  if (s.default) {
+    trackCanonicalName(s.default.id, s.default.canonical);
+    trackCanonicalName(s.default.id, s.name);
+  }
 }
 const ambiguousCanonicalNames = new Set(
   [...canonicalNameIds].filter(([, ids]) => ids.size > 1).map(([name]) => name)
@@ -257,7 +273,7 @@ function lookupPlayerInfo(id, name) {
   if (playerInfo[id]) return playerInfo[id];
   const byIdLower = playerInfoByLowerKey.get((id || '').toLowerCase());
   if (byIdLower) return byIdLower;
-  if (name && !ambiguousCanonicalNames.has(name)) {
+  if (name && !ambiguousCanonicalNames.has(name.toLowerCase())) {
     if (playerInfo[name]) return playerInfo[name];
     const byNameLower = playerInfoByLowerKey.get(name.toLowerCase());
     if (byNameLower) return byNameLower;
@@ -664,11 +680,55 @@ const STARTGG_ICON_URI = assetDataUri('assets/startgg-icon.png');
 
 // "View on Challonge/start.gg" pill for the tournament-page header -- the
 // source's real favicon plus its name, styled like .doubles-pill.
-function sourcePillHtml(url, source) {
+function sourcePillHtml(t) {
+  const { url, source } = t;
+  if (source === 'Paper') {
+    // A paper tournament has no bracket site to link out to. The pill links
+    // to the cited source when one is a URL; otherwise it's a plain badge,
+    // and the page's Source Material section carries the written note.
+    const icon = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/><path d="M6 8h5M6 10.5h5"/></svg>';
+    const link = externalUrlFor(t);
+    return link
+      ? `<a class="source-pill source-pill-paper" href="${escapeHtml(link)}" target="_blank" rel="noopener">${icon}Paper</a>`
+      : `<span class="source-pill source-pill-paper">${icon}Paper</span>`;
+  }
   const isChallonge = source === 'Challonge';
   const cls = isChallonge ? 'source-pill-challonge' : 'source-pill-startgg';
   const icon = `<img src="${isChallonge ? CHALLONGE_ICON_URI : STARTGG_ICON_URI}" alt="">`;
   return `<a class="source-pill ${cls}" href="${escapeHtml(url)}" target="_blank" rel="noopener">${icon}${escapeHtml(source)}</a>`;
+}
+
+// The "Source Material" section of a paper tournament's page: the scanned
+// sheet(s), each opening full-size in a new tab, plus the cited source. An
+// image path is relative to data/paper/images/ and served from there
+// directly (the repo is the site), so there's no second copy to keep in
+// sync. Returns '' for scraped tournaments.
+function paperSourceSectionHtml(t) {
+  if (t.source !== 'Paper' || !t.paper) return '';
+  const { images, sourceLink, sourceNote } = t.paper;
+  const gallery = images.length
+    ? `<div class="paper-gallery">
+${images.map((img) => {
+      const src = `../data/paper/images/${encodeURIComponent(img.file)}`;
+      const caption = img.caption ? `<span class="paper-caption">${escapeHtml(img.caption)}</span>` : '';
+      return `      <a class="paper-scan" href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${escapeHtml(img.caption || `${t.label} results sheet`)}" loading="lazy">${caption}</a>`;
+    }).join('\n')}
+    </div>`
+    : '';
+  const sourceBits = [];
+  if (sourceLink) sourceBits.push(`<a href="${escapeHtml(sourceLink)}" target="_blank" rel="noopener">${escapeHtml(sourceLink)}</a>`);
+  if (sourceNote) sourceBits.push(escapeHtml(sourceNote));
+  const sourceLine = sourceBits.length
+    ? `<p class="paper-source"><span class="paper-source-label">Source</span>${sourceBits.join('<span class="loc-sep">&middot;</span>')}</p>`
+    : '';
+  if (!gallery && !sourceLine) return '';
+  return `
+<div class="tourney-section tourney-paper">
+  <h2>Source Material</h2>
+  <p class="paper-note">These results were transcribed by hand from the material below.</p>
+  ${gallery}
+  ${sourceLine}
+</div>`;
 }
 
 // "Watch on YouTube" pill, shown next to the source pill when a VOD is
@@ -949,6 +1009,180 @@ function collectStartgg() {
   return result;
 }
 
+// Hand-transcribed tournaments (a paper bracket sheet, a whiteboard photo,
+// a results post) from data/paper/tournaments.json -- see
+// data/paper/add_paper_tournament.js for the record format and the import
+// workflow. Keyed by a synthetic `paper://<slug>` URL so every URL-keyed
+// config (tournament-locations/groups/doubles, manual-matches, videos)
+// applies to a paper tournament exactly as it does to a scraped one.
+// Matches reuse manual-matches.json's entry shape (p1/p2 + score/games/dq)
+// via resolveManualMatch, plus optional round/order/identifier so a
+// transcribed elimination bracket can still be laid out by build_bracket.js.
+// `participants` entries may carry a `placement` (the sheet's final
+// placing), which flows into finalRank so buildStandings honors the sheet
+// over any derived order.
+function collectPaper() {
+  const storePath = path.join(DATA_ROOT, 'paper', 'tournaments.json');
+  if (!fs.existsSync(storePath)) return [];
+  const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+  const result = [];
+
+  for (const [url, rec] of Object.entries(store)) {
+    if (!rec || typeof rec !== 'object' || !rec.name) continue;
+    const label = resolveName(url, rec.name.trim());
+
+    const participantList = (rec.participants || []).map((p) => {
+      const entry = typeof p === 'string' ? { name: p } : p;
+      return {
+        name: normName(entry.name || ''),
+        seed: entry.seed != null ? entry.seed : null,
+        finalRank: entry.placement != null ? entry.placement : null,
+      };
+    }).filter((p) => p.name);
+
+    const matches = (rec.matches || []).map((m, i) => ({
+      ...resolveManualMatch(m),
+      identifier: m.identifier != null ? String(m.identifier) : String(i + 1),
+      round: m.round != null ? m.round : null,
+      order: m.order != null ? m.order : i + 1,
+      groupId: m.groupId != null ? m.groupId : null,
+      stageKind: m.groupId != null ? 'pool' : 'bracket',
+    }));
+    inferPaperRounds(matches, rec.type || null);
+
+    // A match can name a player the participant list forgot -- add them so
+    // standings/crosstable/bracket all see the same roster.
+    const listed = new Set(participantList.map((p) => p.name.toLowerCase()));
+    for (const m of matches) {
+      for (const n of [m.winnerName, m.loserName]) {
+        const trimmed = normName(n || '');
+        if (trimmed && !listed.has(trimmed.toLowerCase())) {
+          listed.add(trimmed.toLowerCase());
+          participantList.push({ name: trimmed, seed: null, finalRank: null });
+        }
+      }
+    }
+
+    const locInfo = resolveLocationInfo(url, (rec.city || rec.state || rec.location)
+      ? { city: rec.city, state: rec.state, location: rec.location, country: rec.country }
+      : null);
+    const images = (rec.images || []).map((img) => (typeof img === 'string' ? { file: img } : img))
+      .filter((img) => img && img.file);
+    result.push({
+      url,
+      label,
+      date: resolveDate(url, rec.date || ''),
+      dateOrder: resolveDateOrder(url),
+      location: formatLocation(locInfo),
+      locationDisplay: locationDisplay(locInfo),
+      venue: locInfo?.location || '',
+      city: locInfo?.city || '',
+      state: locInfo?.state || '',
+      country: locInfo?.country || 'United States',
+      participants: participantList.length,
+      matchCount: matches.length,
+      source: 'Paper',
+      tournamentType: rec.type || null,
+      isDoubles: isDoublesTournament(url),
+      participantList,
+      matches,
+      pendingMatches: [],
+      // Rendered by writeTournamentPages as the "Source Material" section:
+      // the sheet scans (served straight out of data/paper/images/) plus
+      // where the results came from -- a link, a written note, or both.
+      paper: {
+        images,
+        sourceLink: rec.source?.link || null,
+        sourceNote: rec.source?.note || null,
+      },
+    });
+  }
+
+  return result;
+}
+
+// A paper record transcribed as a plain list of results in the order they
+// were played carries no round numbers, which build_bracket.js needs to
+// draw the bracket. For an elimination format those rounds are implied by
+// the list itself, so fill them in:
+//   - every match is classed by how many losses each side had going in:
+//     none/none = winners bracket, one/one = losers bracket, none/one = the
+//     grand final (a repeat pairing right after it = the bracket reset);
+//   - within the winners chain (and separately the losers chain) a match's
+//     round is one less than the round of the next match its winner played,
+//     counted back from the chain's last match -- exact for any bracket
+//     where a round's winner plays in the next round, byes included;
+//   - winners rounds are positive, losers negative, grand finals sit after
+//     the last winners round (the convention build_bracket.js reads).
+// Only runs when no match has a round at all (an explicit round anywhere
+// means the transcriber is placing matches by hand) and never for
+// round-robin/swiss. Bails out silently -- leaving the page on its
+// round-less match list -- when the results don't fit either elimination
+// shape (a single-elim loser playing again, or a 0-vs-1-loss pairing with
+// no losers bracket behind it).
+function inferPaperRounds(matches, type) {
+  if (!matches.length || matches.some((m) => m.round != null)) return;
+  if (type === 'round robin' || type === 'swiss') return;
+  const key = (n) => normName(n || '').toLowerCase();
+
+  const losses = new Map();
+  const kinds = [];
+  let gfPair = null;
+  for (const m of matches) {
+    const w = key(m.winnerName);
+    const l = key(m.loserName);
+    const lw = losses.get(w) || 0;
+    const ll = losses.get(l) || 0;
+    let kind;
+    if (gfPair && gfPair.has(w) && gfPair.has(l)) kind = 'GF';
+    else if (lw === 0 && ll === 0) kind = 'W';
+    else if (lw >= 1 && ll >= 1) kind = 'L';
+    else { kind = 'GF'; gfPair = new Set([w, l]); }
+    kinds.push(kind);
+    losses.set(l, ll + 1);
+  }
+  const hasLosers = kinds.includes('L');
+  const hasGf = kinds.includes('GF');
+  if (type === 'single elimination' && (hasLosers || hasGf)) return;
+  if (!hasLosers && hasGf) return;
+  if (hasLosers && !hasGf) return; // a losers bracket with no grand final can't be placed reliably
+
+  const idxOf = (kind) => kinds.map((k, i) => (k === kind ? i : -1)).filter((i) => i >= 0);
+  // Depth of each match in its chain: 0 for the chain's last match, +1 for
+  // each step back along "the next match this match's winner played".
+  const depthsOf = (idxs) => {
+    const depth = new Map();
+    for (let a = idxs.length - 1; a >= 0; a--) {
+      const i = idxs[a];
+      const w = key(matches[i].winnerName);
+      const next = idxs.find((j) => j > i && (key(matches[j].winnerName) === w || key(matches[j].loserName) === w));
+      depth.set(i, next == null ? 0 : depth.get(next) + 1);
+    }
+    return depth;
+  };
+
+  const wIdx = idxOf('W');
+  const wDepth = depthsOf(wIdx);
+  const wRounds = Math.max(...wDepth.values()) + 1;
+  for (const i of wIdx) matches[i].round = wRounds - wDepth.get(i);
+  if (hasLosers) {
+    const lIdx = idxOf('L');
+    const lDepth = depthsOf(lIdx);
+    const lRounds = Math.max(...lDepth.values()) + 1;
+    for (const i of lIdx) matches[i].round = -(lRounds - lDepth.get(i));
+  }
+  let gfN = 0;
+  for (const i of idxOf('GF')) matches[i].round = wRounds + 1 + gfN++;
+}
+
+// Where "View original" style links should point for a tournament: the
+// bracket URL for a scraped tournament, the cited source link (if any) for
+// a paper one -- its synthetic paper:// key is not a real address.
+function externalUrlFor(t) {
+  if (t.source === 'Paper') return t.paper?.sourceLink || null;
+  return t.url || null;
+}
+
 // Assigns a unique, filesystem-safe slug to each tournament (name + date),
 // used for its standalone bracket page filename.
 function assignSlugs(allTournaments) {
@@ -1201,7 +1435,9 @@ function buildStandings(t) {
     losses: wlRecord.get(r.name)?.losses || 0,
   }));
 
-  const hasOfficialRanks = t.source === 'Challonge' &&
+  // Challonge's final_rank, or a paper sheet's transcribed placements --
+  // either is the event's own word on who placed where.
+  const hasOfficialRanks = (t.source === 'Challonge' || t.source === 'Paper') &&
     named.filter((p) => p.finalRank != null).length >= named.length * 0.8;
 
   if (hasOfficialRanks) {
@@ -2432,14 +2668,14 @@ function writeHtml(playerRows, allTournaments, rankingRows, mapRegions, mapAllPl
       matches: t.matchCount,
       tournamentType: t.isDoubles ? 'Doubles' : 'Singles',
       bracketType: bracketTypeLabel(t) || '',
-      bracketUrl: t.url || '',
+      bracketUrl: externalUrlFor(t) || '',
       videoUrl: tournamentVideos[t.url] || '',
     }));
 
   const tournamentTableRows = [...allTournaments]
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.dateOrder || 0) - (a.dateOrder || 0))
     .map((t) => `<tr>
-      <td><a href="tournaments/${escapeHtml(t.slug)}.html">${escapeHtml(t.label)}</a><a class="ext-link" href="${escapeHtml(t.url)}" target="_blank" rel="noopener" title="View original">&#8599;</a>${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</td>
+      <td><a href="tournaments/${escapeHtml(t.slug)}.html">${escapeHtml(t.label)}</a>${externalUrlFor(t) ? `<a class="ext-link" href="${escapeHtml(externalUrlFor(t))}" target="_blank" rel="noopener" title="View original">&#8599;</a>` : ''}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</td>
       <td data-sort="${t.date}">${escapeHtml(t.date)}</td>
       <td>${locationHtml(t.locationDisplay)}</td>
       <td>${escapeHtml(t.source)}</td>
@@ -3555,7 +3791,7 @@ ${extraHead}
 <div class="tourney-meta">
   <span class="tourney-date">${escapeHtml(formatDateHuman(t.date))}</span>
   ${t.locationDisplay.venue || t.locationDisplay.cityState ? `<span class="tourney-loc">${locationHtml(t.locationDisplay)}</span>` : ''}
-  <span class="source-pills">${sourcePillHtml(t.url, t.source)}${tournamentVideos[t.url] ? youtubePillHtml(tournamentVideos[t.url]) : ''}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</span>
+  <span class="source-pills">${sourcePillHtml(t)}${tournamentVideos[t.url] ? youtubePillHtml(tournamentVideos[t.url]) : ''}${t.isDoubles ? ' <span class="doubles-pill">Doubles</span>' : ''}</span>
 </div>
 <a class="back-link" href="../index.html?tab=tournaments">&larr; Back to tournaments</a>
 
@@ -3571,6 +3807,7 @@ ${extraHead}
     <script>setupPlayerInteractivity();</script>
   </div>
 </div>
+${paperSourceSectionHtml(t)}
 ${siteFooter('../')}
 </body>
 </html>
@@ -4303,7 +4540,8 @@ ${siteFooter('../')}
 async function main() {
   const challongeTournaments = collectChallonge();
   const startggTournaments = collectStartgg();
-  const allTournaments = [...challongeTournaments, ...startggTournaments];
+  const paperTournaments = collectPaper();
+  const allTournaments = [...challongeTournaments, ...startggTournaments, ...paperTournaments];
 
   allTournaments.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.dateOrder || 0) - (b.dateOrder || 0));
   assignSlugs(allTournaments);
@@ -4684,6 +4922,7 @@ module.exports = {
   displayName,
   collectChallonge,
   collectStartgg,
+  collectPaper,
   buildPlayerStats,
   parseTeamName,
   resolveTeamMembers,

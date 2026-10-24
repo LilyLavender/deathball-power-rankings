@@ -1,6 +1,6 @@
 # DeathBall Power Rankings
 
-Pulls DeathBall tournament results from Challonge and start.gg into a common CSV schema, then generates Glicko-2 power rankings and a static site from the results.
+Pulls DeathBall tournament results from Challonge, start.gg,& paper brackets into a common CSV schema, then generates Glicko-2 power rankings and a static site from the results.
 
 ## Setup
 
@@ -25,3 +25,10 @@ Rebuilds `index.html`/`index.css`/`index.js`, `compare.html`, `players.csv`, and
 ```
 
 This command fetches tournaments via their url from either service, asks some player-related questions via a text-based wizard, and then aggregates all new data. You may need to add additional data to the many `.json` files after adding a tournament.
+
+### Paper tournaments
+
+For a tournament that only exists as a photo of a bracket sheet, run:
+```
+node data/paper/add_paper_tournament.js
+```

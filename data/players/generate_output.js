@@ -784,7 +784,26 @@ tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 #3eff8b; }
 .source-pill-startgg:hover { background: rgba(63, 128, 255, 0.15); }
 .source-pill-youtube { color: #ff4d4d; border-color: rgba(255, 0, 0, 0.5); }
 .source-pill-youtube:hover { background: rgba(255, 0, 0, 0.15); }
+.source-pill-paper { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
+a.source-pill-paper:hover { background: rgba(255, 255, 255, 0.12); }
+span.source-pill-paper { cursor: default; }
 .source-pills .doubles-pill { margin-left: 0; font-size: 0.85rem; padding: 3px 10px; }
+/* "Source Material" section on a hand-transcribed (paper) tournament's page:
+   the scanned sheet(s) in a responsive grid, each a link to the full-size
+   file, under a one-line explanation and over the cited source. */
+.tourney-paper { margin-top: 0.5rem; }
+.paper-note { color: #888; font-size: 0.9rem; margin: 0 0 0.9rem; }
+/* auto-fill (not auto-fit) on purpose: a lone scan stays one ~400px track
+   wide as a thumbnail that opens full-size, instead of stretching across
+   the whole page at full resolution. */
+.paper-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.paper-scan { display: flex; flex-direction: column; gap: 0.4rem; text-decoration: none; color: #888; }
+.paper-scan img { display: block; width: 100%; height: auto; border: 1px solid #222; border-radius: 4px; background: #0d0d0d; transition: border-color 0.15s ease; }
+.paper-scan:hover img { border-color: rgba(255, 255, 255, 0.5); }
+.paper-caption { font-size: 0.85rem; }
+.paper-source { color: #888; font-size: 0.9rem; margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.paper-source-label { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: #fff; margin-right: 0.2rem; }
+.paper-source a { color: #3eff8b; word-break: break-all; }
 .tourney-section { margin-bottom: 2rem; }
 .tourney-section h2 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3eff8b; border-bottom: 1px solid #222; padding-bottom: 0.4rem; margin-bottom: 0.75rem; }
 /* Rating-over-time chart (player pages). Fixed pixel height with a

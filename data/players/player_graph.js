@@ -9,6 +9,7 @@ const path = require('path');
 const {
   collectChallonge,
   collectStartgg,
+  collectPaper,
   buildPlayerStats,
   resolveIdentity,
   resolveTeamMembers,
@@ -361,7 +362,8 @@ function computeCommunityAnchors(sizeOf, crossWeight) {
 function buildGraph() {
   const challongeTournaments = collectChallonge();
   const startggTournaments = collectStartgg();
-  const allTournaments = [...challongeTournaments, ...startggTournaments];
+  const paperTournaments = collectPaper();
+  const allTournaments = [...challongeTournaments, ...startggTournaments, ...paperTournaments];
   const singlesTournaments = allTournaments.filter((t) => !t.isDoubles);
   const doublesTournaments = allTournaments.filter((t) => t.isDoubles);
 

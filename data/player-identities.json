@@ -90,7 +90,7 @@
     { "names": ["Andrew Griner", "Griner"], "canonical": "Andrew Griner" },
     { "names": ["impossablank", "Impossiblank"], "canonical": "impossablank" },
     { "names": ["Leonrecon", "Leon"], "canonical": "Leonrecon" },
-    { "names": ["Rachel", "Rachel Maria"], "canonical": "Rachel Maria" },
+    { "names": ["Rachel Maria"], "canonical": "Rachel Maria" },
     { "names": ["Vernon", "Vern"], "canonical": "Vernon" },
     { "names": ["D.Owls", "D"], "canonical": "D.Owls" },
     { "names": ["GARZON", "David Garzon"], "canonical": "David Garzon" },
@@ -118,7 +118,8 @@
     { "names": ["Con", "Connor"], "canonical": "Con" },
     { "names": ["Ryan", "Ryan rismon"], "canonical": "Ryan", "id": "ryan-deathball" },
     { "names": ["Kevan S", "Kevan!"], "canonical": "Kevan S", "id": "kevan-deathball-combined" },
-    { "names": ["zachaction", "Zack"], "canonical": "zachaction" }
+    { "names": ["zachaction", "Zack"], "canonical": "zachaction" },
+    { "names": ["Alex Jaspersen", "Alex J"], "canonical": "Alex Jaspersen" }
   ],
   "_splits_example": "Use when one name has been used by more than one distinct person (e.g. \"Chris\" in TX and \"Chris\" in FL). `tournaments` is a list of tournament URLs (the same keys used in challonge/tournaments.json and start.gg/tournaments.json) that belong to that specific person. Each resolution (and the optional `default`, used for any tournament not listed under a resolution) needs its own unique `id` — `canonical` can repeat the same display name across resolutions, since `id` is what actually keeps them separate. Example: { \"name\": \"Chris\", \"resolutions\": [ { \"id\": \"chris-tx\", \"canonical\": \"Chris\", \"tournaments\": [\"https://challonge.com/dbcha20190430\"] }, { \"id\": \"chris-fl\", \"canonical\": \"Chris\", \"tournaments\": [\"https://www.start.gg/tournament/deathball-leaderboard-shad-4/events/deathball-1v1-bracket/brackets/2212670/3213841/overview\"] } ], \"default\": { \"id\": \"chris-unresolved\", \"canonical\": \"Chris\" } }",
   "splits": [
@@ -190,7 +191,7 @@
         { "id": "brian-free-play", "canonical": "Brian", "tournaments": ["https://fpaplayers.challonge.com/pdfudix1"] },
         { "id": "brian-preseason-may-league-2019", "canonical": "Brian", "tournaments": ["https://challonge.com/db20190406", "https://challonge.com/dbcha20190430", "https://challonge.com/dbcha20190602", "https://challonge.com/dbcha20190507", "https://challonge.com/dbcha20190514"] },
         { "id": "brian-dbjax", "canonical": "Brian", "tournaments": ["https://challonge.com/9eis0ou0"] },
-        { "id": "brian-gdc", "canonical": "Brian", "tournaments": ["https://challonge.com/dbgdc"] }
+        { "id": "brian-gdc", "canonical": "Brian", "tournaments": ["https://challonge.com/dbgdc", "paper://first-ever-deathball-tournament-2017-03-05"] }
       ]
     },
     {
@@ -263,7 +264,8 @@
       "name": "Drew",
       "resolutions": [
         { "id": "drew-dbjax", "canonical": "Drew", "tournaments": ["https://challonge.com/8uvx0hf6", "https://challonge.com/oy3nenv"] },
-        { "id": "drew-free-play", "canonical": "Drew", "tournaments": ["https://fpaplayers.challonge.com/18ykixya"] }
+        { "id": "drew-free-play", "canonical": "Drew", "tournaments": ["https://fpaplayers.challonge.com/18ykixya"] },
+        { "id": "drew-mar-2017", "canonical": "Drew", "tournaments": ["paper://first-ever-deathball-tournament-2017-03-05"] }
       ]
     },
     {
@@ -409,7 +411,8 @@
         { "id": "mike-deathball", "canonical": "Mike", "tournaments": ["https://fpaplayers.challonge.com/puf4t590"] },
         { "id": "mike-1105-24", "canonical": "Mike", "tournaments": ["https://challonge.com/bxlwhrkw"] },
         { "id": "mike-recent", "canonical": "Mike", "tournaments": ["https://challonge.com/y7upbs7h", "https://challonge.com/my7fsi0o"] },
-        { "id": "mike-tourney", "canonical": "Mike", "tournaments": ["https://challonge.com/9yxjnhn"] }
+        { "id": "mike-tourney", "canonical": "Mike", "tournaments": ["https://challonge.com/9yxjnhn"] },
+        { "id": "mike-mar-2017", "canonical": "Mike", "tournaments": ["paper://first-ever-deathball-tournament-2017-03-05"] }
       ]
     },
     {
@@ -430,7 +433,8 @@
         { "id": "ryan-popup-sept", "canonical": "Ryan", "tournaments": ["https://challonge.com/db20190406", "https://challonge.com/dbcha20190911"] },
         { "id": "ryan-dbjax2", "canonical": "Ryan", "tournaments": ["https://challonge.com/oy3nenv"] },
         { "id": "ryan-shad7", "canonical": "Ryan", "tournaments": ["https://www.start.gg/tournament/deathball-leaderboard-shad-7/events/deathball-1v1-bracket/brackets/2228855/3234121/overview"] },
-        { "id": "ryan-dec-2017", "canonical": "Ryan", "tournaments": ["https://challonge.com/CQHPD"] }
+        { "id": "ryan-dec-2017", "canonical": "Ryan", "tournaments": ["https://challonge.com/CQHPD"] },
+        { "id": "ryan-mar-2017", "canonical": "Ryan", "tournaments": ["paper://first-ever-deathball-tournament-2017-03-05"] }
       ]
     },
     {
@@ -578,6 +582,27 @@
         { "id": "jack j", "canonical": "Jack J", "tournaments": ["https://challonge.com/uddeathball"] }
       ],
       "default": { "id": "jack", "canonical": "jack" }
+    },
+    {
+      "name": "Richard",
+      "resolutions": [
+        { "id": "richard-mar-2017", "canonical": "Richard", "tournaments": ["paper://first-ever-deathball-tournament-2017-03-05"] }
+      ],
+      "default": { "id": "richard", "canonical": "Richard" }
+    },
+    {
+      "name": "Eric",
+      "resolutions": [
+        { "id": "eric-mar-2017", "canonical": "Eric", "tournaments": ["paper://first-ever-deathball-tournament-2017-03-05"] }
+      ],
+      "default": { "id": "eric", "canonical": "Eric" }
+    },
+    {
+      "name": "Rachel",
+      "resolutions": [
+        { "id": "rachel-mar-2017", "canonical": "Rachel", "tournaments": ["paper://first-ever-deathball-tournament-2017-03-05"] }
+      ],
+      "default": { "id": "rachel maria", "canonical": "Rachel Maria" }
     }
   ],
   "_hidden_example": "Raw names listed here are dropped entirely: matches involving them are skipped (not counted as a win/loss for either side), and they never appear as a player.",

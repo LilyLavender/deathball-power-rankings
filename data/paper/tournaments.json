@@ -1,0 +1,52 @@
+{
+  "paper://first-ever-deathball-tournament-2017-03-05": {
+    "name": "First ever DeathBall tournament",
+    "date": "2017-03-05",
+    "city": "San Francisco",
+    "state": "CA",
+    "type": "single elimination",
+    "source": {"link":"https://www.facebook.com/groups/KillerQueenSF/posts/421762651504118/"},
+    "images": [
+      "first-ever-deathball-tournament-2017-03-05.jpg"
+    ],
+    "participants": [
+      "Alex J",
+      "Brian",
+      "Richard",
+      "Andrew D",
+      "Garzon",
+      "Matt S",
+      "Drew",
+      "Matt D",
+      "Mike",
+      "Neal S",
+      "Brett",
+      "Cody",
+      "Ian",
+      "Eric",
+      "Rachel",
+      "Steve",
+      "Ryan",
+      "Dillon"
+    ],
+    "matches": [
+      {"p1":"Brian","p2":"Richard"},
+      {"p1":"Ryan","p2":"Dillon"},
+      {"p1":"Brian","p2":"Alex J"},
+      {"p1":"Garzon","p2":"Andrew D"},
+      {"p1":"Matt S","p2":"Drew"},
+      {"p1":"Matt D","p2":"Mike"},
+      {"p1":"Neal S","p2":"Brett"},
+      {"p1":"Ian","p2":"Cody"},
+      {"p1":"Rachel","p2":"Eric"},
+      {"p1":"Steve","p2":"Ryan"},
+      {"p1":"Brian","p2":"Garzon"},
+      {"p1":"Matt D","p2":"Matt S"},
+      {"p1":"Ian","p2":"Neal S"},
+      {"p1":"Steve","p2":"Rachel"},
+      {"p1":"Brian","p2":"Matt D"},
+      {"p1":"Ian","p2":"Steve"},
+      {"p1":"Brian","p2":"Ian"}
+    ]
+  }
+}

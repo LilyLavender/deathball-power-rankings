@@ -52,10 +52,11 @@ const { execFileSync } = require('child_process');
 const readline = require('node:readline/promises');
 const {
   DATA_ROOT, identities, hiddenNames, normName, resolveIdentity,
-  displayName, collectChallonge, collectStartgg, buildPlayerStats, parseTeamName,
+  displayName, collectChallonge, collectStartgg, collectPaper, buildPlayerStats, parseTeamName,
 } = require('./aggregate_players');
 const { resolveParticipantName } = require('../challonge/resolve_participant_name');
 const { slugify } = require('../slugify');
+const { serializePaperStore } = require('../paper/add_paper_tournament');
 
 const IDENTITIES_PATH = path.join(DATA_ROOT, 'player-identities.json');
 const PLAYER_INFO_PATH = path.join(DATA_ROOT, 'player-info.json');
@@ -64,6 +65,17 @@ const TOURNAMENT_DOUBLES_PATH = path.join(DATA_ROOT, 'tournament-doubles.json');
 const TEAM_NAMES_PATH = path.join(DATA_ROOT, 'team-names.json');
 const CHALLONGE_STORE = path.join(DATA_ROOT, 'challonge', 'tournaments.json');
 const STARTGG_STORE = path.join(DATA_ROOT, 'start.gg', 'tournaments.json');
+// Hand-transcribed tournaments (see data/paper/add_paper_tournament.js).
+// Nothing is fetched for these -- the import script marks a new record
+// dedupPending, and this script picks it up the same way it picks up a
+// resolve_via_browser.js resolution (see newFetchedUrls).
+const PAPER_STORE = path.join(DATA_ROOT, 'paper', 'tournaments.json');
+
+function storeFor(source) {
+  if (source === 'start.gg') return STARTGG_STORE;
+  if (source === 'Paper') return PAPER_STORE;
+  return CHALLONGE_STORE;
+}
 
 function readJson(filePath, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
@@ -340,6 +352,9 @@ async function askTournamentFormat(rl, tournament) {
 
 async function askTournamentLocation(rl, tournament) {
   if (tournamentLocationsFile.locations[tournament.url]) return; // already set, don't re-ask
+  // A paper tournament's import already asked for all of this and stored
+  // it on the record itself (see data/paper/add_paper_tournament.js).
+  if (tournament.source === 'Paper') return;
 
   console.log(`\nTournament: ${tournament.label} (${tournament.date})`);
   const nameOverride = await ask(rl, `  Name (blank = keep "${tournament.label}"): `);
@@ -631,21 +646,40 @@ function newFetchedUrls(storePath, beforeUrls) {
   );
 }
 
-function clearDedupPending(url, isStartgg) {
-  const storePath = isStartgg ? STARTGG_STORE : CHALLONGE_STORE;
+function clearDedupPending(url, source) {
+  const storePath = storeFor(source);
   const store = readJson(storePath, {});
   if (store[url] && store[url].dedupPending) {
     delete store[url].dedupPending;
-    fs.writeFileSync(storePath, JSON.stringify(store, null, 1));
+    // The paper store is hand-maintained, so keep its compact per-line
+    // layout (the scraped stores use the fetchers' 1-space style).
+    fs.writeFileSync(storePath, source === 'Paper' ? serializePaperStore(store) : JSON.stringify(store, null, 1));
   }
 }
 
-function rawParticipantNames(url, isStartgg) {
-  if (isStartgg) {
+// Paper records are never "fetched", so the only signal that one still
+// needs its names walked is the dedupPending flag the import script sets.
+function pendingPaperUrls() {
+  const store = readJson(PAPER_STORE, {});
+  return new Set(Object.entries(store).filter(([, rec]) => rec && rec.dedupPending).map(([url]) => url));
+}
+
+function rawParticipantNames(url, source) {
+  if (source === 'start.gg') {
     const store = readJson(STARTGG_STORE, {});
     const rec = store[url];
     if (!rec?.entrants) return [];
     return rec.entrants.map((e) => e.participants[0]?.gamerTag || e.name || '').filter(Boolean);
+  }
+  if (source === 'Paper') {
+    const store = readJson(PAPER_STORE, {});
+    const rec = store[url];
+    if (!rec) return [];
+    // Same roster collectPaper builds: the participant list plus anyone
+    // who only shows up in a match line.
+    const names = (rec.participants || []).map((p) => (typeof p === 'string' ? p : p.name) || '');
+    for (const m of rec.matches || []) names.push(m.p1 || '', m.p2 || '');
+    return names.map((n) => normName(n)).filter(Boolean);
   }
   const store = readJson(CHALLONGE_STORE, {});
   const rec = store[url];
@@ -664,13 +698,14 @@ async function main() {
   runFetch(path.join(DATA_ROOT, 'start.gg', 'fetch_batch.js'));
   const newStartggUrls = newFetchedUrls(STARTGG_STORE, startggBefore);
 
-  const newUrls = new Set([...newChallongeUrls, ...newStartggUrls]);
+  const newPaperUrls = pendingPaperUrls();
+  const newUrls = new Set([...newChallongeUrls, ...newStartggUrls, ...newPaperUrls]);
   if (newUrls.size === 0) {
     console.log('\nNo new tournaments fetched — nothing to dedupe.');
     return;
   }
 
-  const allTournaments = [...collectChallonge(), ...collectStartgg()]
+  const allTournaments = [...collectChallonge(), ...collectStartgg(), ...collectPaper()]
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const knownById = buildKnownPlayers(allTournaments.filter((t) => !newUrls.has(t.url)));
 
@@ -684,8 +719,7 @@ async function main() {
       const isDoublesTournament = await askTournamentFormat(rl, t);
       await askTournamentLocation(rl, t);
 
-      const isStartgg = t.source === 'start.gg';
-      const rawNames = [...new Set(rawParticipantNames(t.url, isStartgg))];
+      const rawNames = [...new Set(rawParticipantNames(t.url, t.source))];
 
       // Doubles participant/team names are usually "PlayerA + PlayerB" (or
       // "&"/"and") -- split each into its two halves and dedupe/resolve them
@@ -767,7 +801,7 @@ async function main() {
         }
       }
 
-      clearDedupPending(t.url, isStartgg);
+      clearDedupPending(t.url, t.source);
     }
   } finally {
     rl.close();
